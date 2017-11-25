@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScoreDraftCore", "ScoreDraftCore\ScoreDraftCore.vcxproj", "{80FE791F-1F8E-49B1-A2DC-76882BE560BE}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScoreDraft", "ScoreDraft\ScoreDraft.vcxproj", "{903285CD-7FF2-4682-A97B-54B6559E3CF1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Debug|Win32.Build.0 = Debug|Win32
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Release|Win32.ActiveCfg = Release|Win32
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Release|Win32.Build.0 = Release|Win32
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Debug|Win32.Build.0 = Debug|Win32
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Release|Win32.ActiveCfg = Release|Win32
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

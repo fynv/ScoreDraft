@@ -1,0 +1,1 @@
+..\Release\ScoreDraft -midi %1

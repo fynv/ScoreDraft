@@ -1,0 +1,1 @@
+..\Release\ScoreDraft -wav %1
