@@ -21,11 +21,20 @@ void PureSin::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuff
 
 	unsigned j;
 
+	float wave = 1.0f;
+	float Dwave = 0.0f;
+	float a = powf(2.0 * PI*sampleFreq, 2.0f);
+
 	for (j=0;j<noteBuf->m_sampleNum;j++)
 	{
 		float amplitude=sinf(PI*(float)j/noteBuf->m_sampleNum);
-		float wave=cos(2*PI*sampleFreq*j);
+		//float wave=cos(2.0f*PI*sampleFreq*j);
+
 		noteBuf->m_data[j]=amplitude*wave;
+
+		float DDwave = -a*wave;
+		Dwave += DDwave;
+		wave += Dwave;
 	}
 }
 

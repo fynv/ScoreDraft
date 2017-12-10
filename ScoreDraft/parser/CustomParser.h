@@ -11,6 +11,10 @@ class NoteSequence;
 class CustomParser
 {
 public:
+	CustomParser()
+	{
+		m_OctBase = 2.0f;
+	}
 	struct NoteDef
 	{
 		string name;
@@ -24,8 +28,13 @@ public:
 	bool ParseNote(const char* strNote, Note& note);
 	bool ParseSeq(const char* strSeq, NoteSequence& seq, char* errMsg = 0);
 
+	void SetOrdinaryOctBase() { m_OctBase = 2.0f; }
+	void SetAlternativeOctBase() { m_OctBase = 3.0f; } // God damned Bohlen¨CPierce
+
 private:
 	std::vector<NoteDef> m_NoteTable;
+
+	float m_OctBase;
 };
 
 #endif

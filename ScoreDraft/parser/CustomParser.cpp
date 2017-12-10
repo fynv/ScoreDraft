@@ -70,7 +70,7 @@ bool CustomParser::ParseNote(const char* strNote, Note& note)
 	strOct[i] = 0;
 
 	unsigned Oct = atoi(strOct);
-	note.m_freq_rel = freq_oct_rel*pow(2.0f, ((float)Oct - 4.0f));
+	note.m_freq_rel = freq_oct_rel*pow(m_OctBase, ((float)Oct - 5.0f));
 
 	const char* pDur = pEdOct + 1;
 	note.m_duration = atoi(pDur);

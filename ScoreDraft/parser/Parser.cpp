@@ -108,7 +108,7 @@ bool Parser::ParseNote(const char* strNote, Note& note)
 	strOct[i] = 0;
 
 	unsigned Oct = atoi(strOct);
-	note.m_freq_rel = pow(2.0f, ((float)(12 * Oct) + shift-48.0f)/12.0f);
+	note.m_freq_rel = pow(2.0f, ((float)(12 * Oct) + shift-60.0f)/12.0f);
 
 	const char* pDur = pEdOct + 1;
 	note.m_duration = atoi(pDur);

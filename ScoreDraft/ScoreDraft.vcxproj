@@ -68,6 +68,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AirBird_eq.cpp" />
+    <ClCompile Include="AirBird_just.cpp" />
+    <ClCompile Include="FlyMeToTheMoon_eq.cpp" />
+    <ClCompile Include="FlyMeToTheMoon_just.cpp" />
+    <ClCompile Include="kimiwo_nosete_just.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MIDIWriter.cpp" />
     <ClCompile Include="parser\CustomParser.cpp" />

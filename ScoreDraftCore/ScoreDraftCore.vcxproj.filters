@@ -39,6 +39,9 @@
     <ClCompile Include="instruments\NaivePiano.cpp">
       <Filter>Source Files\instruments</Filter>
     </ClCompile>
+    <ClCompile Include="instruments\BottleBlow.cpp">
+      <Filter>Source Files\instruments</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TrackBuffer.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files\instruments</Filter>
     </ClInclude>
     <ClInclude Include="instruments\NaivePiano.h">
+      <Filter>Header Files\instruments</Filter>
+    </ClInclude>
+    <ClInclude Include="instruments\BottleBlow.h">
       <Filter>Header Files\instruments</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
 tempo 80
-reffreq 297
+reffreq 594
 
 set blkblock = BL768
 set cello = do4.48 do4.48 so3.48 so3.48 la3.48 la3.48 mi3.48 mi3.48...

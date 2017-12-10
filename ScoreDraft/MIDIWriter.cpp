@@ -171,7 +171,7 @@ void WriteToMidi(const Document& doc, const char* fileName)
 			{
 				nevent.isOn = true;
 				nevent.time = timeTicks;
-				nevent.note = (unsigned char)(logf(seq[j].m_freq_rel)*12.0f / logf(2.0f)+ 48.0f + pitchShift);
+				nevent.note = (unsigned char)(logf(seq[j].m_freq_rel)*12.0f / logf(2.0f)+ 60.0f + pitchShift);
 				AddNoteEvent(elist, nevent);
 
 				timeTicks += seq[j].m_duration*timeFactor;

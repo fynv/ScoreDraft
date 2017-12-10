@@ -69,6 +69,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Instrument.cpp" />
+    <ClCompile Include="instruments\BottleBlow.cpp" />
     <ClCompile Include="instruments\NaivePiano.cpp" />
     <ClCompile Include="instruments\PureSin.cpp" />
     <ClCompile Include="instruments\Sawtooth.cpp" />
@@ -78,6 +79,7 @@
   <ItemGroup>
     <ClInclude Include="Deferred.h" />
     <ClInclude Include="Instrument.h" />
+    <ClInclude Include="instruments\BottleBlow.h" />
     <ClInclude Include="instruments\NaivePiano.h" />
     <ClInclude Include="instruments\PureSin.h" />
     <ClInclude Include="instruments\Sawtooth.h" />
