@@ -10,6 +10,7 @@
 BottleBlow::BottleBlow()
 {
 	srand((unsigned)time(NULL));
+	m_accelerate = false;
 }
 
 BottleBlow::~BottleBlow()
@@ -38,16 +39,17 @@ void BottleBlow::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteB
 	float out = 0.0f;
 	float Dout = 0.0f;
 
-	float FreqCut = 1.0f / 5000.0f;
+	//float FreqCut = 1.0f / 5000.0f;
+	float k = 0.02f;
+	float FreqCut = k*sampleFreq;
 	float a = powf(2 * PI, 2.0f)*sqrtf(powf(FreqCut, 4.0f) + powf(sampleFreq, 4.0f));
 	//float b = 2 * PI * powf(2.0f*(sqrtf(powf(FreqCut, 4.0f) + powf(sampleFreq, 4.0f)) - powf(sampleFreq, 2.0f)),0.5f);
 	float b = 2 * PI * FreqCut*FreqCut / sampleFreq;
 
-	float ampfac = sqrtf(sampleFreq);
+	float ampfac = powf(FreqCut, 1.5f);
 
 	for (j = 0; j < noteBuf->m_sampleNum; j++)
 	{
-		//float amplitude = sinf(PI*(float)j / noteBuf->m_sampleNum) ;
 		float x2 = ((float)j / (float)(noteBuf->m_sampleNum - 1));
 		float amplitude = 1.0f - powf(x2 - 0.5f, 3.0f)*8.0f;
 
