@@ -5,6 +5,7 @@ While the core code is written in C++, I added a python wrapper recently (2017/1
 
 The following python sample code with generate "FlyMeToTheMoon_just.wav", "fly me to the moon" in just intonation.
 
+```Python
 import os 
 import ScoreDraft
 from ScoreDraftNotes import *
@@ -156,6 +157,6 @@ doc.playSeq(seq2,0.5, ScoreDraft.NaivePiano)
 doc.mixDown('FlyMeToTheMoon_just.wav')
 
 os.system("pause") 
-
+```
 
 
