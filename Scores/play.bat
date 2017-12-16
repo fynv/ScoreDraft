@@ -1,1 +1,1 @@
-..\Release\ScoreDraft -play %1
+..\x64\Release\ScoreDraft -play %1

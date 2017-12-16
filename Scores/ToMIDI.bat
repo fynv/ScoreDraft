@@ -1,1 +1,1 @@
-..\Release\ScoreDraft -midi %1
+..\x64\Release\ScoreDraft -midi %1

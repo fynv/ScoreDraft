@@ -7,20 +7,40 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScoreDraftCore", "ScoreDraf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScoreDraft", "ScoreDraft\ScoreDraft.vcxproj", "{903285CD-7FF2-4682-A97B-54B6559E3CF1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyScoreDraft", "PyScoreDraft\PyScoreDraft.vcxproj", "{22AF9F78-5248-4230-B816-E3CF151FD826}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
 		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Debug|Win32.ActiveCfg = Debug|Win32
 		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Debug|Win32.Build.0 = Debug|Win32
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Debug|x64.ActiveCfg = Debug|x64
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Debug|x64.Build.0 = Debug|x64
 		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Release|Win32.ActiveCfg = Release|Win32
 		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Release|Win32.Build.0 = Release|Win32
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Release|x64.ActiveCfg = Release|x64
+		{80FE791F-1F8E-49B1-A2DC-76882BE560BE}.Release|x64.Build.0 = Release|x64
 		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Debug|Win32.ActiveCfg = Debug|Win32
 		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Debug|Win32.Build.0 = Debug|Win32
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Debug|x64.ActiveCfg = Debug|x64
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Debug|x64.Build.0 = Debug|x64
 		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Release|Win32.ActiveCfg = Release|Win32
 		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Release|Win32.Build.0 = Release|Win32
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Release|x64.ActiveCfg = Release|x64
+		{903285CD-7FF2-4682-A97B-54B6559E3CF1}.Release|x64.Build.0 = Release|x64
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Debug|Win32.ActiveCfg = Debug|Win32
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Debug|Win32.Build.0 = Debug|Win32
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Debug|x64.ActiveCfg = Debug|x64
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Debug|x64.Build.0 = Debug|x64
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Release|Win32.ActiveCfg = Release|Win32
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Release|Win32.Build.0 = Release|Win32
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Release|x64.ActiveCfg = Release|x64
+		{22AF9F78-5248-4230-B816-E3CF151FD826}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -149,7 +149,7 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 		m_WaveFormat.wBitsPerSample = 16;
 		m_WaveFormat.cbSize = 0;
 
-		waveOutOpen(&m_WaveOut,0, &m_WaveFormat,(DWORD)(SoundOutCallBack),(DWORD)m_BufferQueue,CALLBACK_FUNCTION); 
+		waveOutOpen(&m_WaveOut, 0, &m_WaveFormat, (DWORD_PTR)(SoundOutCallBack), (DWORD_PTR)m_BufferQueue, CALLBACK_FUNCTION);
 
 		m_WaveHeader1.lpData = (char *)m_Buffer1;
 		m_WaveHeader1.dwBufferLength = m_bufferSize*sizeof(short);

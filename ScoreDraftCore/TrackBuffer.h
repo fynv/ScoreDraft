@@ -7,7 +7,7 @@
 class TrackBuffer;
 typedef Deferred<TrackBuffer> TrackBuffer_deferred;
 
-class  TrackBuffer
+class TrackBuffer
 {
 public:
 	TrackBuffer(unsigned rate=44100);

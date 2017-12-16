@@ -16,7 +16,7 @@
 
 void Composite(const Document& doc, TrackBuffer& buffer)
 {
-	BottleBlow inst;
+	NaivePiano inst;
 
 	size_t numTracks = doc.m_tracks.size();
 	TrackBuffer_deferred *tracks = new TrackBuffer_deferred[numTracks];
@@ -140,9 +140,9 @@ int main(int argc, char *argv[])
 {
 	if (argc < 2)
 	{
-		test();
-		//AirBird_eq();
-		//AirBird_just();
+		//test();
+		AirBird_eq();
+		AirBird_just();
 		//FlyMeToTheMoon_just();
 		//FlyMeToTheMoon_eq();
 		//BBD();
@@ -233,8 +233,8 @@ void test()
 
 	Document doc;
 	doc.m_RefFreq = 264.0f;
-	doc.m_tempo = 150;
-	//doc.m_tempo = 80;
+	//doc.m_tempo = 150;
+	doc.m_tempo = 80;
 
 	CustomParser parser;
 	parser.Customize(7, names, freqs);
@@ -245,10 +245,10 @@ void test()
 	Track track2;
 	NoteSequence& seq2 = *track2.m_note_seq;
 
-	//parser.ParseSeq("do6.24 re6.24 mi6.144 fa6.12 mi6.12 re6.12 do6.12 re6.24 so6.120 fa6.24 mi6.24 do6.144", seq1);
+	parser.ParseSeq("do6.24 re6.24 mi6.144 fa6.12 mi6.12 re6.12 do6.12 re6.24 so6.120 fa6.24 mi6.24 do6.144", seq1);
 
-	parser.ParseSeq("so5.24 la5.24 ti5.24 do6.24 re6.24 mi6.24 fa6.72 mi6.24 re6.48 do6.48 so5.48 mi5.48 do5.48", seq1);
-	parser.ParseSeq("so4.144 BK144 ti4.144 BK144 re5.144 so4.144 BK144 re5.144 BK144 fa5.144 so4.48 BK48 do5.48 BK48 mi5.48 BL96 do4.48 BK48 so4.48",seq2);
+	//parser.ParseSeq("so5.24 la5.24 ti5.24 do6.24 re6.24 mi6.24 fa6.72 mi6.24 re6.48 do6.48 so5.48 mi5.48 do5.48", seq1);
+	//parser.ParseSeq("so4.144 BK144 ti4.144 BK144 re5.144 so4.144 BK144 re5.144 BK144 fa5.144 so4.48 BK48 do5.48 BK48 mi5.48 BL96 do4.48 BK48 so4.48",seq2);
 
 	doc.m_tracks.push_back(track1);
 	doc.m_tracks.push_back(track2);

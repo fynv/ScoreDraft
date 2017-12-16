@@ -170,9 +170,8 @@ void FlyMeToTheMoon_just()
 	parser.ParseSeq("BL96 ti5.24 re6.72", seq1);
 	parser.ParseSeq("so3.192 BK144 re4.48 fa4.48 ti4.48", seq2);
 
-	parser.ModifyFreq("fa", 11.0f / 8.0f);
-	parser.ParseSeq("do6.384", seq1);
-	parser.ParseSeq("do3.384 BK360 so3.360 BK336 do4.336 BK312 mi4.312 BK288 so4.288 BK264 -ti4.264 BK240 do5.240 BK216 re5.216 BK192 mi5.192 BK168 fa5.168 BK144 so5.144", seq2);
+	parser.ParseSeq("do6.192", seq1);
+	parser.ParseSeq("do3.192 BK180 so3.180 BK168 do4.168 BK156 mi4.156 BK144 so4.144 BK132 do5.132", seq2);
 
 
 	doc.m_tracks.push_back(track1);
