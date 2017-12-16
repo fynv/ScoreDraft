@@ -1,9 +1,9 @@
 ScoreDraft
 ================
-A simple software music synthesizer and text-based score authoring. Used for music experiments. 
+A simple software music synthesizer and text/script based score authoring. Used for music experiments. 
 While the core code is written in C++, I added a python wrapper recently (2017/12/16).
 
-The following python sample code with generate "FlyMeToTheMoon_just.wav", "fly me to the moon" in just intonation.
+The following python sample code will generate "FlyMeToTheMoon_just.wav", "fly me to the moon" in just intonation.
 
 ```Python
 import os 
