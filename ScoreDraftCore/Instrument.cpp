@@ -39,11 +39,15 @@ public:
 
 class NoteTable : public std::vector<NoteBufferItem*> {};
 
+#include <cmath>
+#include <time.h>
 Instrument::Instrument()
 {
 	m_accelerate=true;
 	//m_accelerate=false;
 	m_NoteTable=new NoteTable;
+
+	srand((unsigned)time(NULL));
 }
 
 Instrument::~Instrument()
@@ -68,13 +72,23 @@ void Instrument::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteB
 	Silence(numOfSamples,noteBuf);
 }
 
+
+inline float rand01()
+{
+	float f = (float)rand() / (float)RAND_MAX;
+	if (f < 0.0000001f) f = 0.0000001f;
+	if (f > 0.9999999f) f = 0.9999999f;
+	return f;
+}
+
 void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo, float RefFreq)
 {
 	NoteBuffer l_noteBuf;
 	NoteBuffer *noteBuf=&l_noteBuf;
 
 	float fduration=fabsf((float)(aNote.m_duration*60))/(float)(tempo*48);
-	unsigned numOfSamples=(unsigned)(buffer.Rate()*fduration);
+	float fNumOfSamples = buffer.Rate()*fduration;
+	unsigned numOfSamples = (unsigned)(fNumOfSamples)+ ((fNumOfSamples - floorf(fNumOfSamples) > rand01())?1:0);
 
 	bool bufferFilled=false;
 	if (aNote.m_freq_rel<0.0f)
