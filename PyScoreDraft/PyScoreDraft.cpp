@@ -52,7 +52,7 @@ template<class T_Instrument>
 static PyObject* t_InitInstrument(PyObject *self, PyObject *args)
 {
 	s_lastInstrumentId++;
-	s_InstrumentMap[s_lastInstrumentId] = Instrument_deferred(new T_Instrument);
+	s_InstrumentMap[s_lastInstrumentId] = Instrument_deferred::Instance<T_Instrument>();
 	return PyLong_FromUnsignedLong(s_lastInstrumentId);
 }
 

@@ -30,14 +30,14 @@ void NoteBuffer::Allocate()
 	m_data=new float[m_sampleNum];
 }
 
-class NoteBufferItem
+class NoteTableItem
 {
 public:
 	Note m_note;
 	NoteBuffer m_noteBuffer;
 };
 
-class NoteTable : public std::vector<NoteBufferItem*> {};
+class NoteTable : public std::vector<NoteTableItem*> {};
 
 #include <cmath>
 #include <time.h>
@@ -71,7 +71,6 @@ void Instrument::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteB
 {
 	Silence(numOfSamples,noteBuf);
 }
-
 
 inline float rand01()
 {
@@ -123,10 +122,10 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 			}
 			if (i==m_NoteTable->size())
 			{
-				NoteBufferItem* nbi=new NoteBufferItem;
-				nbi->m_note=aNote;
-				noteBuf=&nbi->m_noteBuffer;
-				m_NoteTable->push_back(nbi);
+				NoteTableItem* nti=new NoteTableItem;
+				nti->m_note = aNote;
+				noteBuf = &nti->m_noteBuffer;
+				m_NoteTable->push_back(nti);
 			}
 		}
 

@@ -11,10 +11,6 @@ public:
 	{
 		m->addRef();
 	}
-	Deferred(T* t) : m(new Deferred<T>::Internal(t))
-	{
-		m->addRef();
-	}
 	Deferred(const Deferred & in) : m(in.m)
 	{
 		if (m != NULL) m->addRef();
@@ -38,6 +34,19 @@ public:
 	operator T*() { return m->t; }
 	operator const T*() const { return m->t; }
 
+	template <class SubClass>
+	static Deferred<T> Instance()
+	{
+		SubClass* dummy=0;
+		return Deferred<T>(dummy);
+	}
+
+private:
+	template <class SubClass>
+	Deferred(SubClass* t) : m(new Deferred<T>::Internal(t))
+	{
+		m->addRef();
+	}
 	class Internal : public RefCounted 
 	{
 	public:
@@ -46,10 +55,13 @@ public:
 		{
 			t = new T;
 		}
-		Internal(T* t)
+	
+		template <class SubClass>
+		Internal(SubClass* dummy)
 		{
-			this->t = t;
+			t = new SubClass;
 		}
+
 		~Internal()
 		{
 			delete t;
