@@ -123,6 +123,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Beat.cpp" />
     <ClCompile Include="Instrument.cpp" />
     <ClCompile Include="instruments\BottleBlow.cpp" />
     <ClCompile Include="instruments\NaivePiano.cpp" />
@@ -131,9 +132,12 @@
     <ClCompile Include="instruments\Square.cpp" />
     <ClCompile Include="instruments\Triangle.cpp" />
     <ClCompile Include="Note.cpp" />
+    <ClCompile Include="Percussion.cpp" />
+    <ClCompile Include="percussions\TestPerc.cpp" />
     <ClCompile Include="TrackBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Beat.h" />
     <ClInclude Include="Deferred.h" />
     <ClInclude Include="Instrument.h" />
     <ClInclude Include="instruments\BottleBlow.h" />
@@ -143,6 +147,8 @@
     <ClInclude Include="instruments\Square.h" />
     <ClInclude Include="instruments\Triangle.h" />
     <ClInclude Include="Note.h" />
+    <ClInclude Include="Percussion.h" />
+    <ClInclude Include="percussions\TestPerc.h" />
     <ClInclude Include="RefCounted.h" />
     <ClInclude Include="TrackBuffer.h" />
   </ItemGroup>

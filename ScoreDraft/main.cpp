@@ -10,6 +10,9 @@
 #include "instruments/NaivePiano.h"
 #include "instruments/BottleBlow.h"
 
+#include "Beat.h"
+#include "percussions/TestPerc.h"
+
 #include "WinPCMPlayer.h"
 #include "WinWavWriter.h"
 #include "MIDIWriter.h"
@@ -137,17 +140,21 @@ void FlyMeToTheMoon_just();
 void FlyMeToTheMoon_eq();
 
 void BBD();
+void TestPercussion();
 
 int main(int argc, char *argv[])
 {
 	if (argc < 2)
 	{
 		//test();
-		AirBird_eq();
-		AirBird_just();
+		//AirBird_eq();
+		//AirBird_just();
 		//FlyMeToTheMoon_just();
 		//FlyMeToTheMoon_eq();
 		//BBD();
+
+		TestPercussion();
+
 		return 0;
 	}
 
@@ -324,4 +331,29 @@ void BBD()
 
 	WriteToWav(tb, "BBD.wav");
 
+}
+
+void TestPercussion()
+{
+	BeatSequence seq;
+	seq.resize(10);
+
+	for (int i = 0; i < 5; i++)
+	{
+		seq[i * 2].m_PercId = 0;
+		seq[i * 2].m_duration = 48;
+
+		seq[i * 2+1].m_PercId = -1;
+		seq[i * 2+1].m_duration = 48;
+	}
+
+	TrackBuffer tb;
+
+	Percussion_deferred percList[1];
+	percList[0] = Percussion_deferred::Instance<TestPerc>();
+
+	Percussion::PlayBeats(tb, percList, seq);
+	tb.SetVolume(1.0f / tb.MaxValue());
+
+	WriteToWav(tb, "perc.wav");
 }

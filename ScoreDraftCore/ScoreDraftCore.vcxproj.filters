@@ -19,6 +19,12 @@
     <Filter Include="Source Files\instruments">
       <UniqueIdentifier>{76a9cbf2-b138-457d-be91-5e256ad4ac9a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\percussions">
+      <UniqueIdentifier>{bc6373e4-2a89-4730-bdf2-47e309a2e1fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\percussions">
+      <UniqueIdentifier>{c2104520-e481-4ca4-a696-cd70adfdbcfd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Instrument.cpp">
@@ -47,6 +53,15 @@
     </ClCompile>
     <ClCompile Include="instruments\Triangle.cpp">
       <Filter>Source Files\instruments</Filter>
+    </ClCompile>
+    <ClCompile Include="Percussion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Beat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="percussions\TestPerc.cpp">
+      <Filter>Source Files\percussions</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -82,6 +97,15 @@
     </ClInclude>
     <ClInclude Include="instruments\Triangle.h">
       <Filter>Header Files\instruments</Filter>
+    </ClInclude>
+    <ClInclude Include="Percussion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Beat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="percussions\TestPerc.h">
+      <Filter>Header Files\percussions</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
