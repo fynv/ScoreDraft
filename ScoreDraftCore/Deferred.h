@@ -11,6 +11,10 @@ public:
 	{
 		m->addRef();
 	}
+	Deferred(T* t) : m(new Deferred<T>::Internal(t))
+	{
+		m->addRef();
+	}
 	Deferred(const Deferred & in) : m(in.m)
 	{
 		if (m != NULL) m->addRef();
@@ -28,13 +32,29 @@ public:
 		m = in.m;
 	}
 
-	T* operator -> () { return m; }
-	const T* operator -> () const { return m; }
+	T* operator -> () { return m->t; }
+	const T* operator -> () const { return m->t; }
 
-	operator T*() { return m; }
-	operator const T*() const { return m; }
+	operator T*() { return m->t; }
+	operator const T*() const { return m->t; }
 
-	class Internal : public RefCounted, public T {};
+	class Internal : public RefCounted 
+	{
+	public:
+		T* t;
+		Internal()
+		{
+			t = new T;
+		}
+		Internal(T* t)
+		{
+			this->t = t;
+		}
+		~Internal()
+		{
+			delete t;
+		}
+	};
 	Internal* m;
 };
 

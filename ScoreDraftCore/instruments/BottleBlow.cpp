@@ -3,13 +3,11 @@
 #include "TrackBuffer.h"
 
 #include <cmath>
-#include <time.h>
 
 #define PI 3.14159265359f
 
 BottleBlow::BottleBlow()
 {
-	srand((unsigned)time(NULL));
 	m_accelerate = false;
 }
 

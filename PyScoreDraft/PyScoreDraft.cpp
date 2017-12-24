@@ -23,6 +23,10 @@ typedef std::vector<TrackBuffer_deferred> TrackBuferList;
 static unsigned s_lastTrackBufferListId = 0;
 static map<unsigned, TrackBuferList> s_TrackBufferListMap;
 
+typedef Deferred<Instrument> Instrument_deferred;
+static unsigned s_lastInstrumentId = 0;
+static map<unsigned, Instrument_deferred> s_InstrumentMap;
+
 static PyObject* InitNoteSequence(PyObject *self, PyObject *args)
 {
 	s_lastNoteSequenceId++;
@@ -42,23 +46,32 @@ static PyObject* AddNoteToSequence(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
-template<class Instrument>
-static PyObject* t_Play(PyObject *self, PyObject *args)
+template<class T_Instrument>
+static PyObject* t_InitInstrument(PyObject *self, PyObject *args)
 {
+	s_lastInstrumentId++;
+	s_InstrumentMap[s_lastInstrumentId] = Instrument_deferred(new T_Instrument);
+	return PyLong_FromUnsignedLong(s_lastInstrumentId);
+}
+
+static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
+{
+	unsigned InstrumentId;
 	unsigned SeqId;
 	float volume;
 	unsigned tempo;
 	float RefFreq;
 
-	if (!PyArg_ParseTuple(args, "IfIf", &SeqId, &volume, &tempo, &RefFreq))
+	if (!PyArg_ParseTuple(args, "IIfIf", &InstrumentId, &SeqId, &volume, &tempo, &RefFreq))
 		return NULL;
+
+	Instrument_deferred instrument = s_InstrumentMap[InstrumentId];
 
 	NoteSequence_deferred seq = s_NoteSequenceMap[SeqId];
 	s_lastTrackBufferId++;
 	TrackBuffer_deferred buffer = s_TrackBufferMap[s_lastTrackBufferId];
 
-	Instrument inst;
-	inst.PlayNotes(*buffer, *seq, tempo, RefFreq);
+	instrument->PlayNotes(*buffer, *seq, tempo, RefFreq);
 
 	float maxV = buffer->MaxValue();
 	buffer->SetVolume(volume / maxV);
@@ -66,6 +79,19 @@ static PyObject* t_Play(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong(s_lastTrackBufferId);
 }
 
+static PyObject* InstrumentTune(PyObject *self, PyObject *args)
+{
+	unsigned InstrumentId;
+	const char* nob;
+	float value;
+
+	if (!PyArg_ParseTuple(args, "Isf", &InstrumentId, &nob, &value))
+		return NULL;
+
+	Instrument_deferred instrument = s_InstrumentMap[InstrumentId];
+	instrument->Tune(nob, value);
+	return PyLong_FromLong(0);
+}
 
 static PyObject* InitTrackBufferList(PyObject *self, PyObject *args)
 {
@@ -133,26 +159,38 @@ static PyMethodDef PyScoreDraftMethods[] = {
 		""
 	},
 	{
-		"PureSinPlay",
-		t_Play<PureSin>,
+		"InitPureSin",
+		t_InitInstrument<PureSin>,
 		METH_VARARGS,
 		""
 	},
 	{
-		"SawtoothPlay",
-		t_Play<Sawtooth>,
+		"InitSawtooth",
+		t_InitInstrument<Sawtooth>,
 		METH_VARARGS,
 		""
 	},
 	{
-		"NaivePianoPlay",
-		t_Play<NaivePiano>,
+		"InitNaivePiano",
+		t_InitInstrument<NaivePiano>,
 		METH_VARARGS,
 		""
 	},
 	{
-		"BottleBlowPlay",
-		t_Play<BottleBlow>,
+		"InitBottleBlow",
+		t_InitInstrument<BottleBlow>,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InstrumentPlay",
+		InstrumentPlay,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InstrumentTune",
+		InstrumentTune,
 		METH_VARARGS,
 		""
 	},
