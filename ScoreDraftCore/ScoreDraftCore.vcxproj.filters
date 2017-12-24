@@ -42,6 +42,12 @@
     <ClCompile Include="instruments\BottleBlow.cpp">
       <Filter>Source Files\instruments</Filter>
     </ClCompile>
+    <ClCompile Include="instruments\Square.cpp">
+      <Filter>Source Files\instruments</Filter>
+    </ClCompile>
+    <ClCompile Include="instruments\Triangle.cpp">
+      <Filter>Source Files\instruments</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TrackBuffer.h">
@@ -69,6 +75,12 @@
       <Filter>Header Files\instruments</Filter>
     </ClInclude>
     <ClInclude Include="instruments\BottleBlow.h">
+      <Filter>Header Files\instruments</Filter>
+    </ClInclude>
+    <ClInclude Include="instruments\Square.h">
+      <Filter>Header Files\instruments</Filter>
+    </ClInclude>
+    <ClInclude Include="instruments\Triangle.h">
       <Filter>Header Files\instruments</Filter>
     </ClInclude>
   </ItemGroup>

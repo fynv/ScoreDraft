@@ -12,8 +12,14 @@ class Instrument:
 def PureSin():
 	return Instrument(PyScoreDraft.InitPureSin)
 
+def Square():
+	return Instrument(PyScoreDraft.InitSquare)
+
 def SawTooth():
 	return Instrument(PyScoreDraft.InitSawTooth)
+
+def Triangle():
+	return Instrument(PyScoreDraft.InitTriangle)
 
 def NaivePiano():
 	return Instrument(PyScoreDraft.InitNaivePiano)

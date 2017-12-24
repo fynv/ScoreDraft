@@ -3,7 +3,9 @@
 #include <Deferred.h>
 #include "TrackBuffer.h"
 #include "instruments/PureSin.h"
+#include "instruments/Square.h"
 #include "instruments/Sawtooth.h"
+#include "instruments/Triangle.h"
 #include "instruments/NaivePiano.h"
 #include "instruments/BottleBlow.h"
 #include "WinWavWriter.h"
@@ -161,6 +163,18 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"InitPureSin",
 		t_InitInstrument<PureSin>,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InitSquare",
+		t_InitInstrument<Square>,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InitTriangle",
+		t_InitInstrument<Triangle>,
 		METH_VARARGS,
 		""
 	},

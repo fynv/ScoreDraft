@@ -4,7 +4,9 @@
 #include "Note.h"
 #include "TrackBuffer.h"
 #include "instruments/PureSin.h"
+#include "instruments/Square.h"
 #include "instruments/Sawtooth.h"
+#include "instruments/Triangle.h"
 #include "instruments/NaivePiano.h"
 #include "instruments/BottleBlow.h"
 

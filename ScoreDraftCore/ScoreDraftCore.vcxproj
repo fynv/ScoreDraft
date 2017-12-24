@@ -128,6 +128,8 @@
     <ClCompile Include="instruments\NaivePiano.cpp" />
     <ClCompile Include="instruments\PureSin.cpp" />
     <ClCompile Include="instruments\Sawtooth.cpp" />
+    <ClCompile Include="instruments\Square.cpp" />
+    <ClCompile Include="instruments\Triangle.cpp" />
     <ClCompile Include="Note.cpp" />
     <ClCompile Include="TrackBuffer.cpp" />
   </ItemGroup>
@@ -138,6 +140,8 @@
     <ClInclude Include="instruments\NaivePiano.h" />
     <ClInclude Include="instruments\PureSin.h" />
     <ClInclude Include="instruments\Sawtooth.h" />
+    <ClInclude Include="instruments\Square.h" />
+    <ClInclude Include="instruments\Triangle.h" />
     <ClInclude Include="Note.h" />
     <ClInclude Include="RefCounted.h" />
     <ClInclude Include="TrackBuffer.h" />
