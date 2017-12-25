@@ -120,7 +120,15 @@ void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 	}
 
 	buffer.WriteBlend(beatBuf->m_sampleNum, beatBuf->m_data);
-	buffer.SeekSample(numOfSamples - beatBuf->m_sampleNum, SEEK_CUR);
+
+
+	if (numOfSamples < beatBuf->m_sampleNum)
+		buffer.SeekSample(numOfSamples - beatBuf->m_sampleNum, SEEK_CUR);
+	else if (numOfSamples > beatBuf->m_sampleNum)
+	{
+		Silence(numOfSamples - beatBuf->m_sampleNum, &l_beatBuf);
+		buffer.WriteBlend(l_beatBuf.m_sampleNum, l_beatBuf.m_data);
+	}
 }
 
 void Percussion::PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo)
@@ -135,7 +143,6 @@ void Percussion::PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo)
 	Silence(numOfSamples, beatBuf);
 
 	buffer.WriteBlend(beatBuf->m_sampleNum, beatBuf->m_data);
-	buffer.SeekSample(numOfSamples - beatBuf->m_sampleNum, SEEK_CUR);
 }
 
 void Percussion::PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo)

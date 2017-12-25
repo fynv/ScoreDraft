@@ -138,8 +138,15 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 	}
 	
 	buffer.WriteBlend(noteBuf->m_sampleNum,noteBuf->m_data);
-	buffer.SeekSample(numOfSamples-noteBuf->m_sampleNum,SEEK_CUR);
-	
+
+	if (numOfSamples < noteBuf->m_sampleNum)
+		buffer.SeekSample(numOfSamples-noteBuf->m_sampleNum,SEEK_CUR);
+	else if (numOfSamples > noteBuf->m_sampleNum)
+	{
+		Silence(numOfSamples - noteBuf->m_sampleNum, &l_noteBuf);
+		buffer.WriteBlend(l_noteBuf.m_sampleNum, l_noteBuf.m_data);
+	}
+		
 }
 
 void Instrument::PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigned tempo, float RefFreq)
