@@ -95,8 +95,8 @@ seq2 = seq2 + [do(3,192), BK(180), so(3,180), BK(168), do(4,168), BK(156), mi(4,
 
 instrument=ScoreDraft.NaivePiano()
 
-doc.playSeq(seq1, instrument, 1.0)
-doc.playSeq(seq2, instrument, 1.0)
+doc.playNoteSeq(seq1, instrument, 1.0)
+doc.playNoteSeq(seq2, instrument, 1.0)
 doc.mixDown('FlyMeToTheMoon_eq.wav')
 
 os.system("pause") 
