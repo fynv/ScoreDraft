@@ -21,6 +21,12 @@ public:
 		m = NULL;
 	}
 
+	void Abondon()
+	{
+		if (m != NULL) m->release();
+		m = NULL;
+	}
+
 	void operator=(const Deferred & in)
 	{
 		if (in.m != NULL) in.m->addRef();
@@ -28,11 +34,28 @@ public:
 		m = in.m;
 	}
 
-	T* operator -> () { return m->t; }
-	const T* operator -> () const { return m->t; }
+	T* operator -> () 
+	{ 
+		if (m == NULL) return NULL;
+		return m->t; 
+	}
+	const T* operator -> () const 
+	{ 
+		if (m == NULL) return NULL;
+		return m->t; 
+	}
 
-	operator T*() { return m->t; }
-	operator const T*() const { return m->t; }
+	operator T*() 
+	{ 
+		if (m == NULL) return NULL;
+		return m->t; 
+	}
+
+	operator const T*() const 
+	{ 
+		if (m == NULL) return NULL;
+		return m->t; 
+	}
 
 	template <class SubClass>
 	static Deferred<T> Instance()

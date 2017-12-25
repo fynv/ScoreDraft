@@ -16,37 +16,37 @@
 typedef Deferred<NoteSequence> NoteSequence_deferred;
 typedef Deferred<BeatSequence> BeatSequence_deferred;
 
-#include <map>
-using namespace std;
+#include <vector>
 
-static unsigned s_lastNoteSequenceId = 0;
-static map<unsigned, NoteSequence_deferred> s_NoteSequenceMap;
+static unsigned s_lastNoteSequenceId = -1;
+static std::vector<NoteSequence_deferred> s_NoteSequenceMap;
 
-static unsigned s_lastBeatSequenceId = 0;
-static map<unsigned, BeatSequence_deferred> s_BeatSequenceMap;
+static unsigned s_lastBeatSequenceId = -1;
+static std::vector<BeatSequence_deferred> s_BeatSequenceMap;
 
-static unsigned s_lastTrackBufferId = 0;
-static map<unsigned, TrackBuffer_deferred> s_TrackBufferMap;
+static unsigned s_lastTrackBufferId = -1;
+static std::vector<TrackBuffer_deferred> s_TrackBufferMap;
 
 typedef std::vector<TrackBuffer_deferred> TrackBufferList;
-static unsigned s_lastTrackBufferListId = 0;
-static map<unsigned, TrackBufferList> s_TrackBufferListMap;
+static unsigned s_lastTrackBufferListId = -1;
+static std::vector<TrackBufferList> s_TrackBufferListMap;
 
 typedef Deferred<Instrument> Instrument_deferred;
-static unsigned s_lastInstrumentId = 0;
-static map<unsigned, Instrument_deferred> s_InstrumentMap;
+static unsigned s_lastInstrumentId = -1;
+static std::vector<Instrument_deferred> s_InstrumentMap;
 
 typedef Deferred<Percussion> Percussion_deferred;
-static unsigned s_lastPercussionId = 0;
-static map<unsigned, Percussion_deferred> s_PercussionMap;
+static unsigned s_lastPercussionId = -1;
+static std::vector<Percussion_deferred> s_PercussionMap;
 
 typedef std::vector<Percussion_deferred> PercussionList;
-static unsigned s_lastPercussionListId = 0;
-static map<unsigned, PercussionList> s_PercussionListMap;
+static unsigned s_lastPercussionListId = -1;
+static std::vector<PercussionList> s_PercussionListMap;
 
 static PyObject* InitNoteSequence(PyObject *self, PyObject *args)
 {
 	s_lastNoteSequenceId++;
+	s_NoteSequenceMap.push_back(NoteSequence_deferred());
 	return PyLong_FromUnsignedLong(s_lastNoteSequenceId);
 }
 
@@ -66,6 +66,7 @@ static PyObject* AddNoteToSequence(PyObject *self, PyObject *args)
 static PyObject* InitBeatSequence(PyObject *self, PyObject *args)
 {
 	s_lastBeatSequenceId++;
+	s_BeatSequenceMap.push_back(BeatSequence_deferred());
 	return PyLong_FromUnsignedLong(s_lastBeatSequenceId);
 }
 
@@ -87,7 +88,7 @@ template<class T_Instrument>
 static PyObject* t_InitInstrument(PyObject *self, PyObject *args)
 {
 	s_lastInstrumentId++;
-	s_InstrumentMap[s_lastInstrumentId] = Instrument_deferred::Instance<T_Instrument>();
+	s_InstrumentMap.push_back(Instrument_deferred::Instance<T_Instrument>());
 	return PyLong_FromUnsignedLong(s_lastInstrumentId);
 }
 
@@ -106,7 +107,8 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 
 	NoteSequence_deferred seq = s_NoteSequenceMap[SeqId];
 	s_lastTrackBufferId++;
-	TrackBuffer_deferred buffer = s_TrackBufferMap[s_lastTrackBufferId];
+	TrackBuffer_deferred buffer;
+	s_TrackBufferMap.push_back(buffer);
 
 	instrument->PlayNotes(*buffer, *seq, tempo, RefFreq);
 
@@ -135,7 +137,7 @@ template<class T_Percussion>
 static PyObject* t_InitPercussion(PyObject *self, PyObject *args)
 {
 	s_lastPercussionId++;
-	s_PercussionMap[s_lastPercussionId] = Percussion_deferred::Instance<T_Percussion>();
+	s_PercussionMap.push_back(Percussion_deferred::Instance<T_Percussion>());
 	return PyLong_FromUnsignedLong(s_lastPercussionId);
 }
 
@@ -143,6 +145,7 @@ static PyObject* t_InitPercussion(PyObject *self, PyObject *args)
 static PyObject* InitPercussionList(PyObject *self, PyObject *args)
 {
 	s_lastPercussionListId++;
+	s_PercussionListMap.push_back(PercussionList());
 	return PyLong_FromUnsignedLong(s_lastPercussionListId);
 }
 
@@ -176,7 +179,8 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 
 	BeatSequence_deferred seq = s_BeatSequenceMap[SeqId];
 	s_lastTrackBufferId++;
-	TrackBuffer_deferred buffer = s_TrackBufferMap[s_lastTrackBufferId];
+	TrackBuffer_deferred buffer;
+	s_TrackBufferMap.push_back(buffer);
 
 	Percussion::PlayBeats(*buffer, percList.data(), *seq, tempo);
 
@@ -203,6 +207,7 @@ static PyObject* PercussionTune(PyObject *self, PyObject *args)
 static PyObject* InitTrackBufferList(PyObject *self, PyObject *args)
 {
 	s_lastTrackBufferListId++;
+	s_TrackBufferListMap.push_back(TrackBufferList());
 	return PyLong_FromUnsignedLong(s_lastTrackBufferListId);
 }
 
@@ -229,7 +234,8 @@ static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 
 	TrackBufferList& list = s_TrackBufferListMap[BufferListId];
 	s_lastTrackBufferId++;
-	TrackBuffer_deferred buffer = s_TrackBufferMap[s_lastTrackBufferId];
+	TrackBuffer_deferred buffer;
+	s_TrackBufferMap.push_back(buffer);
 
 	TrackBuffer::CombineTracks(*buffer, (unsigned)list.size(), list.data());
 	float maxV = buffer->MaxValue();
