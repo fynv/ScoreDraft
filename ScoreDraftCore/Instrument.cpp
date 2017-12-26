@@ -151,11 +151,11 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 
 void Instrument::PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigned tempo, float RefFreq)
 {
-	unsigned i;
+	int i;
 	int prog=0;
-	for (i=0;i<seq.size();i++)
+	for (i=0;i<(int)seq.size();i++)
 	{
-		int newprog = (i + 1) * 10 / seq.size();
+		int newprog = (i + 1) * 10 / (int)seq.size();
 		if (newprog>prog)
 		{
 			printf("-");

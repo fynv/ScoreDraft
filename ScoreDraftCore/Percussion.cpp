@@ -160,11 +160,11 @@ void Percussion::PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo
 
 void Percussion::PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionList, const BeatSequence& seq, unsigned tempo)
 {
-	unsigned i;
+	int i;
 	int prog = 0;
-	for (i = 0; i<seq.size(); i++)
+	for (i = 0; i<(int)seq.size(); i++)
 	{
-		int newprog = (i + 1) * 10 / seq.size();
+		int newprog = (i + 1) * 10 / (int)seq.size();
 		if (newprog>prog)
 		{
 			printf("-");

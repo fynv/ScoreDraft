@@ -136,7 +136,7 @@ bool Parser::ParseSeq(const char* strSeq, NoteSequence& seq, char* errMsg)
 	{
 		const NoteSequence* subSeq = m_nst->FindNoteSequence(subStrings[i]);
 		IsNote[i] = (subSeq == 0);
-		if (subSeq) NumOfNotes += subSeq->size();
+		if (subSeq) NumOfNotes += (unsigned)subSeq->size();
 		else NumOfNotes++;
 	}
 	size_t originalSize = seq.size();
@@ -286,7 +286,7 @@ bool Parser::ParseTrack(const char* strTrack, char* errMsg)
 bool Parser::ParseLine(const char* strLine, char* errMsg)
 {
 	string stringLine = strLine;
-	int notation = stringLine.find_first_of('#');
+	int notation = (int) stringLine.find_first_of('#');
 	if (notation>=0)
 	{
 		stringLine = string(strLine, notation);

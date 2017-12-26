@@ -32,7 +32,7 @@ void Composite(const Document& doc, TrackBuffer& buffer)
 		tracks[i]->SetVolume(doc.m_tracks[i].m_vol);
 	}
 
-	TrackBuffer::CombineTracks(buffer, numTracks, tracks);
+	TrackBuffer::CombineTracks(buffer, (unsigned)numTracks, tracks);
 
 	float maxV = buffer.MaxValue();
 	buffer.SetVolume(1.0f / maxV);

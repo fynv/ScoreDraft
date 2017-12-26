@@ -91,7 +91,7 @@ bool CustomParser::ParseSeq(const char* strSeq, NoteSequence& seq, char* errMsg)
 		strSeq = strstr(strSeq, subStr) + strlen(subStr);
 	}
 
-	unsigned NumOfNotes = subStrings.size();
+	unsigned NumOfNotes = (unsigned)subStrings.size();
 	size_t originalSize = seq.size();
 	seq.resize(NumOfNotes + originalSize);
 

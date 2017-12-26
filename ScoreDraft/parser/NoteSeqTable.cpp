@@ -24,7 +24,7 @@ bool NoteSeqTable::AddNoteSequence(string name, const NoteSequence_deferred& seq
 
 const NoteSequence* NoteSeqTable::FindNoteSequence(string name)
 {
-	unsigned size=m_list.size();
+	unsigned size = (unsigned)m_list.size();
 	unsigned i;
 	for (i=0;i<size;i++)
 	{
