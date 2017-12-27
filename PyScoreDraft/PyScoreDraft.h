@@ -79,6 +79,8 @@ protected:
 	std::vector<PercussionInitializer*> m_PercussionInitializers;
 };
 
+#define PY_SCOREDRAFT_EXTENSION_INTERFACE extern "C" __declspec(dllexport) InstrumentFactory*
+
 
 #endif
 

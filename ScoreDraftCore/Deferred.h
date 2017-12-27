@@ -64,6 +64,13 @@ public:
 		return Deferred<T>(dummy);
 	}
 
+	template <class SubClass>
+	SubClass* DownCast()
+	{
+		if (m == NULL) return NULL;
+		return (SubClass*)m->t;
+	}
+
 private:
 	template <class SubClass>
 	Deferred(SubClass* t) : m(new Deferred<T>::Internal(t))

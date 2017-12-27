@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <Windows.h>
 #include "PyScoreDraft.h"
 #include <Note.h>
 #include <Deferred.h>
@@ -79,6 +80,38 @@ static void RegisterFactories()
 {
 	TypicalInstrumentFactory* defaultFactory = GetDefaultFactory();
 	RegisterFactory(defaultFactory);
+
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+
+	hFind = FindFirstFileA("Extensions\\*.dll", &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) return;
+
+	do
+	{
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+
+		char path[1024];
+		sprintf(path, "Extensions\\%s", ffd.cFileName);
+
+		HINSTANCE hinstLib;
+		hinstLib = LoadLibraryA(path);
+
+		typedef InstrumentFactory*(GetFacFunc)();
+		GetFacFunc* getFacFunc;
+
+		if (hinstLib != NULL)
+		{
+			getFacFunc = (GetFacFunc*)GetProcAddress(hinstLib, "GetFactory");
+			if (getFacFunc != NULL)
+			{
+				InstrumentFactory* fac = getFacFunc();
+				RegisterFactory(fac);
+			}
+		}
+
+	} while (FindNextFile(hFind, &ffd) != 0);
+
 	FactoriesRegistered = true;
 }
 
@@ -156,7 +189,6 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 
 	TrackBuffer_deferred buffer;
 	s_TrackBufferMap.push_back(buffer);
-
 	Percussion::PlayBeats(*buffer, perc_List, seq, tempo);
 
 	float maxV = buffer->MaxValue();

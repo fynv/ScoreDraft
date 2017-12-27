@@ -171,6 +171,7 @@ void Percussion::PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionL
 			prog = newprog;
 		}
 		const Beat& beat = seq[i];
+	
 		if (beat.m_PercId >= 0)
 			percussionList[beat.m_PercId]->PlayBeat(buffer, beat.m_duration, tempo);
 		else if (beat.m_duration >= 0)

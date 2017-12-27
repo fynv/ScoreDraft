@@ -1,6 +1,6 @@
 #include "TrackBuffer.h"
 #include <memory.h>
-
+#include <cmath>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -170,7 +170,7 @@ float TrackBuffer::MaxValue()
 
 	float maxValue=Sample(0);
 	for (i=1;i<num;i++)
-		maxValue=max(maxValue,Sample(i));
+		maxValue=max(maxValue, fabsf(Sample(i)));
 	
 	return maxValue;
 }

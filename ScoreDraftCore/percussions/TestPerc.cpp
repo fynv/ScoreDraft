@@ -31,7 +31,7 @@ void TestPerc::GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, floa
 		float x2 = ((float)j / (float)(beatBuf->m_sampleNum - 1));
 		float amplitude = 1.0f - powf(x2 - 0.5f, 3.0f)*8.0f;
 
-		beatBuf->m_data[j] = amplitude*wave;
+		beatBuf->m_data[j] = amplitude*wave/8000.0f;
 
 		float sign1 = wave > 0.0f ? 1.0f : -1.0f;
 		float sign2 = Dwave > 0.0f ? 1.0f : -1.0f;
