@@ -15,10 +15,8 @@ doc=ScoreDraft.Document()
 seq = [dong(), Bl(), dong(), Bl(), dong(), Bl(),dong(), Bl(),dong(), Bl(),dong(), Bl()]
 
 perc=ScoreDraft.TestPerc()
-percList=ScoreDraft.PercussionList()
-percList.add(perc)
 
-doc.playBeatSeq(seq, percList, 1.0)
+doc.playBeatSeq(seq, [perc], 1.0)
 doc.mixDown('test_perc.wav')
 
 os.system("pause") 

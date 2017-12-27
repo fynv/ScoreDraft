@@ -1,4 +1,5 @@
 #include <Python.h>
+#include "PyScoreDraft.h"
 #include <Note.h>
 #include <Deferred.h>
 #include "TrackBuffer.h"
@@ -13,109 +14,103 @@
 #include <Beat.h>
 #include "percussions/TestPerc.h"
 
-typedef Deferred<NoteSequence> NoteSequence_deferred;
-typedef Deferred<BeatSequence> BeatSequence_deferred;
-
 #include <vector>
 
-static unsigned s_lastNoteSequenceId = -1;
-static std::vector<NoteSequence_deferred> s_NoteSequenceMap;
-
-static unsigned s_lastBeatSequenceId = -1;
-static std::vector<BeatSequence_deferred> s_BeatSequenceMap;
-
-static unsigned s_lastTrackBufferId = -1;
+static std::vector<Instrument_deferred> s_InstrumentMap;
+static std::vector<Percussion_deferred> s_PercussionMap;
 static std::vector<TrackBuffer_deferred> s_TrackBufferMap;
 
-typedef std::vector<TrackBuffer_deferred> TrackBufferList;
-static unsigned s_lastTrackBufferListId = -1;
-static std::vector<TrackBufferList> s_TrackBufferListMap;
+static std::vector<std::string> s_AllInstruments;
+static std::vector<InstrumentFactory*> s_FactoriesOfInstruments;
+static std::vector<unsigned> s_ClassIndicesOfInstruments;
 
-typedef Deferred<Instrument> Instrument_deferred;
-static unsigned s_lastInstrumentId = -1;
-static std::vector<Instrument_deferred> s_InstrumentMap;
+static std::vector<std::string> s_AllPercussions;
+static std::vector<InstrumentFactory*> s_FactoriesOfPercussions;
+static std::vector<unsigned> s_ClassIndicesOfPercussions;
 
-typedef Deferred<Percussion> Percussion_deferred;
-static unsigned s_lastPercussionId = -1;
-static std::vector<Percussion_deferred> s_PercussionMap;
-
-typedef std::vector<Percussion_deferred> PercussionList;
-static unsigned s_lastPercussionListId = -1;
-static std::vector<PercussionList> s_PercussionListMap;
-
-static PyObject* InitNoteSequence(PyObject *self, PyObject *args)
+static TypicalInstrumentFactory* GetDefaultFactory()
 {
-	s_lastNoteSequenceId++;
-	s_NoteSequenceMap.push_back(NoteSequence_deferred());
-	return PyLong_FromUnsignedLong(s_lastNoteSequenceId);
+	static TypicalInstrumentFactory _defaultFactory;
+	static bool initialized = false;
+	if (!initialized)
+	{
+		_defaultFactory.AddInstrument<PureSin>("PureSin");
+		_defaultFactory.AddInstrument<Square>("Square");
+		_defaultFactory.AddInstrument<Triangle>("Triangle");
+		_defaultFactory.AddInstrument<Sawtooth>("Sawtooth");
+		_defaultFactory.AddInstrument<NaivePiano>("NaivePiano");
+		_defaultFactory.AddInstrument<BottleBlow>("BottleBlow");
+		_defaultFactory.AddPercussion<TestPerc>("TestPerc");
+	}
+	return &_defaultFactory;
+
 }
 
-static PyObject* AddNoteToSequence(PyObject *self, PyObject *args)
+static void RegisterFactory(InstrumentFactory* factory)
 {
-	unsigned SeqId;
-	Note note;
+	{
+		std::vector<std::string> instList;
+		factory->GetInstrumentList(instList);
 
-	if (!PyArg_ParseTuple(args, "Ifi", &SeqId, &note.m_freq_rel, &note.m_duration))
-		return NULL;
+		for (size_t i = 0; i < instList.size(); i++)
+		{
+			s_AllInstruments.push_back(instList[i]);
+			s_FactoriesOfInstruments.push_back(factory);
+			s_ClassIndicesOfInstruments.push_back((unsigned)i);
+		}
+	}
+	{
 
-	NoteSequence_deferred seq = s_NoteSequenceMap[SeqId];
-	seq->push_back(note);
-	return PyLong_FromLong(0);
+		std::vector<std::string> percList;
+		factory->GetPercussionList(percList);
+
+		for (size_t i = 0; i < percList.size(); i++)
+		{
+			s_AllPercussions.push_back(percList[i]);
+			s_FactoriesOfPercussions.push_back(factory);
+			s_ClassIndicesOfPercussions.push_back((unsigned)i);
+		}
+	}
+
 }
 
-static PyObject* InitBeatSequence(PyObject *self, PyObject *args)
+static bool FactoriesRegistered = false;
+static void RegisterFactories()
 {
-	s_lastBeatSequenceId++;
-	s_BeatSequenceMap.push_back(BeatSequence_deferred());
-	return PyLong_FromUnsignedLong(s_lastBeatSequenceId);
-}
-
-
-static PyObject* AddBeatToSequence(PyObject *self, PyObject *args)
-{
-	unsigned SeqId;
-	Beat beat;
-
-	if (!PyArg_ParseTuple(args, "Iii", &SeqId, &beat.m_PercId, &beat.m_duration))
-		return NULL;
-
-	BeatSequence_deferred seq = s_BeatSequenceMap[SeqId];
-	seq->push_back(beat);
-	return PyLong_FromLong(0);
-}
-
-template<class T_Instrument>
-static PyObject* t_InitInstrument(PyObject *self, PyObject *args)
-{
-	s_lastInstrumentId++;
-	s_InstrumentMap.push_back(Instrument_deferred::Instance<T_Instrument>());
-	return PyLong_FromUnsignedLong(s_lastInstrumentId);
+	TypicalInstrumentFactory* defaultFactory = GetDefaultFactory();
+	RegisterFactory(defaultFactory);
+	FactoriesRegistered = true;
 }
 
 static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 {
-	unsigned InstrumentId;
-	unsigned SeqId;
-	float volume;
-	unsigned tempo;
-	float RefFreq;
-
-	if (!PyArg_ParseTuple(args, "IIfIf", &InstrumentId, &SeqId, &volume, &tempo, &RefFreq))
-		return NULL;
-
+	unsigned InstrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	PyObject *seq_py = PyTuple_GetItem(args, 1);
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
+	
 	Instrument_deferred instrument = s_InstrumentMap[InstrumentId];
+	NoteSequence seq;
+	size_t note_count = PyList_Size(seq_py);
+	for (size_t i = 0; i < note_count; i++)
+	{
+		PyObject *note_py = PyList_GetItem(seq_py, i);
+		Note note;
+		note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(note_py, 0));
+		note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(note_py, 1));
+		seq.push_back(note);
+	}
 
-	NoteSequence_deferred seq = s_NoteSequenceMap[SeqId];
-	s_lastTrackBufferId++;
 	TrackBuffer_deferred buffer;
 	s_TrackBufferMap.push_back(buffer);
 
-	instrument->PlayNotes(*buffer, *seq, tempo, RefFreq);
+	instrument->PlayNotes(*buffer, seq, tempo, RefFreq);
 
 	float maxV = buffer->MaxValue();
 	buffer->SetVolume(volume / maxV);
 
-	return PyLong_FromUnsignedLong(s_lastTrackBufferId);
+	return PyLong_FromUnsignedLong((unsigned long)(s_TrackBufferMap.size() - 1));
 }
 
 static PyObject* InstrumentTune(PyObject *self, PyObject *args)
@@ -133,61 +128,43 @@ static PyObject* InstrumentTune(PyObject *self, PyObject *args)
 }
 
 
-template<class T_Percussion>
-static PyObject* t_InitPercussion(PyObject *self, PyObject *args)
-{
-	s_lastPercussionId++;
-	s_PercussionMap.push_back(Percussion_deferred::Instance<T_Percussion>());
-	return PyLong_FromUnsignedLong(s_lastPercussionId);
-}
-
-
-static PyObject* InitPercussionList(PyObject *self, PyObject *args)
-{
-	s_lastPercussionListId++;
-	s_PercussionListMap.push_back(PercussionList());
-	return PyLong_FromUnsignedLong(s_lastPercussionListId);
-}
-
-static PyObject* AddPercussionToList(PyObject *self, PyObject *args)
-{
-	unsigned PercussionListId;
-	unsigned PercussionId;
-
-	if (!PyArg_ParseTuple(args, "II", &PercussionListId, &PercussionId))
-		return NULL;
-
-	Percussion_deferred perc = s_PercussionMap[PercussionId];
-	PercussionList& list = s_PercussionListMap[PercussionListId];
-	list.push_back(perc);
-
-	return PyLong_FromUnsignedLong(0);
-}
-
-
 static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 {
-	unsigned PercussionListId;
-	unsigned SeqId;
-	float volume;
-	unsigned tempo;
+	PyObject *percId_list = PyTuple_GetItem(args, 0);
+	PyObject *seq_py = PyTuple_GetItem(args, 1);
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
 
-	if (!PyArg_ParseTuple(args, "IIfI", &PercussionListId, &SeqId, &volume, &tempo))
-		return NULL;
+	size_t perc_count = PyList_Size(percId_list);
+	Percussion_deferred *perc_List = new Percussion_deferred[perc_count];
+	for (size_t i = 0; i < perc_count; i++)
+	{
+		unsigned long percId = PyLong_AsUnsignedLong(PyList_GetItem(percId_list, i));
+		perc_List[i] = s_PercussionMap[percId];
+	}
 
-	PercussionList& percList = s_PercussionListMap[PercussionListId];
+	BeatSequence seq;
+	size_t beat_count = PyList_Size(seq_py);
+	for (size_t i = 0; i < beat_count; i++)
+	{
+		PyObject *beat_py = PyList_GetItem(seq_py, i);
+		Beat beat;
+		beat.m_PercId = (int)PyLong_AsLong(PyTuple_GetItem(beat_py, 0));
+		beat.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(beat_py, 1));
+		seq.push_back(beat);
+	}
 
-	BeatSequence_deferred seq = s_BeatSequenceMap[SeqId];
-	s_lastTrackBufferId++;
 	TrackBuffer_deferred buffer;
 	s_TrackBufferMap.push_back(buffer);
 
-	Percussion::PlayBeats(*buffer, percList.data(), *seq, tempo);
+	Percussion::PlayBeats(*buffer, perc_List, seq, tempo);
 
 	float maxV = buffer->MaxValue();
 	buffer->SetVolume(volume / maxV);
 
-	return PyLong_FromUnsignedLong(s_lastTrackBufferId);
+	delete[] perc_List;
+
+	return PyLong_FromUnsignedLong((unsigned long)(s_TrackBufferMap.size() - 1));
 }
 
 static PyObject* PercussionTune(PyObject *self, PyObject *args)
@@ -204,44 +181,28 @@ static PyObject* PercussionTune(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
-static PyObject* InitTrackBufferList(PyObject *self, PyObject *args)
-{
-	s_lastTrackBufferListId++;
-	s_TrackBufferListMap.push_back(TrackBufferList());
-	return PyLong_FromUnsignedLong(s_lastTrackBufferListId);
-}
-
-static PyObject* AddTrackBufferToList(PyObject *self, PyObject *args)
-{
-	unsigned BufferListId;
-	unsigned BufferId;
-
-	if (!PyArg_ParseTuple(args, "II", &BufferListId, &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_TrackBufferMap[BufferId];
-	TrackBufferList& list=s_TrackBufferListMap[BufferListId];
-	list.push_back(buffer);
-
-	return PyLong_FromUnsignedLong(0);
-}
-
 static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 {
-	unsigned BufferListId;
-	if (!PyArg_ParseTuple(args, "I", &BufferListId))
-		return NULL;
+	PyObject *list = PyTuple_GetItem(args, 0);
+	size_t bufferCount = PyList_Size(list);
+	TrackBuffer_deferred* bufferList = new TrackBuffer_deferred[bufferCount];
+	for (size_t i = 0; i < bufferCount; i++)
+	{
+		unsigned long listId = PyLong_AsUnsignedLong(PyList_GetItem(list, i));
+		bufferList[i] = s_TrackBufferMap[listId];
+	}
 
-	TrackBufferList& list = s_TrackBufferListMap[BufferListId];
-	s_lastTrackBufferId++;
 	TrackBuffer_deferred buffer;
 	s_TrackBufferMap.push_back(buffer);
 
-	TrackBuffer::CombineTracks(*buffer, (unsigned)list.size(), list.data());
+	TrackBuffer::CombineTracks(*buffer, (unsigned)bufferCount, bufferList);
 	float maxV = buffer->MaxValue();
 	buffer->SetVolume(1.0f / maxV);
 
-	return PyLong_FromUnsignedLong(s_lastTrackBufferId);
+	delete[] bufferList;
+
+	return PyLong_FromUnsignedLong((unsigned long)(s_TrackBufferMap.size() - 1));
+
 }
 
 static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
@@ -257,32 +218,59 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyObject* ListInstruments(PyObject *self, PyObject *args)
+{
+	PyObject* list=PyList_New(0);
+	size_t count = s_AllInstruments.size();
+	for (size_t i = 0; i < count; i++)
+	{
+		PyList_Append(list, PyUnicode_FromString(s_AllInstruments[i].data()));
+	}
+	return list;
+}
+
+static PyObject* InitInstrument(PyObject *self, PyObject *args)
+{
+	unsigned glbClsId;
+	if (!PyArg_ParseTuple(args, "I", &glbClsId))
+		return NULL;
+
+	InstrumentFactory* factory = s_FactoriesOfInstruments[glbClsId];
+	unsigned clsId = s_ClassIndicesOfInstruments[glbClsId];
+	Instrument_deferred inst;
+	factory->InitiateInstrument(clsId, inst);
+	s_InstrumentMap.push_back(inst);
+	return PyLong_FromUnsignedLong((unsigned long)(s_InstrumentMap.size() - 1));
+}
+
+
+static PyObject* ListPercussions(PyObject *self, PyObject *args)
+{
+	PyObject* list = PyList_New(0);
+	size_t count = s_AllPercussions.size();
+	for (size_t i = 0; i < count; i++)
+	{
+		PyList_Append(list, PyUnicode_FromString(s_AllPercussions[i].data()));
+	}
+	return list;
+}
+
+
+static PyObject* InitPercussion(PyObject *self, PyObject *args)
+{
+	unsigned glbClsId;
+	if (!PyArg_ParseTuple(args, "I", &glbClsId))
+		return NULL;
+
+	InstrumentFactory* factory = s_FactoriesOfPercussions[glbClsId];
+	unsigned clsId = s_ClassIndicesOfPercussions[glbClsId];
+	Percussion_deferred perc;
+	factory->InitiatePercussion(clsId, perc);
+	s_PercussionMap.push_back(perc);
+	return PyLong_FromUnsignedLong((unsigned long)(s_PercussionMap.size() - 1));
+}
 
 static PyMethodDef PyScoreDraftMethods[] = {
-	{
-		"InitNoteSequence",
-		InitNoteSequence,
-		METH_VARARGS,
-		""
-	},
-	{
-		"AddNoteToSequence",
-		AddNoteToSequence,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitBeatSequence",
-		InitBeatSequence,
-		METH_VARARGS,
-		""
-	},
-	{
-		"AddBeatToSequence",
-		AddBeatToSequence,
-		METH_VARARGS,
-		""
-	},
 	{
 		"InstrumentPlay",
 		InstrumentPlay,
@@ -292,18 +280,6 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"InstrumentTune",
 		InstrumentTune,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitPercussionList",
-		InitPercussionList,
-		METH_VARARGS,
-		""
-	},
-	{
-		"AddPercussionToList",
-		AddPercussionToList,
 		METH_VARARGS,
 		""
 	},
@@ -320,18 +296,6 @@ static PyMethodDef PyScoreDraftMethods[] = {
 		""
 	},
 	{
-		"InitTrackBufferList",
-		InitTrackBufferList,
-		METH_VARARGS,
-		""
-	},
-	{
-		"AddTrackBufferToList",
-		AddTrackBufferToList,
-		METH_VARARGS,
-		""
-	},
-	{
 		"MixTrackBufferList",
 		MixTrackBufferList,
 		METH_VARARGS,
@@ -344,44 +308,26 @@ static PyMethodDef PyScoreDraftMethods[] = {
 		""
 	},
 	{
-		"InitPureSin",
-		t_InitInstrument<PureSin>,
+		"ListInstruments",
+		ListInstruments,
 		METH_VARARGS,
 		""
 	},
 	{
-		"InitSquare",
-		t_InitInstrument<Square>,
+		"InitInstrument",
+		InitInstrument,
 		METH_VARARGS,
 		""
 	},
 	{
-		"InitTriangle",
-		t_InitInstrument<Triangle>,
+		"ListPercussions",
+		ListPercussions,
 		METH_VARARGS,
 		""
 	},
 	{
-		"InitSawtooth",
-		t_InitInstrument<Sawtooth>,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitNaivePiano",
-		t_InitInstrument<NaivePiano>,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitBottleBlow",
-		t_InitInstrument<BottleBlow>,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitTestPerc",
-		t_InitPercussion<TestPerc>,
+		"InitPercussion",
+		InitPercussion,
 		METH_VARARGS,
 		""
 	},
@@ -398,5 +344,6 @@ static struct PyModuleDef cModPyDem =
 };
 
 PyMODINIT_FUNC PyInit_PyScoreDraft(void) {
+	if (!FactoriesRegistered) RegisterFactories();
 	return PyModule_Create(&cModPyDem);
 }

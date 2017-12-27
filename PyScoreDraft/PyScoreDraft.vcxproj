@@ -139,6 +139,7 @@
     <ClCompile Include="WinWavWriter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="PyScoreDraft.h" />
     <ClInclude Include="WinWavWriter.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
