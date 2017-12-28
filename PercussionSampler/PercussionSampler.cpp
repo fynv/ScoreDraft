@@ -1,4 +1,4 @@
-#include "PyScoreDraft.h"
+﻿#include "PyScoreDraft.h"
 #include <Windows.h>
 
 #ifndef max
@@ -133,6 +133,8 @@ public:
 		m_wav_length = dataSize / channels / 2;
 		m_wav_samples = new float[m_wav_length];
 
+		m_max_v = 0.0f;
+
 		for (unsigned i = 0; i < m_wav_length; i++)
 		{
 			float v = 0.0f;
@@ -142,6 +144,8 @@ public:
 			}
 			v /= 32767.0f*(float)channels;
 			m_wav_samples[i] = v;
+			m_max_v = max(m_max_v, fabsf(v));
+
 		}
 
 		delete[] data;
@@ -156,10 +160,12 @@ public:
 		beatBuf->m_sampleNum = min(numOfSamples, m_wav_length);
 		beatBuf->Allocate();
 
+		float mult = m_beatVolume / m_max_v;
+		
 		for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
 		{
 			float x2 = ((float)j / (float)(numOfSamples - 1));
-			float amplitude = 1.0f - powf(x2 - 0.5f, 3.0f)*8.0f;
+			float amplitude = (1.0f - powf(x2 - 0.5f, 3.0f)*8.0f)*mult;
 
 			beatBuf->m_data[j] = amplitude*m_wav_samples[j];
 		}
@@ -168,6 +174,7 @@ public:
 private:
 	unsigned m_wav_length;
 	float *m_wav_samples;
+	float m_max_v;
 
 };
 

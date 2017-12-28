@@ -42,10 +42,9 @@ class BeatTable : public std::vector<BeatTableItem*> {};
 
 #include <cmath>
 #include <time.h>
-Percussion::Percussion()
+Percussion::Percussion() : m_beatVolume(1.0f)
 {
-	m_accelerate = true;
-	//m_accelerate=false;
+	m_accelerate=false;
 	m_BeatTable = new BeatTable;
 
 	srand((unsigned)time(NULL));
@@ -180,4 +179,18 @@ void Percussion::PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionL
 			PlayBackspace(buffer, -beat.m_duration, tempo);
 	}
 	printf("\n");
+}
+
+
+bool Percussion::Tune(const char* cmd)
+{
+	char command[1024];
+	float value;
+	sscanf(cmd, "%s %f", &command, &value);
+	if (strcmp(command, "volume") == 0)
+	{
+		m_beatVolume = value;
+		return true;
+	}
+	return false;
 }

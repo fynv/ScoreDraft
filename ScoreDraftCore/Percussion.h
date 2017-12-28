@@ -32,7 +32,7 @@ public:
 	static void PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo = 80);
 	static void PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionList, const BeatSequence& seq, unsigned tempo = 80);
 
-	virtual void Tune(std::string nob, float value) {}
+	virtual bool Tune(const char* cmd);
 
 
 protected:
@@ -42,6 +42,8 @@ protected:
 	// acceleration
 	bool m_accelerate;
 	BeatTable* m_BeatTable;
+
+	float m_beatVolume;
 };
 
 

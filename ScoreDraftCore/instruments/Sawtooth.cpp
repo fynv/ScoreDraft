@@ -26,7 +26,7 @@ void Sawtooth::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuf
 		float amplitude = 1.0f - ((float)j / (float)(noteBuf->m_sampleNum - 1));
 		float phase = sampleFreq*j;
 		float wave = 1.0f-2.0f*(phase - floor(phase));
-		noteBuf->m_data[j] = amplitude*wave;
+		noteBuf->m_data[j] = amplitude*wave* m_noteVolume;
 	}
 }
 

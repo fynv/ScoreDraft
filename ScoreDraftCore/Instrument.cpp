@@ -41,10 +41,9 @@ class NoteTable : public std::vector<NoteTableItem*> {};
 
 #include <cmath>
 #include <time.h>
-Instrument::Instrument()
+Instrument::Instrument() : m_noteVolume(1.0f)
 {
-	m_accelerate=true;
-	//m_accelerate=false;
+	m_accelerate=false;
 	m_NoteTable=new NoteTable;
 
 	srand((unsigned)time(NULL));
@@ -165,4 +164,17 @@ void Instrument::PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigne
 		PlayNote(buffer,seq[i],tempo,RefFreq);
 	}
 	printf("\n");
+}
+
+bool Instrument::Tune(const char* cmd)
+{
+	char command[1024];
+	float value;
+	sscanf(cmd, "%s %f", &command, &value);
+	if (strcmp(command, "volume") == 0)
+	{
+		m_noteVolume = value;
+		return true;
+	}
+	return false;
 }

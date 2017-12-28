@@ -31,7 +31,7 @@ void NaivePiano::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteB
 		float amplitude = 1.0f - powf(x2-0.5f, 3.0f)*8.0f;
 		float wave = (1.0f + 0.5f*cos(2 * PI*x * 5))*sin(PI*x)* powf(1.0f - 2.0f * x,3.0f);
 
-		noteBuf->m_data[j] = amplitude*wave;
+		noteBuf->m_data[j] = amplitude*wave* m_noteVolume;
 	}
 }
 

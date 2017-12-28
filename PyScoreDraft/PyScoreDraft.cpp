@@ -124,21 +124,29 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
 	
 	Instrument_deferred instrument = s_InstrumentMap[InstrumentId];
-	NoteSequence seq;
-	size_t note_count = PyList_Size(seq_py);
-	for (size_t i = 0; i < note_count; i++)
-	{
-		PyObject *note_py = PyList_GetItem(seq_py, i);
-		Note note;
-		note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(note_py, 0));
-		note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(note_py, 1));
-		seq.push_back(note);
-	}
 
 	TrackBuffer_deferred buffer;
 	s_TrackBufferMap.push_back(buffer);
+	
+	size_t note_count = PyList_Size(seq_py);
+	for (size_t i = 0; i < note_count; i++)
+	{
+		PyObject *item = PyList_GetItem(seq_py, i);
+		if (PyObject_TypeCheck(item, &PyTuple_Type))
+		{
 
-	instrument->PlayNotes(*buffer, seq, tempo, RefFreq);
+			Note note;
+			note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+			note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+
+			instrument->PlayNote(*buffer, note, tempo, RefFreq);
+		}
+		else if (PyObject_TypeCheck(item, &PyUnicode_Type))
+		{
+			instrument->Tune(_PyUnicode_AsString(item));
+		}
+
+	}	
 
 	float maxV = buffer->MaxValue();
 	buffer->SetVolume(volume / maxV);
@@ -149,14 +157,13 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 static PyObject* InstrumentTune(PyObject *self, PyObject *args)
 {
 	unsigned InstrumentId;
-	const char* nob;
-	float value;
+	const char* cmd;
 
-	if (!PyArg_ParseTuple(args, "Isf", &InstrumentId, &nob, &value))
+	if (!PyArg_ParseTuple(args, "Is", &InstrumentId, &cmd))
 		return NULL;
 
 	Instrument_deferred instrument = s_InstrumentMap[InstrumentId];
-	instrument->Tune(nob, value);
+	instrument->Tune(cmd);
 	return PyLong_FromLong(0);
 }
 
@@ -176,20 +183,33 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 		perc_List[i] = s_PercussionMap[percId];
 	}
 
-	BeatSequence seq;
+	TrackBuffer_deferred buffer;
+	s_TrackBufferMap.push_back(buffer);
+
 	size_t beat_count = PyList_Size(seq_py);
 	for (size_t i = 0; i < beat_count; i++)
 	{
-		PyObject *beat_py = PyList_GetItem(seq_py, i);
-		Beat beat;
-		beat.m_PercId = (int)PyLong_AsLong(PyTuple_GetItem(beat_py, 0));
-		beat.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(beat_py, 1));
-		seq.push_back(beat);
+		PyObject *item = PyList_GetItem(seq_py, i);		
+		int percId = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+
+		PyObject *operation = PyTuple_GetItem(item, 1);
+		if (PyObject_TypeCheck(operation, &PyLong_Type))
+		{
+			int duration = (int)PyLong_AsLong(operation);
+
+			if (percId >= 0)
+				perc_List[percId]->PlayBeat(*buffer, duration, tempo);
+			else if (duration >= 0)
+				Percussion::PlaySilence(*buffer, duration, tempo);
+			else
+				Percussion::PlayBackspace(*buffer, -duration, tempo);
+		}
+		else if (PyObject_TypeCheck(operation, &PyUnicode_Type))
+		{
+			perc_List[percId]->Tune(_PyUnicode_AsString(operation));
+		}
 	}
 
-	TrackBuffer_deferred buffer;
-	s_TrackBufferMap.push_back(buffer);
-	Percussion::PlayBeats(*buffer, perc_List, seq, tempo);
 
 	float maxV = buffer->MaxValue();
 	buffer->SetVolume(volume / maxV);
@@ -202,14 +222,13 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 static PyObject* PercussionTune(PyObject *self, PyObject *args)
 {
 	unsigned PercussionId;
-	const char* nob;
-	float value;
+	const char* cmd;
 
-	if (!PyArg_ParseTuple(args, "Isf", &PercussionId, &nob, &value))
+	if (!PyArg_ParseTuple(args, "Is", &PercussionId, &cmd))
 		return NULL;
 
 	Percussion_deferred perc = s_PercussionMap[PercussionId];
-	perc->Tune(nob, value);
+	perc->Tune(cmd);
 	return PyLong_FromLong(0);
 }
 

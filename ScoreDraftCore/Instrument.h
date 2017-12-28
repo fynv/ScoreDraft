@@ -1,8 +1,6 @@
 #ifndef _scoredraft_Instrument_h
 #define _scoredraft_Instrument_h
 
-#include<string>
-
 class  NoteBuffer
 {
 public:
@@ -28,7 +26,7 @@ public:
 	void PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo=80,float RefFreq=261.626f);
 	void PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigned tempo=80,float RefFreq=261.626f);
 
-	virtual void Tune(std::string nob, float value) {}
+	virtual bool Tune(const char* cmd);
 	
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
@@ -37,6 +35,8 @@ protected:
 	// acceleration
 	bool m_accelerate;
 	NoteTable* m_NoteTable;
+
+	float m_noteVolume;
 
 };
 

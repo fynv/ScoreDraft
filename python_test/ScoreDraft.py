@@ -4,14 +4,14 @@ import PyScoreDraft
 class Instrument:
 	def __init__ (self, clsId):
 		self.inst_id=PyScoreDraft.InitInstrument(clsId)
-	def tune(self, nob, value):
-		PyScoreDraft.InstrumentTune(self.inst_id, nob, value)
+	def tune(self, cmd):
+		PyScoreDraft.InstrumentTune(self.inst_id, cmd)
 
 class Percussion:
 	def __init__(self, clsId):
 		self.perc_id=PyScoreDraft.InitPercussion(clsId)
-	def tune(self, nob, value):
-		PyScoreDraft.PercussionTune(self.inst_id, nob, value)
+	def tune(self, cmd):
+		PyScoreDraft.PercussionTune(self.perc_id, cmd)
 
 g_instList=PyScoreDraft.ListInstruments();
 for i in range(len(g_instList)):
