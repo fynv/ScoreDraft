@@ -55,6 +55,7 @@ static void RegisterFactory(InstrumentFactory* factory)
 
 		for (size_t i = 0; i < instList.size(); i++)
 		{
+			printf("Registering instrument, clsId=%d, name=%s\n", s_AllInstruments.size(), instList[i]);
 			s_AllInstruments.push_back(instList[i]);
 			s_FactoriesOfInstruments.push_back(factory);
 			s_ClassIndicesOfInstruments.push_back((unsigned)i);
@@ -67,6 +68,7 @@ static void RegisterFactory(InstrumentFactory* factory)
 
 		for (size_t i = 0; i < percList.size(); i++)
 		{
+			printf("Registering Percussion, clsId=%d, name=%s\n", s_AllPercussions.size(), percList[i]);
 			s_AllPercussions.push_back(percList[i]);
 			s_FactoriesOfPercussions.push_back(factory);
 			s_ClassIndicesOfPercussions.push_back((unsigned)i);
@@ -105,6 +107,7 @@ static void RegisterFactories()
 			getFacFunc = (GetFacFunc*)GetProcAddress(hinstLib, "GetFactory");
 			if (getFacFunc != NULL)
 			{
+				printf("Loading extension: %s\n", ffd.cFileName);
 				InstrumentFactory* fac = getFacFunc();
 				RegisterFactory(fac);
 			}
