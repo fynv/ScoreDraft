@@ -1,165 +1,204 @@
 ScoreDraft
 ================
 A simple software music synthesizer and text/script based score authoring. Used for music experiments. 
-While the core code is written in C++, I added a python wrapper recently (2017/12/16).
 
-The following python sample code will generate "FlyMeToTheMoon_just.wav", "fly me to the moon" in just intonation.
+In the first design, I was intending to use text files as the means of authoring, i.e., the C++ program
+reads a text file, parse the notes and generates a music file. However, after trying using Python as a 
+script layer, it has shown very much benefit comparing to text parsing. 
+
+Now, Python is the recommended way to use ScoreDraft. The following examples shows how easily a piece of
+music can be sythesized using the Python interface of ScoreDraft. 
+
 
 ```Python
-import os 
 import ScoreDraft
 from ScoreDraftNotes import *
 
-def soS(octave=5, duration=48):
-	return (Freqs[8]*(2.0**(octave-5.0)), duration)
-
-def set_soS(freq):
-	Freqs[8]=freq
-
 doc=ScoreDraft.Document()
-doc.refFreq=264.0 *1.25
-doc.tempo=120
 
-set_re(10.0/9.0)
-set_mi(5.0/4.0)
-set_fa(4.0/3.0)
-set_so(3.0/2.0)
-set_la(5.0/3.0)
-set_ti(15.0/8.0)
-set_soS(25.0/16.0)
+seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
 
-seq1 = [do(6,72), ti(5,24), la(5,24), so(5,72)]
-seq2 = [la(3,192), BK(144), mi(4,48), so(4,48), do(5,48)]
-
-seq1 = seq1 + [fa(5,96), BL(24), so(5,24), la(5,24), do(6,24)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48),fa(4,48)]
-
-set_re(9.0/8.0)
-set_fa(21.0/16.0)
-
-seq1 = seq1 + [ti(5,72), la(5,24), so(5,24), fa(5,72)]
-seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]
-
-set_fa(4.0/3.0)
-
-seq1 = seq1 + [mi(5,144), BL(48)]
-seq2 = seq2 + [do(3,192), BK(144), so(3,48), do(4,48), mi(4,48)]
-
-set_re(10.0/9.0)
-
-seq1 = seq1 + [la(5,72), so(5,24), fa(5,24), mi(5,72)]
-seq2 = seq2 + [fa(3,192), BK(144), do(4,48), mi(4,48), la(4,48)]
-
-seq1 = seq1 + [re(5,72), mi(5,24), fa(5,24), la(5,72)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48), fa(4,48)]
-
-set_re(35.0/32.0)
-seq1 = seq1 + [soS(5,72), fa(5,24), mi(5,24), re(5,72)]
-seq2 = seq2 + [mi(3,192), BK(144), ti(3,48), re(4,48), soS(4,48)]
-
-set_re(10.0/9.0)
-seq1 = seq1 + [do(5,144), BL(48)]
-seq2 = seq2 + [la(3,192), BK(144), mi(4,48), so(4,48), do(5,48)]
-
-seq1 = seq1 + [re(5,24), la(5,72), la(5,96)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48), fa(4,48)]	
-
-set_re(9.0/8.0)
-set_fa(21.0/16.0)
-
-seq1 = seq1 + [BL(96), do(6,24), ti(5,72)]
-seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]	
-
-set_fa(4.0/3.0)
-seq1 = seq1 + [so(5,144), BL(48)]
-seq2 = seq2 + [mi(3,192), BK(144), ti(3,48), re(4,48), so(4,48)]
-
-set_re(10.0/9.0)
-seq1 = seq1 + [la(4,24), fa(5,72), fa(5,96)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48), fa(4,48)]
-
-set_re(9.0/8.0)
-set_fa(21.0/16.0)
-set_la(27.0/16.0)
-
-seq1 = seq1 + [BL(96), la(5,72), so(5,24)]
-seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]	
-
-seq1 = seq1 + [fa(5,24), mi(5,120), BL(48)]
-seq2 = seq2 + [do(3,192), BK(144), so(3,48), do(4,48), mi(4,48)]
-
-set_re(10.0/9.0)
-set_fa(4.0/3.0)
-set_la(5.0/3.0)
-
-seq1 = seq1 +  [do(6,72), ti(5,24), la(5,24), so(5,72)]
-seq2 = seq2 +  [la(3,192), BK(144), mi(4,48), so(4,48), do(5,48)]
-
-seq1 = seq1 + [fa(5,96), BL(24), so(5,24), la(5,24), do(6,24)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48),fa(4,48)]
-
-set_re(9.0/8.0)
-set_fa(21.0/16.0)
-
-seq1 = seq1 + [ti(5,72), la(5,24), so(5,24), fa(5,72)]
-seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]
-
-set_fa(4.0/3.0)
-
-seq1 = seq1 + [mi(5,144), BL(48)]
-seq2 = seq2 + [do(3,192), BK(144), so(3,48), do(4,48), mi(4,48)]
-
-set_re(10.0/9.0)
-
-seq1 = seq1 + [la(5,72), so(5,24), fa(5,24), mi(5,72)]
-seq2 = seq2 + [fa(3,192), BK(144), do(4,48), mi(4,48), la(4,48)]
-
-seq1 = seq1 + [re(5,72), mi(5,24), fa(5,24), la(5,72)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48), fa(4,48)]
-
-set_re(35.0/32.0)
-seq1 = seq1 + [soS(5,72), la(5,24), ti(5,24), ti(5,72)]
-seq2 = seq2 + [mi(3,192), BK(144), ti(3,48), re(4,48), soS(4,48)]
-
-set_re(10.0/9.0)
-seq1 = seq1 + [do(6,24), ti(5,24), la(5,96), BL(48)]
-seq2 = seq2 + [la(3,192), BK(144), mi(4,48), so(4,48), do(5,48)]
-
-seq1 = seq1 + [la(5,24), so(5,72), la(5,24), so(5,24), fa(5,48)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48), fa(4,48)]
-
-set_re(9.0/8.0)
-set_fa(21.0/16.0)
-
-seq1 = seq1 + [BL(96), do(6,24), ti(5,72)]
-seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]	
-
-set_re(10.0/9.0)
-set_fa(4.0/3.0)
-seq1 = seq1 + [mi(6,144), BL(48)]
-seq2 = seq2 + [fa(3,192), BK(144), do(4,48), mi(4,48), la(4,48)]
-
-seq1 = seq1 + [mi(6,24), do(6,72), do(6,96)]
-seq2 = seq2 + [re(3,192), BK(144), la(3,48), do(4,48), fa(4,48)]
-
-set_re(9.0/8.0)
-set_fa(21.0/16.0)
-
-seq1 = seq1 + [BL(96), ti(5,24), re(6,72)]
-seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]	
-
-seq1 = seq1 + [do(6,192)]
-seq2 = seq2 + [do(3,192), BK(180), so(3,180), BK(168), do(4,168), BK(156), mi(4,156), BK(144), so(4,144), BK(132), do(5,132) ]	
-
-
-naivePiano=ScoreDraft.NaivePiano()
-
-doc.playSeq(seq1, naivePiano, 1.0)
-doc.playSeq(seq2, naivePiano, 1.0)
-doc.mixDown('FlyMeToTheMoon_just.wav')
-
-os.system("pause") 
+doc.playNoteSeq(seq, ScoreDraft.Piano())
+doc.mixDown('twinkle.wav')
 
 ```
 
+* Using ScoreDraft.py interface
 
+A list like the following defines a "note-sequence":
+
+[ (freq, duration), (freq, duration), (freq, duration)... ]
+
+A note-sequence can by "played" using an "instrument".
+
+Each tuple (freq, duration) defines a "note". 
+
+- "freq" is a floating point frequency multiplier relative to a reference frequency.
+- "duration" is a integer that defines the duration of the note. 1 beat = 48, 1/2 beat =24 etc.
+
+"freq" is typically a positive number. A negative "freq" number has the following special usage:
+- when "freq" is negative and "duration" is positive, a silent time period is defined, which 
+  occupies the "duration" but does not make any sound.
+- when "freq" is negative and "duration" is also negative, a "backspace" is generated. The cursor
+  of note-sequence play will be brought backwards by "duration". In this way, the new notes can
+  be overlapped with old ones, so that harmonies and chords can be generated.
+
+The utility file "ScoreDraftNotes.py" contains utility functions do(), re(), mi() etc., which 
+simplies the frequency calculation. For example, in "do(octave, duration)", octave defines the 
+octave of the "do" sound, where octave=5 means the central octave, and do(5,48) defines a 1 beat
+sound at the reference frequency. The return value is a tuple with the proper "freq" calculated.
+
+A list like the following defines a "beat-sequence":
+
+[ (index, duration), (index, duration), (index, duration)... ]
+
+A beat-sequence can by "played" using a list of "percussions".
+
+Each tuple (index, duration) defines a "beat". 
+
+- "index" is a integer. When it is non-negative, it references a percussion in a percussion list, which is used to make to noise
+- "duration" is the same as the "duration" of a note
+
+Negative "index" values are used in the same way as negative "freq" values of notes to define
+silent time periods and backspaces.
+
+In both note-sequences and beat-sequences, tuning commands can be inserted to tune an instrument or a percussion. 
+A tuning command is a string. Different instruments and percussions can support different tuning commands.
+Currently, the only supported tuning command is 'volume [x]'. Examples:
+
+- in a note sequence: [do(5,48),re(5,48), "volume 2.0", mi(5,48)... ]
+- in a beat sequence: [(0,48), (1,48), (0,"volume 2.0"), (1,"volume 3.0"), (0,48), (1,48)... ]
+
+In the beat sequence case, an index need to be provided to choose which persecussion the command is sent to.
+
+"ScoreDraft.Document" is a class used to manage some public states like tempo and reference-frequency.
+It also maintains a list of "track-buffers", which are generated wave forms.
+
+- ScoreDraft.Document.tempo is an integer defining the tempo in beats/minute.
+- ScoreDraft.Document.refFreq is a floating point defining the reference-frequency in Hz.
+
+- ScoreDraft.Document.playNoteSeq(self, seq, instrument, volume): 
+  -- seq is the note-sequence to play
+  -- instrument is the instrument used to play the sequence. The usage of instrument will be explained later.
+  -- volume is a floating point to define volume of the track. It is applied during mixing, and has nothing to do with the instrument tunning. 
+  A track-buffer will be generated and recorded.
+
+- ScoreDraft.Document.playBeatSeq(self, seq, percList, volume):
+  -- seq is the beat-sequence to play
+  -- percList is a list of percussions used to play the sequence. The usage of percussion will be explained later.
+  -- volume is a floating point to define volume of the track. It is applied during mixing, and has nothing to do with the percussion tunning. 
+  A track-buffer will be generated and recorded.
+
+- ScoreDraft.Document.mixDown(self,filename):
+  -- filename is a string. 
+  A windows wav file with the given name will be generated by mixing down all the generated tracks.
+
+ScoreDraft.WriteNoteSequencesToMidi(noteSeqList, tempo, refFreq, filename)
+is an interface to write note-sequences to a MIDI file.
+
+- noteSeqList is a list to note-sequences. Each note-sequence will be converted to a MIDI track.
+- tempo is an integer defining the tempo in beats/minute.
+- refFreq is a floating point defining the reference-frequency in Hz.
+- filename is a string. 
+A MIDI file with the given name will be generated.
+
+ScoreDraft.g_instList contains a list of all available instruments. Run print(ScoreDraft.g_instList)
+to display the list, we will see something like:
+
+['PureSin', 'Square', 'Triangle', 'Sawtooth', 'NaivePiano', 'BottleBlow', 'Ah', 'Cello', 'Lah', 'Piano', 'String', 'Violin']
+
+A function corresponding to each of the above names will be generated, such as:
+
+ScoreDraft.PureSin(), ScoreDraft.Square()..
+
+They can be used to create instances of the instruments.
+
+Similarly, ScoreDraft.g_percList contains a list of all available percussions, and there are 
+functions to create instances of percussions like:
+
+ScoreDraft.BassDrum(), ScoreDraft.Snare()..
+
+* Sampling supports
+
+Sampling based synthesis is now supported using 2 extensions, which supports instrument sampling
+and percussion sampling separately.
+
+The "InstrumentSamples" directory is searched for .wav files. Each file is used to define an 
+instrument. For example, if you put a "whistle.wav" into the "InstrumentSamples" directory, 
+an instrument named "whistle" will be available to use.
+
+Similary, .wav files in the "PercussionSamples" direcory are used to define percussions. If you
+put a "clap.wav" into the "PercussionSamples" directory, an percussion named "clap" will be
+available to use.
+
+* Introduction to the PyScoreDraft.pyd interface
+
+PyScoreDraft.pyd is the C++ based core module underlying ScoreDraft.py.
+The following interfaces are provided:
+
+- PyScoreDraft.ListInstruments()
+  -- returns a string list of all available instruments
+
+- PyScoreDraft.InitInstrument(clsId)
+  -- clsId: an integer referencing an instrument class in the list returned by ListInstruments()
+  -- returns an id of the initialized instrument instance
+
+- PyScoreDraft.ListPercussions()
+  -- returns a string list of all available percussions
+
+- PyScoreDraft.InitPercussion(clsId)
+  -- clsId: an integer referencing an percussion class in the list returned by ListPercussions()
+  -- return an id of the initialized percussion instance
+
+- PyScoreDraft.InstrumentPlay(InstrumentId, seq, volume, tempo, RefFreq)
+  -- InstrumentId: an integer, id of the instrument instance, which is return by InitInstrument()
+  -- seq: the note-sequence to play
+  -- volume: a floating point defining the volume of the track
+  -- tempo: an integer defining the tempo in beats/minute.
+  -- RefFreq: a floating point defining the reference-frequency in Hz.
+  -- return an id of the generated track-buffer
+
+- PyScoreDraft.InstrumentTune(InstrumentId, cmd)
+  -- InstrumentId: an integer, id of the instrument instance, which is return by InitInstrument()
+  -- cmd: a string to be passed to the instrument
+
+- PyScoreDraft.PercussionPlay(percIdList, seq, volume, tempo)
+  -- percIdList: a list of percussion instance ids, each id is returned by InitPercussion()
+  -- seq: the beat-sequence to play
+  -- volume: a floating point defining the volume of the track
+  -- tempo: an integer defining the tempo in beats/minute.
+  -- return an id of the generated track-buffer
+
+- PyScoreDraft.PercussionTune(PercussionId, cmd)
+  -- PercussionId: an integer, id of the percussion instance, which is return by InitPercussion()
+  -- cmd: a string to be passed to the percussion
+
+- PyScoreDraft.MixTrackBufferList(trackBufferIdList)
+  -- trackBufferIdList: a list of track-buffer ids, each id is returned by InstrumentPlay() or PercussionPlay() or MixTrackBufferList()
+  -- return a new id of the mixed track-buffer
+
+- PyScoreDraft.WriteTrackBufferToWav(trackBufferId, filename)
+  -- trackBufferId: the id of the track-buffer to write, returned by InstrumentPlay() or PercussionPlay() or MixTrackBufferList()
+  -- filename: the name of the wav file
+
+- PyScoreDraft.WriteNoteSequencesToMidi(noteSeqList, temp, refFreq, filename)
+  -- noteSeqList is a list to note-sequences. Each note-sequence will be converted to a MIDI track.
+  -- tempo is an integer defining the tempo in beats/minute.
+  -- refFreq is a floating point defining the reference-frequency in Hz.
+  -- filename is a string. 
+
+* Extension interface 
+
+The set of instruments and percussions can be extended by separate dll builds.
+The dll files are searched by PyScoreDraft.pyd within "Extensions" directory.
+
+Each of these dll files should provide an interface funcion:
+
+```C++
+#define PY_SCOREDRAFT_EXTENSION_INTERFACE extern "C" __declspec(dllexport) InstrumentFactory*
+PY_SCOREDRAFT_EXTENSION_INTERFACE GetFactory();
+```
+
+The class "InstrumentFactory" is defined in "PyScoreDraft.h". Implementation examples can be found
+in "PyScoreDraft.cpp" (TypicalInstrumentFactory), "InstrumentSampler.cpp" (InstrumentSamplerFactory),
+and "PercussionSampler.cpp" (PercussionSamplerFactory).
