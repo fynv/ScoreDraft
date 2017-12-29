@@ -34,8 +34,10 @@ public:
 		delete[] m_wav_samples;
 	}
 
-	bool LoadWav(const char* filename)
+	bool LoadWav(const char* name)
 	{
+		char filename[1024];
+		sprintf(filename, "PercussionSamples\\%s.wav", name);
 		delete[] m_wav_samples;
 		m_wav_length = 0;
 		m_wav_samples = 0;
@@ -210,10 +212,7 @@ public:
 	virtual void InitiatePercussion(unsigned clsInd, Percussion_deferred& perc)
 	{
 		perc = Percussion_deferred::Instance<PercussionSampler>();
-
-		char path[1024];
-		sprintf(path, "PercussionSamples\\%s.wav", m_PercList[clsInd]);
-		perc.DownCast<PercussionSampler>()->LoadWav(path);
+		perc.DownCast<PercussionSampler>()->LoadWav(m_PercList[clsInd].data());
 	}
 
 private:

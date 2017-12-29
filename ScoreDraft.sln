@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PyScoreDraft", "PyScoreDraf
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PercussionSampler", "PercussionSampler\PercussionSampler.vcxproj", "{78E0AA6F-D731-4480-91CA-0CDD613D35E5}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InstrumentSampler", "InstrumentSampler\InstrumentSampler.vcxproj", "{71B50469-9161-48DB-AC52-43038DA779FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
@@ -68,6 +70,17 @@ Global
 		{78E0AA6F-D731-4480-91CA-0CDD613D35E5}.Release|Win32.Build.0 = Release|Win32
 		{78E0AA6F-D731-4480-91CA-0CDD613D35E5}.Release|x64.ActiveCfg = Release|x64
 		{78E0AA6F-D731-4480-91CA-0CDD613D35E5}.Release|x64.Build.0 = Release|x64
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Debug|Win32.Build.0 = Debug|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Debug|x64.ActiveCfg = Debug|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Release|Win32.ActiveCfg = Release|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Release|Win32.Build.0 = Release|Win32
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Release|x64.ActiveCfg = Release|x64
+		{71B50469-9161-48DB-AC52-43038DA779FF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -144,10 +144,11 @@ seq1 = seq1 + [do(6,192)]
 seq2 = seq2 + [do(3,192), BK(180), so(3,180), BK(168), do(4,168), BK(156), mi(4,156), BK(144), so(4,144), BK(132), do(5,132) ]	
 
 
-instrument=ScoreDraft.NaivePiano()
+instrument1=ScoreDraft.Ah()
+instrument2=ScoreDraft.Piano()
 
-doc.playNoteSeq(seq1, instrument, 1.0)
-doc.playNoteSeq(seq2, instrument, 1.0)
+doc.playNoteSeq(seq1, instrument1, 1.0)
+doc.playNoteSeq(seq2, instrument2, 1.0)
 doc.mixDown('FlyMeToTheMoon_just.wav')
 
 os.system("pause") 
