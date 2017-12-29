@@ -11,6 +11,7 @@
 #include "instruments/NaivePiano.h"
 #include "instruments/BottleBlow.h"
 #include "WinWavWriter.h"
+#include "MIDIWriter.h"
 
 #include <Beat.h>
 #include "percussions/TestPerc.h"
@@ -324,6 +325,40 @@ static PyObject* InitPercussion(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong((unsigned long)(s_PercussionMap.size() - 1));
 }
 
+static PyObject* WriteNoteSequencesToMidi(PyObject *self, PyObject *args)
+{
+	PyObject *pySeqList = PyTuple_GetItem(args, 0);
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
+	float refFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+	const char* fileName = _PyUnicode_AsString(PyTuple_GetItem(args, 3));
+
+	size_t seqCount = PyList_Size(pySeqList);
+
+	SequenceList seqList;
+	for (size_t i = 0; i < seqCount; i++)
+	{
+		NoteSequence_deferred seq;
+		PyObject *pySeq = PyList_GetItem(pySeqList, i);
+		size_t note_count = PyList_Size(pySeq);
+		for (size_t j = 0; j < note_count; j++)
+		{
+			PyObject *item = PyList_GetItem(pySeq, j);
+			if (PyObject_TypeCheck(item, &PyTuple_Type))
+			{
+				Note note;
+				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+				seq->push_back(note);
+			}
+		}
+		seqList.push_back(seq);
+	}
+	WriteToMidi(seqList, tempo, refFreq, fileName);
+
+
+	return PyLong_FromUnsignedLong(0);
+}
+
 static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"InstrumentPlay",
@@ -382,6 +417,12 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"InitPercussion",
 		InitPercussion,
+		METH_VARARGS,
+		""
+	},
+	{
+		"WriteNoteSequencesToMidi",
+		WriteNoteSequencesToMidi,
 		METH_VARARGS,
 		""
 	},

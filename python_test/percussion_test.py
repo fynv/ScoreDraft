@@ -1,15 +1,15 @@
 import os 
 import ScoreDraft
 
-test_dong=ScoreDraft.TestPerc()
-clap=ScoreDraft.clap()
+BassDrum=ScoreDraft.BassDrum()
+Snare=ScoreDraft.Snare()
 
-perc_list= [test_dong, clap]
+perc_list= [BassDrum, Snare]
 
 def dong(duration=48):
 	return (0,duration)
 
-def pia(duration=48):
+def ca(duration=48):
 	return (1,duration)
 
 def Bl(duration=48):
@@ -19,8 +19,9 @@ def Bk(duration=48):
 	return (-1, -duration)
 
 doc=ScoreDraft.Document()
+doc.tempo=120
 
-seq = [dong(), pia(24), dong(24), dong(), pia(24), dong(24), dong(), pia(24), dong(24), (0,"volume 1.5"), (1,"volume 2.0"), dong(), pia(24), dong(24), dong(), pia(24), dong(24), dong(), pia(24), dong(24)]
+seq = [dong(), ca(24), dong(24), dong(), ca(), dong(), ca(24), dong(24), dong(), ca()]
 
 
 doc.playBeatSeq(seq, perc_list, 1.0)

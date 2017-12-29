@@ -165,7 +165,7 @@ public:
 		for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
 		{
 			float x2 = ((float)j / (float)(numOfSamples - 1));
-			float amplitude = (1.0f - powf(x2 - 0.5f, 3.0f)*8.0f)*mult;
+			float amplitude = 1.0f - expf((x2-1.0f)*10.0f);
 
 			beatBuf->m_data[j] = amplitude*m_wav_samples[j];
 		}

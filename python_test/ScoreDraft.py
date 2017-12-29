@@ -1,5 +1,6 @@
 import os 
 import PyScoreDraft
+from PyScoreDraft import WriteNoteSequencesToMidi
 
 class Instrument:
 	def __init__ (self, clsId):

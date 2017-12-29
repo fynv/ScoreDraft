@@ -99,4 +99,6 @@ doc.playNoteSeq(seq1, instrument, 1.0)
 doc.playNoteSeq(seq2, instrument, 1.0)
 doc.mixDown('FlyMeToTheMoon_eq.wav')
 
+ScoreDraft.WriteNoteSequencesToMidi([seq1, seq2], 120, 264.0 *1.25, "FlyMeToTheMoon.mid")
+
 os.system("pause") 

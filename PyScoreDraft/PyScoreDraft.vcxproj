@@ -135,10 +135,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MIDIWriter.cpp" />
     <ClCompile Include="PyScoreDraft.cpp" />
     <ClCompile Include="WinWavWriter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MIDIWriter.h" />
     <ClInclude Include="PyScoreDraft.h" />
     <ClInclude Include="WinWavWriter.h" />
   </ItemGroup>

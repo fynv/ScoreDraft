@@ -21,12 +21,18 @@
     <ClCompile Include="WinWavWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MIDIWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinWavWriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PyScoreDraft.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MIDIWriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
