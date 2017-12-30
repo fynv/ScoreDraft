@@ -37,26 +37,16 @@ public:
 	NoteBuffer m_noteBuffer;
 };
 
-class NoteTable : public std::vector<NoteTableItem*> {};
-
 #include <cmath>
 #include <time.h>
 Instrument::Instrument() : m_noteVolume(1.0f)
 {
-	m_accelerate=false;
-	m_NoteTable=new NoteTable;
-
 	srand((unsigned)time(NULL));
 }
 
 Instrument::~Instrument()
 {
-	unsigned i;
-	for (i=0;i<m_NoteTable->size();i++)
-	{
-		delete m_NoteTable->at(i);
-	}
-	delete m_NoteTable;
+
 }
 
 void Instrument::Silence(unsigned numOfSamples, NoteBuffer* noteBuf)
@@ -106,34 +96,9 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 
 	if (!bufferFilled)
 	{
-		if (m_accelerate)
-		{
-			unsigned i;
-			for (i=0;i<m_NoteTable->size();i++)
-			{
-				Note& tabNote=m_NoteTable->at(i)->m_note;
-				if (tabNote.m_duration == aNote.m_duration && fabsf(tabNote.m_freq_rel - aNote.m_freq_rel)<0.01f)
-				{
-					noteBuf=&(m_NoteTable->at(i)->m_noteBuffer);
-					bufferFilled=true;
-					break;
-				}
-			}
-			if (i==m_NoteTable->size())
-			{
-				NoteTableItem* nti=new NoteTableItem;
-				nti->m_note = aNote;
-				noteBuf = &nti->m_noteBuffer;
-				m_NoteTable->push_back(nti);
-			}
-		}
-
-		if (!bufferFilled)
-		{
-			float freq = RefFreq*aNote.m_freq_rel;
-			float sampleFreq=freq/(float)buffer.Rate();				
-			GenerateNoteWave(numOfSamples, sampleFreq, noteBuf);
-		}
+		float freq = RefFreq*aNote.m_freq_rel;
+		float sampleFreq=freq/(float)buffer.Rate();				
+		GenerateNoteWave(numOfSamples, sampleFreq, noteBuf);
 	}
 	
 	buffer.WriteBlend(noteBuf->m_sampleNum,noteBuf->m_data);

@@ -12,8 +12,6 @@ public:
 	void Allocate();	
 };
 
-class NoteTable;
-
 class TrackBuffer;
 class Note;
 class NoteSequence;
@@ -31,10 +29,6 @@ public:
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
 	virtual void GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf);
-
-	// acceleration
-	bool m_accelerate;
-	NoteTable* m_NoteTable;
 
 	float m_noteVolume;
 

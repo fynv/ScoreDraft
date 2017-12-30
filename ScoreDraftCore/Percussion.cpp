@@ -38,26 +38,16 @@ public:
 	BeatBuffer m_beatBuffer;
 };
 
-class BeatTable : public std::vector<BeatTableItem*> {};
-
 #include <cmath>
 #include <time.h>
 Percussion::Percussion() : m_beatVolume(1.0f)
 {
-	m_accelerate=false;
-	m_BeatTable = new BeatTable;
-
 	srand((unsigned)time(NULL));
 }
 
 Percussion::~Percussion()
 {
-	unsigned i;
-	for (i = 0; i<m_BeatTable->size(); i++)
-	{
-		delete m_BeatTable->at(i);
-	}
-	delete m_BeatTable;
+
 }
 
 
@@ -90,36 +80,8 @@ void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 	float fNumOfSamples = buffer.Rate()*fduration;
 	unsigned numOfSamples = (unsigned)(fNumOfSamples)+((fNumOfSamples - floorf(fNumOfSamples) > rand01()) ? 1 : 0);
 
-	bool bufferFilled = false;
-	if (m_accelerate)
-	{
-		unsigned i;
-		for (i = 0; i<m_BeatTable->size(); i++)
-		{
-			int tabNoteDuration = m_BeatTable->at(i)->m_duration;
-			if (tabNoteDuration == duration)
-			{
-				beatBuf = &(m_BeatTable->at(i)->m_beatBuffer);
-				bufferFilled = true;
-				break;
-			}
-		}
-		if (i == m_BeatTable->size())
-		{
-			BeatTableItem* bti = new BeatTableItem;
-			bti->m_duration = duration;
-			beatBuf = &bti->m_beatBuffer;
-			m_BeatTable->push_back(bti);
-		}
-	}
-
-	if (!bufferFilled)
-	{
-		GenerateBeatWave(numOfSamples, beatBuf, (float)buffer.Rate());
-	}
-
+	GenerateBeatWave(numOfSamples, beatBuf, (float)buffer.Rate());
 	buffer.WriteBlend(beatBuf->m_sampleNum, beatBuf->m_data);
-
 
 	if (numOfSamples < beatBuf->m_sampleNum)
 		buffer.SeekSample(numOfSamples - beatBuf->m_sampleNum, SEEK_CUR);

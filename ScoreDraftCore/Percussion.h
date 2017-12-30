@@ -15,7 +15,6 @@ public:
 	void Allocate();
 };
 
-class BeatTable;
 class TrackBuffer;
 class BeatSequence;
 class Percussion;
@@ -38,10 +37,6 @@ public:
 protected:
 	static void Silence(unsigned numOfSamples, BeatBuffer* noteBuf);
 	virtual void GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, float BufferSampleRate);
-
-	// acceleration
-	bool m_accelerate;
-	BeatTable* m_BeatTable;
 
 	float m_beatVolume;
 };

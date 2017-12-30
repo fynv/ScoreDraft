@@ -8,7 +8,7 @@
 
 BottleBlow::BottleBlow()
 {
-	m_accelerate = false;
+
 }
 
 BottleBlow::~BottleBlow()

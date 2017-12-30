@@ -259,7 +259,7 @@ private:
 	void GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 	{
 		float origin_SampleFreq = m_origin_freq / 44100.0f;
-		int maxSample = (int)(m_wav_length*origin_SampleFreq / sampleFreq);
+		unsigned maxSample = (unsigned)((float)m_wav_length*origin_SampleFreq / sampleFreq);
 
 		noteBuf->m_sampleNum = min(numOfSamples, maxSample);
 		noteBuf->Allocate();
@@ -280,7 +280,7 @@ private:
 				int ipos1 = (int)pos;
 				float frac = pos - (float)ipos1;
 				int ipos2 = ipos1 + 1;
-				if (ipos2 >= m_wav_length) ipos2 = m_wav_length-1;
+				if (ipos2 >= (int)m_wav_length) ipos2 = (int)m_wav_length-1;
 
 				// linear interpolation
 				//wave = m_wav_samples[ipos1] * (1.0f - frac) + m_wav_samples[ipos2] * frac;
@@ -290,7 +290,7 @@ private:
 				if (ipos0 < 0) ipos0 = 0;
 
 				int ipos3 = ipos1 + 2;
-				if (ipos3 >= m_wav_length) ipos3 = m_wav_length-1;
+				if (ipos3 >= (int)m_wav_length) ipos3 = (int)m_wav_length-1;
 
 				float p0 = m_wav_samples[ipos0];
 				float p1 = m_wav_samples[ipos1];
@@ -299,14 +299,14 @@ private:
 
 				wave = (-0.5f*p0+1.5f*p1-1.5f*p2+0.5f*p3)*powf(frac, 3.0f)+
 					(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
-					(-0.5f*p0+0.5*p2)*frac+p1;
+					(-0.5f*p0+0.5f*p2)*frac+p1;
 			}
 			else
 			{
 				int ipos1 = (int)ceilf(((float)j - 0.5f)*sampleFreq / origin_SampleFreq);
 				int ipos2 = (int)floorf(((float)j + 0.5f)*sampleFreq / origin_SampleFreq);
 				if (ipos1 < 0) ipos1 = 0;
-				if (ipos2 >= m_wav_length) ipos2 = m_wav_length - 1;
+				if (ipos2 >= (int)m_wav_length) ipos2 = (int)m_wav_length - 1;
 				int count = ipos2 - ipos1 + 1;
 				float sum = 0.0f;
 				for (int ipos = ipos1; ipos <= ipos2; ipos++)
