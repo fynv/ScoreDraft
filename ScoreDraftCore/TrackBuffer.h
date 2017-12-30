@@ -18,16 +18,16 @@ public:
 	void SetVolume(float vol);
 
 	/// block read-write
-	void SeekSample(long offset, int origin);
-	long Tell();
-	void WriteSamples(unsigned count, const float* samples);	
-	void ReadSamples(unsigned count, float* samples);
+	float GetCursor();
+	void SetCursor(float fpos);
+	void MoveCursor(float delta);
 
-	void WriteBlend(unsigned count, const float* samples);	
+	void WriteSamples(unsigned count, const float* samples, float cursorDelta);	
+	void WriteBlend(unsigned count, const float* samples, float cursorDelta);
 
 	// sample read
 	unsigned NumberOfSamples();
-	float Sample(int index);
+	float Sample(unsigned index);
 	float MaxValue();
 		
 	static bool CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffer_deferred* tracks);
@@ -39,7 +39,11 @@ private:
 	float m_volume;
 
 	float *m_localBuffer;
-	unsigned m_curPos;
+	unsigned m_localBufferPos;
+
+	size_t m_length;
+	float m_cursor;
+	void _seekToCursor();
 };
 
 

@@ -28,7 +28,7 @@ public:
 	
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
-	virtual void GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf);
+	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
 	float m_noteVolume;
 

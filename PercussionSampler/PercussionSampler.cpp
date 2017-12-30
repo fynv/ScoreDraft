@@ -157,16 +157,16 @@ public:
 		return true;
 	}
 
-	virtual void GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
+	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
 	{
-		beatBuf->m_sampleNum = min(numOfSamples, m_wav_length);
+		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), m_wav_length);
 		beatBuf->Allocate();
 
 		float mult = m_beatVolume / m_max_v;
 		
 		for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
 		{
-			float x2 = ((float)j / (float)(numOfSamples - 1));
+			float x2 = (float)j / fNumOfSamples;
 			float amplitude = 1.0f - expf((x2-1.0f)*10.0f);
 
 			beatBuf->m_data[j] = amplitude*m_wav_samples[j];

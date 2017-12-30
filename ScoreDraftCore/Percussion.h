@@ -36,7 +36,7 @@ public:
 
 protected:
 	static void Silence(unsigned numOfSamples, BeatBuffer* noteBuf);
-	virtual void GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, float BufferSampleRate);
+	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate);
 
 	float m_beatVolume;
 };

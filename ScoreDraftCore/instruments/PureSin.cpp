@@ -14,9 +14,9 @@ PureSin::~PureSin()
 {
 }
 
-void PureSin::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf)
+void PureSin::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 {
-	noteBuf->m_sampleNum=numOfSamples;
+	noteBuf->m_sampleNum = (unsigned)ceilf(fNumOfSamples);
 	noteBuf->Allocate();
 
 	unsigned j;

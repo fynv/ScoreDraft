@@ -10,7 +10,7 @@ public:
 	~BottleBlow();
 
 protected:
-	virtual void GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf);
+	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
 };
 

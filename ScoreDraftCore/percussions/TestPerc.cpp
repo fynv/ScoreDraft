@@ -11,9 +11,9 @@ TestPerc::~TestPerc()
 {
 }
 
-void TestPerc::GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
+void TestPerc::GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
 {
-	beatBuf->m_sampleNum = numOfSamples;
+	beatBuf->m_sampleNum = (unsigned)ceilf(fNumOfSamples);
 	beatBuf->Allocate();
 
 	float dt = 1.0f / BufferSampleRate;
@@ -30,7 +30,7 @@ void TestPerc::GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, floa
 	
 	for (j = 0; j<beatBuf->m_sampleNum; j++)
 	{
-		float x2 = ((float)j / (float)(beatBuf->m_sampleNum - 1));
+		float x2 = (float)j / fNumOfSamples;
 		float amplitude = 1.0f - powf(x2 - 0.5f, 3.0f)*8.0f;
 
 		beatBuf->m_data[j] = amplitude*wave*ampFac;

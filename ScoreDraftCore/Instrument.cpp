@@ -56,9 +56,9 @@ void Instrument::Silence(unsigned numOfSamples, NoteBuffer* noteBuf)
 	memset(noteBuf->m_data,0,sizeof(float)*numOfSamples);
 }
 
-void Instrument::GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf)
+void Instrument::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 {
-	Silence(numOfSamples,noteBuf);
+	Silence((unsigned)ceilf(fNumOfSamples), noteBuf);
 }
 
 inline float rand01()
@@ -71,45 +71,31 @@ inline float rand01()
 
 void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo, float RefFreq)
 {
-	NoteBuffer l_noteBuf;
-	NoteBuffer *noteBuf=&l_noteBuf;
+	NoteBuffer noteBuf;
 
 	float fduration=fabsf((float)(aNote.m_duration*60))/(float)(tempo*48);
 	float fNumOfSamples = buffer.Rate()*fduration;
-	unsigned numOfSamples = (unsigned)(fNumOfSamples)+ ((fNumOfSamples - floorf(fNumOfSamples) > rand01())?1:0);
 
-	bool bufferFilled=false;
 	if (aNote.m_freq_rel<0.0f)
 	{
 		if (aNote.m_duration>0) 
 		{
-			Silence(numOfSamples, noteBuf);
-			bufferFilled=true;
+			buffer.MoveCursor(fNumOfSamples);
+			return;
 		}
 		else if (aNote.m_duration<0)
 		{
-			buffer.SeekSample(-min((long)numOfSamples,buffer.Tell()),SEEK_CUR);
+			buffer.MoveCursor(-fNumOfSamples);
 			return;
 		}
 		else return;
 	}
 
-	if (!bufferFilled)
-	{
-		float freq = RefFreq*aNote.m_freq_rel;
-		float sampleFreq=freq/(float)buffer.Rate();				
-		GenerateNoteWave(numOfSamples, sampleFreq, noteBuf);
-	}
+	float freq = RefFreq*aNote.m_freq_rel;
+	float sampleFreq=freq/(float)buffer.Rate();				
+	GenerateNoteWave(fNumOfSamples, sampleFreq, &noteBuf);
 	
-	buffer.WriteBlend(noteBuf->m_sampleNum,noteBuf->m_data);
-
-	if (numOfSamples < noteBuf->m_sampleNum)
-		buffer.SeekSample(numOfSamples-noteBuf->m_sampleNum,SEEK_CUR);
-	else if (numOfSamples > noteBuf->m_sampleNum)
-	{
-		Silence(numOfSamples - noteBuf->m_sampleNum, &l_noteBuf);
-		buffer.WriteBlend(l_noteBuf.m_sampleNum, l_noteBuf.m_data);
-	}
+	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples);
 		
 }
 

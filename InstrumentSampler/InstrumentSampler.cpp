@@ -256,12 +256,12 @@ private:
 		}
 	}
 	
-	void GenerateNoteWave(unsigned numOfSamples, float sampleFreq, NoteBuffer* noteBuf)
+	void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 	{
 		float origin_SampleFreq = m_origin_freq / 44100.0f;
 		unsigned maxSample = (unsigned)((float)m_wav_length*origin_SampleFreq / sampleFreq);
 
-		noteBuf->m_sampleNum = min(numOfSamples, maxSample);
+		noteBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 		noteBuf->Allocate();
 
 		float mult = m_noteVolume / m_max_v;
@@ -270,7 +270,7 @@ private:
 
 		for (unsigned j = 0; j < noteBuf->m_sampleNum; j++)
 		{
-			float x2 = ((float)j / (float)(numOfSamples - 1));
+			float x2 = (float)j / fNumOfSamples;
 			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
 			float wave;

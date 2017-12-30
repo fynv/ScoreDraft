@@ -10,7 +10,7 @@ public:
 	~TestPerc();
 
 protected:
-	virtual void GenerateBeatWave(unsigned numOfSamples, BeatBuffer* beatBuf, float BufferSampleRate);
+	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate);
 
 };
 
