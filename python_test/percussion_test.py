@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os 
 import ScoreDraft
 
@@ -26,5 +28,3 @@ seq = [dong(), ca(24), dong(24), dong(), ca(), dong(), ca(24), dong(24), dong(),
 
 doc.playBeatSeq(seq, perc_list, 1.0)
 doc.mixDown('test_perc.wav')
-
-os.system("pause") 

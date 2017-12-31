@@ -1,7 +1,7 @@
 #include "percussions/TestPerc.h"
 #include "Beat.h"
 #include "TrackBuffer.h"
-
+#include <cmath>
 
 TestPerc::TestPerc()
 {

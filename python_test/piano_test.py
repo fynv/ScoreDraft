@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os 
 import ScoreDraft
 from ScoreDraftNotes import *
@@ -23,5 +25,3 @@ seq2 = seq2+[mi(4,96), BK(96), so(4,96), BK(96), ti(4,96), fa(4,96), BK(96), la(
 doc.playNoteSeq(seq1, Piano, 1.0)
 doc.playNoteSeq(seq2, Piano, 1.0)
 doc.mixDown('piano_test.wav')
-
-os.system("pause") 

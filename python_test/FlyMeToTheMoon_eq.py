@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os 
 import ScoreDraft
 from ScoreDraftNotes import *
@@ -93,12 +95,10 @@ seq2 = seq2 + [so(3,192), BK(144), re(4,48), fa(4,48), ti(4,48)]
 seq1 = seq1 + [do(6,192)]
 seq2 = seq2 + [do(3,192), BK(180), so(3,180), BK(168), do(4,168), BK(156), mi(4,156), BK(144), so(4,144), BK(132), do(5,132) ]	
 
-instrument=ScoreDraft.NaivePiano()
+instrument=ScoreDraft.Piano()
 
 doc.playNoteSeq(seq1, instrument, 1.0)
 doc.playNoteSeq(seq2, instrument, 1.0)
 doc.mixDown('FlyMeToTheMoon_eq.wav')
 
 ScoreDraft.WriteNoteSequencesToMidi([seq1, seq2], 120, 264.0 *1.25, "FlyMeToTheMoon.mid")
-
-os.system("pause") 

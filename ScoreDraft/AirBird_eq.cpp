@@ -6,6 +6,7 @@
 #include "parser/CustomParser.h"
 
 #include "WinWavWriter.h"
+#include <cmath>
 
 void Composite(const Document& doc, TrackBuffer& buffer);
 

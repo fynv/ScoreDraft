@@ -1,5 +1,14 @@
 #include <Python.h>
+
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#endif
+
 #include "PyScoreDraft.h"
 #include <Note.h>
 #include <Deferred.h>
@@ -17,6 +26,7 @@
 #include "percussions/TestPerc.h"
 
 #include <vector>
+#include <string.h>
 
 static std::vector<Instrument_deferred> s_InstrumentMap;
 static std::vector<Percussion_deferred> s_PercussionMap;
@@ -56,7 +66,7 @@ static void RegisterFactory(InstrumentFactory* factory)
 
 		for (size_t i = 0; i < instList.size(); i++)
 		{
-			printf("Registering instrument, clsId=%d, name=%s\n", s_AllInstruments.size(), instList[i]);
+			printf("Registering instrument, clsId=%lu, name=%s\n", s_AllInstruments.size(), instList[i].data());
 			s_AllInstruments.push_back(instList[i]);
 			s_FactoriesOfInstruments.push_back(factory);
 			s_ClassIndicesOfInstruments.push_back((unsigned)i);
@@ -69,7 +79,7 @@ static void RegisterFactory(InstrumentFactory* factory)
 
 		for (size_t i = 0; i < percList.size(); i++)
 		{
-			printf("Registering Percussion, clsId=%d, name=%s\n", s_AllPercussions.size(), percList[i]);
+			printf("Registering Percussion, clsId=%lu, name=%s\n", s_AllPercussions.size(), percList[i].data());
 			s_AllPercussions.push_back(percList[i]);
 			s_FactoriesOfPercussions.push_back(factory);
 			s_ClassIndicesOfPercussions.push_back((unsigned)i);
@@ -84,6 +94,7 @@ static void RegisterFactories()
 	TypicalInstrumentFactory* defaultFactory = GetDefaultFactory();
 	RegisterFactory(defaultFactory);
 
+#ifdef _WIN32
 	WIN32_FIND_DATAA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
@@ -100,12 +111,10 @@ static void RegisterFactories()
 		HINSTANCE hinstLib;
 		hinstLib = LoadLibraryA(path);
 
-		typedef InstrumentFactory*(GetFacFunc)();
-		GetFacFunc* getFacFunc;
-
 		if (hinstLib != NULL)
 		{
-			getFacFunc = (GetFacFunc*)GetProcAddress(hinstLib, "GetFactory");
+			typedef InstrumentFactory*(GetFacFunc)();
+			GetFacFunc* getFacFunc = (GetFacFunc*)GetProcAddress(hinstLib, "GetFactory");
 			if (getFacFunc != NULL)
 			{
 				printf("Loading extension: %s\n", ffd.cFileName);
@@ -115,6 +124,41 @@ static void RegisterFactories()
 		}
 
 	} while (FindNextFile(hFind, &ffd) != 0);
+#else
+	DIR *dir;
+    struct dirent *entry;
+
+    if (dir = opendir("Extensions"))
+    {
+	    while ((entry = readdir(dir)) != NULL)
+	    {
+	    	const char* ext=entry->d_name+ strlen(entry->d_name)-3;
+	    	if (strcmp(ext,".so")==0)
+	    	{
+	    		char path[1024];
+	    		sprintf(path, "Extensions/%s", entry->d_name);
+
+	    		void *handle= dlopen(path, RTLD_LAZY);
+	    		if (handle)
+	    		{
+	    			dlerror();
+	    			typedef InstrumentFactory*(GetFacFunc)();
+					GetFacFunc* getFacFunc;
+					*(void **)(&getFacFunc)= dlsym(handle, "GetFactory");
+					if (!dlerror()) 
+					{
+						printf("Loading extension: %s\n", entry->d_name);
+						InstrumentFactory* fac = getFacFunc();
+						RegisterFactory(fac);
+					}
+
+	    		}
+
+	    	}
+	    }
+	}
+
+#endif
 
 	FactoriesRegistered = true;
 }

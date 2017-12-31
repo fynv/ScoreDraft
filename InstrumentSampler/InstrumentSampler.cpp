@@ -1,5 +1,17 @@
 #include "PyScoreDraft.h"
+
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#endif
+
+#include <string.h>
+#include <math.h>
+
 #include "fft.h"
 
 #ifndef max
@@ -38,7 +50,7 @@ public:
 	bool LoadWav(const char* name)
 	{
 		char filename[1024];
-		sprintf(filename, "InstrumentSamples\\%s.wav", name);
+		sprintf(filename, "InstrumentSamples/%s.wav", name);
 
 		delete[] m_wav_samples;
 		m_wav_length = 0;
@@ -165,7 +177,7 @@ private:
 	void _fetchOriginFreq(const char* name)
 	{
 		char filename[1024];
-		sprintf(filename, "InstrumentSamples\\%s.freq", name);
+		sprintf(filename, "InstrumentSamples/%s.freq", name);
 
 		FILE *fp = fopen(filename, "r");
 		if (fp)
@@ -332,6 +344,7 @@ class InstrumentSamplerFactory : public InstrumentFactory
 public:
 	InstrumentSamplerFactory()
 	{
+#ifdef _WIN32
 		WIN32_FIND_DATAA ffd;
 		HANDLE hFind = INVALID_HANDLE_VALUE;
 
@@ -348,6 +361,29 @@ public:
 			m_InstList.push_back(name);
 
 		} while (FindNextFile(hFind, &ffd) != 0);
+
+#else
+		DIR *dir;
+	    struct dirent *entry;
+
+	    if (dir = opendir("InstrumentSamples"))
+	    {
+	    	while ((entry = readdir(dir)) != NULL)
+	    	{
+	    		const char* ext=entry->d_name+ strlen(entry->d_name)-4;
+	    		if (strcmp(ext,".wav")==0)
+	    		{
+	    			char name[1024];
+					memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
+					name[strlen(entry->d_name) - 4] = 0;
+					m_InstList.push_back(name);
+	    		}
+
+	    	}
+
+	    }
+
+#endif
 
 	}
 

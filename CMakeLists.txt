@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.0)
+project (ScoreDraft)
+add_subdirectory(ScoreDraftCore)
+add_subdirectory(ScoreDraft)
+add_subdirectory(PyScoreDraft)
+add_subdirectory(PercussionSampler)
+add_subdirectory(InstrumentSampler)

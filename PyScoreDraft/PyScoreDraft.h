@@ -79,8 +79,11 @@ protected:
 	std::vector<PercussionInitializer*> m_PercussionInitializers;
 };
 
+#ifdef _WIN32
 #define PY_SCOREDRAFT_EXTENSION_INTERFACE extern "C" __declspec(dllexport) InstrumentFactory*
-
+#else
+#define PY_SCOREDRAFT_EXTENSION_INTERFACE extern "C" InstrumentFactory*
+#endif
 
 #endif
 

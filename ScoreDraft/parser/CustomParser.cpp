@@ -1,5 +1,9 @@
 #include "parser/CustomParser.h"
 #include "Note.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <cmath>
 
 void CustomParser::Customize(int count, const char* names[], float freqs[])
 {
@@ -70,7 +74,7 @@ bool CustomParser::ParseNote(const char* strNote, Note& note)
 	strOct[i] = 0;
 
 	unsigned Oct = atoi(strOct);
-	note.m_freq_rel = freq_oct_rel*pow(m_OctBase, ((float)Oct - 5.0f));
+	note.m_freq_rel = freq_oct_rel*powf(m_OctBase, ((float)Oct - 5.0f));
 
 	const char* pDur = pEdOct + 1;
 	note.m_duration = atoi(pDur);

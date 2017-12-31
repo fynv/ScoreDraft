@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <cmath>
 #include <vector>
+#include <stdlib.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -121,7 +122,7 @@ bool Instrument::Tune(const char* cmd)
 {
 	char command[1024];
 	float value;
-	sscanf(cmd, "%s %f", &command, &value);
+	sscanf(cmd, "%s %f", command, &value);
 	if (strcmp(command, "volume") == 0)
 	{
 		m_noteVolume = value;

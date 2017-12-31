@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "parser/Parser.h"
 #include "Note.h"
@@ -13,7 +14,9 @@
 #include "Beat.h"
 #include "percussions/TestPerc.h"
 
+#ifdef _WIN32
 #include "WinPCMPlayer.h"
+#endif
 #include "WinWavWriter.h"
 #include "MIDIWriter.h"
 
@@ -21,7 +24,7 @@
 
 void Composite(const Document& doc, TrackBuffer& buffer)
 {
-	NaivePiano inst;
+	Sawtooth inst;
 
 	size_t numTracks = doc.m_tracks.size();
 	TrackBuffer_deferred *tracks = new TrackBuffer_deferred[numTracks];
@@ -91,6 +94,8 @@ void ParseToDoc(const char* filename, Document& doc)
 	fclose(fp);
 }
 
+#ifdef _WIN32
+
 void PlayFile(const char* filename)
 {
 	Document doc;
@@ -109,6 +114,7 @@ void PlayFile(const char* filename)
 	}
 
 }
+#endif
 
 void ToWav(const char* InFilename, const char* OutFileName)
 {
@@ -147,25 +153,28 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 	{
 		//test();
-		//AirBird_eq();
-		//AirBird_just();
+		AirBird_eq();
+		AirBird_just();
 		//FlyMeToTheMoon_just();
 		//FlyMeToTheMoon_eq();
 		//BBD();
 
-		TestPercussion();
+		//TestPercussion();
 
 		return 0;
 	}
 
 	string option = argv[1];
 
+#ifdef _WIN32
 	if (option == "-play")
 	{
 		if (argc>2)
 			PlayFile(argv[2]);
 	}
-	else if (option == "-wav")
+	else 
+#endif
+	if (option == "-wav")
 	{
 		if (argc > 2)
 		{
@@ -265,12 +274,7 @@ void test()
 	TrackBuffer tb;
 	Composite(doc, tb);
 
-	WinPCMPlayer player;
-	player.PlayTrack(tb);
-
-	system("pause");
-
-	//WriteToWav(tb, "test_just.wav");
+	WriteToWav(tb, "test_just.wav");
 }
 
 void BBD()

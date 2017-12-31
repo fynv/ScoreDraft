@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os 
 import ScoreDraft
 from ScoreDraftNotes import *
@@ -72,5 +74,3 @@ doc.playNoteSeq(seq1, VoiceLah, 1.0)
 doc.playNoteSeq(seq2, String, 0.5)
 doc.playNoteSeq(seq3, Cello, 0.5)
 doc.mixDown('NaushikaRequiem.wav')
-
-os.system("pause") 

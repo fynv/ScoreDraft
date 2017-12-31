@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <cmath>
 
 #include "Note.h"
 #include "TrackBuffer.h"

@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <windows.h>
 #pragma comment(lib, "winmm")
 
@@ -170,3 +171,4 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 	m_BufferQueue->AddBuffer(track,m_Volume);
 
 }
+#endif // WIN32

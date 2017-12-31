@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #ifndef _WinPCMPlayer_h
 #define _WinPCMPlayer_h
 
@@ -35,3 +36,5 @@ private:
 
 
 #endif
+
+#endif // WIN32

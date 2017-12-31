@@ -1,5 +1,16 @@
 ﻿#include "PyScoreDraft.h"
+
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#endif
+
+#include <string.h>
+#include <math.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -37,7 +48,7 @@ public:
 	bool LoadWav(const char* name)
 	{
 		char filename[1024];
-		sprintf(filename, "PercussionSamples\\%s.wav", name);
+		sprintf(filename, "PercussionSamples/%s.wav", name);
 		delete[] m_wav_samples;
 		m_wav_length = 0;
 		m_wav_samples = 0;
@@ -185,6 +196,7 @@ class PercussionSamplerFactory : public InstrumentFactory
 public:
 	PercussionSamplerFactory()
 	{
+#ifdef _WIN32
 		WIN32_FIND_DATAA ffd;
 		HANDLE hFind = INVALID_HANDLE_VALUE;
 
@@ -202,6 +214,28 @@ public:
 
 		} while (FindNextFile(hFind, &ffd) != 0);
 
+#else
+		DIR *dir;
+	    struct dirent *entry;
+
+	    if (dir = opendir("PercussionSamples"))
+	    {
+	    	while ((entry = readdir(dir)) != NULL)
+	    	{
+	    		const char* ext=entry->d_name+ strlen(entry->d_name)-4;
+	    		if (strcmp(ext,".wav")==0)
+	    		{
+	    			char name[1024];
+					memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
+					name[strlen(entry->d_name) - 4] = 0;
+					m_PercList.push_back(name);
+	    		}
+
+	    	}
+
+	    }
+
+#endif
 	}
 
 	virtual void GetPercussionList(std::vector<std::string>& list)

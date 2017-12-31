@@ -13,47 +13,47 @@ public:
 	}
 	Deferred(const Deferred & in) : m(in.m)
 	{
-		if (m != NULL) m->addRef();
+		if (m != nullptr) m->addRef();
 	}
 	~Deferred()
 	{
-		if (m != NULL) m->release();
-		m = NULL;
+		if (m != nullptr) m->release();
+		m = nullptr;
 	}
 
 	void Abondon()
 	{
-		if (m != NULL) m->release();
-		m = NULL;
+		if (m != nullptr) m->release();
+		m = nullptr;
 	}
 
 	void operator=(const Deferred & in)
 	{
-		if (in.m != NULL) in.m->addRef();
-		if (m != NULL) m->release();
+		if (in.m != nullptr) in.m->addRef();
+		if (m != nullptr) m->release();
 		m = in.m;
 	}
 
 	T* operator -> () 
 	{ 
-		if (m == NULL) return NULL;
+		if (m == nullptr) return nullptr;
 		return m->t; 
 	}
 	const T* operator -> () const 
 	{ 
-		if (m == NULL) return NULL;
+		if (m == nullptr) return nullptr;
 		return m->t; 
 	}
 
 	operator T*() 
 	{ 
-		if (m == NULL) return NULL;
+		if (m == nullptr) return nullptr;
 		return m->t; 
 	}
 
 	operator const T*() const 
 	{ 
-		if (m == NULL) return NULL;
+		if (m == nullptr) return nullptr;
 		return m->t; 
 	}
 
@@ -67,7 +67,7 @@ public:
 	template <class SubClass>
 	SubClass* DownCast()
 	{
-		if (m == NULL) return NULL;
+		if (m == nullptr) return nullptr;
 		return (SubClass*)m->t;
 	}
 
