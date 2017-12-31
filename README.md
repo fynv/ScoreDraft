@@ -49,6 +49,7 @@ The utility file "ScoreDraftNotes.py" contains utility functions do(), re(), mi(
 simplies the frequency calculation. For example, in "do(octave, duration)", octave defines the 
 octave of the "do" sound, where octave=5 means the central octave, and do(5,48) defines a 1 beat
 sound at the reference frequency. The return value is a tuple with the proper "freq" calculated.
+BL() generates a silent time period and BK() generates a backspace.
 
 ## Beat-sequences
 
