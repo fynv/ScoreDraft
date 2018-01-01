@@ -5,7 +5,7 @@ import ScoreDraft
 from ScoreDraftNotes import *
 
 def soS(octave=5, duration=48):
-	return (Freqs[8]*(2.0**(octave-5.0)), duration)
+	return note(octave,Freqs[8],duration)
 
 doc=ScoreDraft.Document()
 doc.refFreq=264.0 *1.25

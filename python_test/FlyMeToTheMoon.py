@@ -5,7 +5,7 @@ import ScoreDraft
 from ScoreDraftNotes import *
 
 def soS(octave=5, duration=48):
-	return (Freqs[8]*(2.0**(octave-5.0)), duration)
+	return note(octave,Freqs[8],duration)
 
 def set_soS(freq):
 	Freqs[8]=freq

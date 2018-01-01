@@ -44,6 +44,9 @@ class Document:
 		bufferId= PyScoreDraft.PercussionPlay(percIdList, seq, volume, self.tempo)
 		self.bufferList.append(bufferId)
 
+	def trackToWav(self,trackIndex, filename):
+		PyScoreDraft.WriteTrackBufferToWav(self.bufferList[trackIndex], filename)
+
 	def mixDown(self,filename):
 		bufferId=PyScoreDraft.MixTrackBufferList(self.bufferList)
 		PyScoreDraft.WriteTrackBufferToWav(bufferId, filename)
