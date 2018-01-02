@@ -117,11 +117,7 @@ public:
 			return false;
 		}
 
-		if (header.dwSamplesPerSec!=44100)
-		{
-			fclose(fp);
-			return false;
-		}
+		m_origin_sample_rate = header.dwSamplesPerSec;
 		
 		if (header.wBitsPerSample!=16)
 		{
@@ -174,13 +170,68 @@ public:
 		beatBuf->Allocate();
 
 		float mult = m_beatVolume / m_max_v;
-		
-		for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
-		{
-			float x2 = (float)j / fNumOfSamples;
-			float amplitude = 1.0f - expf((x2-1.0f)*10.0f);
 
-			beatBuf->m_data[j] = amplitude*m_wav_samples[j];
+		if (BufferSampleRate == (float)m_origin_sample_rate)
+		{
+
+			for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
+			{
+				float x2 = (float)j / fNumOfSamples;
+				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+
+				beatBuf->m_data[j] = amplitude*m_wav_samples[j];
+			}
+		}
+		else
+		{
+			bool interpolation = BufferSampleRate >= (float)m_origin_sample_rate;
+			for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
+			{
+				float x2 = (float)j / fNumOfSamples;
+				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+
+				float wave;
+				if (interpolation)
+				{
+					float pos = (float)j *(float)m_origin_sample_rate / BufferSampleRate;
+					int ipos1 = (int)pos;
+					float frac = pos - (float)ipos1;
+					int ipos2 = ipos1 + 1;
+					if (ipos2 >= (int)m_wav_length) ipos2 = (int)m_wav_length - 1;
+
+					// cubic interpolation
+					int ipos0 = ipos1 - 1;
+					if (ipos0 < 0) ipos0 = 0;
+
+					int ipos3 = ipos1 + 2;
+					if (ipos3 >= (int)m_wav_length) ipos3 = (int)m_wav_length - 1;
+
+					float p0 = m_wav_samples[ipos0];
+					float p1 = m_wav_samples[ipos1];
+					float p2 = m_wav_samples[ipos2];
+					float p3 = m_wav_samples[ipos3];
+
+					wave = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+						(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+						(-0.5f*p0 + 0.5f*p2)*frac + p1;
+				}
+				else
+				{
+					int ipos1 = (int)ceilf(((float)j - 0.5f)*(float)m_origin_sample_rate / BufferSampleRate);
+					int ipos2 = (int)floorf(((float)j + 0.5f)*(float)m_origin_sample_rate / BufferSampleRate);
+					if (ipos1 < 0) ipos1 = 0;
+					if (ipos2 >= (int)m_wav_length) ipos2 = (int)m_wav_length - 1;
+					int count = ipos2 - ipos1 + 1;
+					float sum = 0.0f;
+					for (int ipos = ipos1; ipos <= ipos2; ipos++)
+					{
+						sum += m_wav_samples[ipos];
+					}
+					wave = sum / (float)count;
+				}
+
+				beatBuf->m_data[j] = amplitude*wave;
+			}
 		}
 	}
 	
@@ -188,6 +239,8 @@ private:
 	unsigned m_wav_length;
 	float *m_wav_samples;
 	float m_max_v;
+
+	unsigned m_origin_sample_rate;
 
 };
 

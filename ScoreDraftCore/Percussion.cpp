@@ -18,6 +18,7 @@
 BeatBuffer::BeatBuffer()
 {
 	m_sampleNum = 0;
+	m_alignPos = 0;
 	m_data = 0;
 }
 
@@ -80,7 +81,7 @@ void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 	float fNumOfSamples = buffer.Rate()*fduration;
 
 	GenerateBeatWave(fNumOfSamples, &beatBuf, (float)buffer.Rate());
-	buffer.WriteBlend(beatBuf.m_sampleNum, beatBuf.m_data, fNumOfSamples);
+	buffer.WriteBlend(beatBuf.m_sampleNum, beatBuf.m_data, fNumOfSamples, beatBuf.m_alignPos);
 }
 
 void Percussion::PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo)

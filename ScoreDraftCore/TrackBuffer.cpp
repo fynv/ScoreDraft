@@ -22,6 +22,7 @@ TrackBuffer::TrackBuffer(unsigned rate) : m_rate(rate)
 	m_volume=1.0f;
 	m_cursor = 0.0f;
 	m_length = 0;
+	m_alignPos = (unsigned)(-1);
 }
 
 TrackBuffer::~TrackBuffer()
@@ -42,9 +43,8 @@ void TrackBuffer::SetVolume(float vol)
 	m_volume=vol;
 }
 
-void TrackBuffer::_seekToCursor()
+void TrackBuffer::_seek(unsigned upos)
 {
-	size_t upos = (size_t)(m_cursor);
 	if (upos <= m_length)
 	{
 		fseek(m_fp, (long)(upos*sizeof(float)), SEEK_SET);
@@ -54,7 +54,7 @@ void TrackBuffer::_seekToCursor()
 		fseek(m_fp, 0, SEEK_END);
 		float *tmp = new float[upos - m_length];
 		memset(tmp, 0, (upos - m_length)*sizeof(float));
-		fwrite(tmp, sizeof(float), (upos - m_length), m_fp);
+		fwrite(tmp, sizeof(float), upos - m_length, m_fp);
 		delete[] tmp;
 		m_length = upos;
 	}
@@ -69,7 +69,6 @@ void TrackBuffer::SetCursor(float fpos)
 {
 	m_cursor = fpos;
 	if (m_cursor < 0.0f) m_cursor = 0.0f;
-	_seekToCursor();
 }
 
 void TrackBuffer::MoveCursor(float delta)
@@ -77,54 +76,68 @@ void TrackBuffer::MoveCursor(float delta)
 	SetCursor(m_cursor + delta);
 }
 
-void TrackBuffer::WriteSamples(unsigned count, const float* samples, float cursorDelta)
+void TrackBuffer::_writeSamples(unsigned count, const float* samples, unsigned alignPos)
 {
+	unsigned upos = (unsigned)(m_cursor)+m_alignPos - alignPos;
+	_seek(upos);
 	fwrite(samples,sizeof(float),count,m_fp);
-
-	size_t upos = (size_t)(m_cursor)+count;
-	if (upos > m_length) m_length = upos;
-
-	MoveCursor(cursorDelta);
-
+	m_length = max(m_length, upos + count);
 	m_localBufferPos = -1;
 }
 
-void TrackBuffer::WriteBlend(unsigned count, const float* samples, float cursorDelta)
+void TrackBuffer::WriteBlend(unsigned count, const float* samples, float cursorDelta, unsigned note_alignPos)
 {
-	size_t upos = (size_t)(m_cursor); 
-	if (upos == m_length)
+	if (m_alignPos == (unsigned)(-1))
 	{
-		WriteSamples(count, samples, cursorDelta);
-		return;
+		m_alignPos = note_alignPos;
+	}
+	if ((unsigned)(m_cursor)+m_alignPos < note_alignPos)
+	{
+		unsigned truncate = note_alignPos - (unsigned)(m_cursor)+m_alignPos;
+		count -= truncate;
+		samples += truncate;
+		note_alignPos -= truncate;
+	}
+	unsigned upos = (unsigned)(m_cursor)+m_alignPos - note_alignPos;
+	if (upos >= m_length)
+	{
+		_writeSamples(count, samples, note_alignPos);
+	}
+	else
+	{
+
+		float *tmpSamples = new float[count];
+		memcpy(tmpSamples, samples, sizeof(float)*count);
+
+		unsigned sec = min(count, m_length - upos);
+		float* secbuf = new float[sec];
+		_seek(upos);
+		fread(secbuf, sizeof(float), sec, m_fp);
+
+		for (unsigned i = 0; i < sec; i++)
+			tmpSamples[i] += secbuf[i];
+
+		delete[] secbuf;
+
+		_writeSamples(count, tmpSamples, note_alignPos);
+
+		delete[] tmpSamples;
 	}
 
-	float *tmpSamples=new float[count];
-	memcpy(tmpSamples,samples,sizeof(float)*count);
-
-	unsigned sec = min(count, (unsigned)(m_length - upos));
-	float* secbuf = new float[sec];
-	fread(secbuf, sizeof(float), sec, m_fp);
-
-	for (unsigned i = 0; i < sec; i++)
-		tmpSamples[i] += secbuf[i];
-
-	delete[] secbuf;
-	_seekToCursor();
-
-	WriteSamples(count, tmpSamples, cursorDelta);
-
-	delete[] tmpSamples;
+	MoveCursor(cursorDelta);
 }
 
 bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffer_deferred* tracks)
 {
 	float *targetBuffer=new float[s_localBufferSize];
 	unsigned *lengths=new unsigned[num];
+	int* sourcePos = new int[num];
 
 	// scan
 	unsigned i;
 	unsigned rate=sumbuffer.Rate();
 	float maxCursor = 0.0f;
+	unsigned maxAlign = 0;
 
 	for (i=0;i<num;i++)
 	{
@@ -138,12 +151,22 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 
 		float cursor = tracks[i]->GetCursor();
 		if (cursor > maxCursor) maxCursor = cursor;
+
+		unsigned align = tracks[i]->AlignPos();
+		if (align > maxAlign) maxAlign = align;
+
+		sourcePos[i] = (int)(align);
+	}
+
+	for (i = 0; i < num; i++)
+	{
+		sourcePos[i] -= (int)maxAlign;
 	}
 
 	maxCursor += sumbuffer.GetCursor();
 
 	bool finish=false;
-	unsigned sourcePos = 0;
+	
 	while (!finish)
 	{
 		finish=true;
@@ -151,35 +174,32 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 		unsigned maxCount=0;
 		for (i=0;i<num;i++)
 		{
-			if (lengths[i]>0)
+			if (lengths[i] - sourcePos[i]>0)
 			{
-				unsigned count=min(s_localBufferSize,lengths[i]);
+				unsigned count = min(s_localBufferSize, lengths[i] - sourcePos[i]);
 				maxCount=max(count,maxCount);
 				unsigned j;
 				for (j=0;j<count;j++)
 				{
-					targetBuffer[j] += tracks[i]->Sample(j + sourcePos)* tracks[i]->Volume();
+					if ((int)j + sourcePos[i]>0)
+						targetBuffer[j] += tracks[i]->Sample((unsigned)((int)j + sourcePos[i]))* tracks[i]->Volume();
 				}
-				lengths[i]-=count;
-				if (lengths[i]>0) finish=false;
+				sourcePos[i] += count;
+				if (lengths[i] - sourcePos[i]>0) finish = false;
 			}
 		}	
-		sumbuffer.WriteBlend(maxCount, targetBuffer, (float)maxCount);
-		sourcePos += maxCount;
+		sumbuffer.WriteBlend(maxCount, targetBuffer, (float)(maxCount - maxAlign), maxAlign);
+		maxAlign = 0;
 	}
 	sumbuffer.SetCursor(maxCursor);
 
+	delete[] sourcePos;
 	delete[] lengths;
 	delete[] targetBuffer;
 	
 	return true;
 }
 
-
-unsigned TrackBuffer::NumberOfSamples()
-{
-	return (unsigned)m_length;
-}
 
 float TrackBuffer::Sample(unsigned index)
 {
@@ -190,8 +210,6 @@ float TrackBuffer::Sample(unsigned index)
 
 		fseek(m_fp, m_localBufferPos*sizeof(float), SEEK_SET);
 		fread(m_localBuffer,sizeof(float),min(s_localBufferSize,num-m_localBufferPos),m_fp);
-
-		_seekToCursor();
 	}
 
 	return m_localBuffer[index-m_localBufferPos];

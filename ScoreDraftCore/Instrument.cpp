@@ -17,6 +17,7 @@
 NoteBuffer::NoteBuffer()
 {
 	m_sampleNum=0;
+	m_alignPos = 0;
 	m_data=0;
 }
 
@@ -96,7 +97,7 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 	float sampleFreq=freq/(float)buffer.Rate();				
 	GenerateNoteWave(fNumOfSamples, sampleFreq, &noteBuf);
 	
-	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples);
+	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples, noteBuf.m_alignPos);
 		
 }
 

@@ -22,11 +22,18 @@ public:
 	void SetCursor(float fpos);
 	void MoveCursor(float delta);
 
-	void WriteSamples(unsigned count, const float* samples, float cursorDelta);	
-	void WriteBlend(unsigned count, const float* samples, float cursorDelta);
+	void WriteBlend(unsigned count, const float* samples, float cursorDelta, unsigned alignPos=0);
 
 	// sample read
-	unsigned NumberOfSamples();
+	unsigned NumberOfSamples()
+	{
+		return m_length;
+	}
+	unsigned AlignPos()
+	{
+		return m_alignPos;
+	}
+
 	float Sample(unsigned index);
 	float MaxValue();
 		
@@ -41,9 +48,13 @@ private:
 	float *m_localBuffer;
 	unsigned m_localBufferPos;
 
-	size_t m_length;
+	unsigned m_length;
+	unsigned m_alignPos;
+
 	float m_cursor;
-	void _seekToCursor();
+
+	void _writeSamples(unsigned count, const float* samples, unsigned alignPos);
+	void _seek(unsigned upos);
 };
 
 

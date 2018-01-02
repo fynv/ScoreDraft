@@ -8,6 +8,7 @@ public:
 	~NoteBuffer();
 	
 	unsigned m_sampleNum;
+	unsigned m_alignPos;
 	float* m_data;
 	void Allocate();	
 };
