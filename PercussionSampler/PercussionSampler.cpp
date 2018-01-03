@@ -166,7 +166,8 @@ public:
 
 	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
 	{
-		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), m_wav_length);
+		unsigned maxSample = (unsigned)((float)m_wav_length * BufferSampleRate / m_origin_sample_rate);
+		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 		beatBuf->Allocate();
 
 		float mult = m_beatVolume / m_max_v;
