@@ -13,9 +13,10 @@ public:
 	TrackBuffer(unsigned rate=44100);
 	~TrackBuffer();
 
-	unsigned Rate() const;
-	float Volume() const;
-	void SetVolume(float vol);
+	unsigned Rate() const { return m_rate; }
+	void SetRate(unsigned rate) { m_rate = rate; }
+	float Volume() const  { return m_volume; }
+	void SetVolume(float vol) {	m_volume = vol;	}
 
 	/// block read-write
 	float GetCursor();

@@ -120,11 +120,7 @@ public:
 			return false;
 		}
 
-		if (header.dwSamplesPerSec != 44100)
-		{
-			fclose(fp);
-			return false;
-		}
+		m_origin_sample_rate = header.dwSamplesPerSec;
 
 		if (header.wBitsPerSample != 16)
 		{
@@ -219,7 +215,7 @@ private:
 			double lastV = fftData[0].Re;
 			bool ascending = false;
 			unsigned maxi = 0;
-			for (unsigned i = 1; i < min(500, len); i++)
+			for (unsigned i = 1; i < min(m_origin_sample_rate / 100, len); i++)
 			{
 				double v = fftData[i].Re;
 				if (v > thresh)
@@ -240,13 +236,13 @@ private:
 				}
 			}
 
-			m_origin_freq = 44100.0f / (float)maxi;
+			m_origin_freq = (float)m_origin_sample_rate / (float)maxi;
 
 
 			/*
 			// FFT Peak
-			unsigned starti = 100 * len / 44100;
-			unsigned stopi = 2000 * len / 44100;
+			unsigned starti = 100 * len /  (float)m_origin_sample_rate;
+			unsigned stopi = 2000 * len /  (float)m_origin_sample_rate;
 			unsigned maxi = starti;
 			double max = DCAbs(fftData + maxi);
 			for (unsigned i = starti + 1; i < stopi; i++)
@@ -259,7 +255,7 @@ private:
 			}
 			delete[] fftData;
 
-			m_origin_freq=(float)maxi*44100.0f/ (float)len;*/
+			m_origin_freq=(float)maxi* (float)m_origin_sample_rate / (float)len;*/
 
 			printf("Detected frequency of %s.wav = %fHz\n", name, m_origin_freq);
 			fp = fopen(filename, "w");
@@ -270,7 +266,7 @@ private:
 	
 	void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 	{
-		float origin_SampleFreq = m_origin_freq / 44100.0f;
+		float origin_SampleFreq = m_origin_freq / (float)m_origin_sample_rate;
 		unsigned maxSample = (unsigned)((float)m_wav_length*origin_SampleFreq / sampleFreq);
 
 		noteBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
@@ -336,6 +332,7 @@ private:
 	float *m_wav_samples;
 	float m_max_v;
 	float m_origin_freq;
+	unsigned m_origin_sample_rate;
 
 };
 

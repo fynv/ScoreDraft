@@ -31,17 +31,6 @@ TrackBuffer::~TrackBuffer()
 	fclose(m_fp);
 }
 
-unsigned TrackBuffer::Rate() const {return m_rate;}
-
-float TrackBuffer::Volume() const
-{
-	return m_volume;
-}
-
-void TrackBuffer::SetVolume(float vol)
-{
-	m_volume=vol;
-}
 
 void TrackBuffer::_seek(unsigned upos)
 {
