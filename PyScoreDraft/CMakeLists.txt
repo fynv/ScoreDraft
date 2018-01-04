@@ -45,6 +45,6 @@ endif()
 target_link_libraries(PyScoreDraft ${LINK_LIBS})
 
 
-
+install(TARGETS PyScoreDraft DESTINATION .)
 
 

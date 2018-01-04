@@ -35,7 +35,7 @@ add_definitions(${DEFINES})
 add_library (InstrumentSampler SHARED ${SOURCES})
 target_link_libraries(InstrumentSampler ${LINK_LIBS})
 
-
+install(TARGETS InstrumentSampler DESTINATION Extensions)
 
 
 

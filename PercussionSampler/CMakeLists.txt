@@ -28,7 +28,6 @@ add_definitions(${DEFINES})
 add_library (PercussionSampler SHARED ${SOURCES})
 target_link_libraries(PercussionSampler ${LINK_LIBS})
 
-
-
+install(TARGETS PercussionSampler DESTINATION Extensions)
 
 

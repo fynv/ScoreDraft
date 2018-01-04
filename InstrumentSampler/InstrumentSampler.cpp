@@ -215,7 +215,7 @@ private:
 			double lastV = fftData[0].Re;
 			bool ascending = false;
 			unsigned maxi = 0;
-			for (unsigned i = 1; i < min(m_origin_sample_rate / 100, len); i++)
+			for (unsigned i = 1; i < min(m_origin_sample_rate / 30, len); i++)
 			{
 				double v = fftData[i].Re;
 				if (v > thresh)
