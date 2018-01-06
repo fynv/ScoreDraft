@@ -37,6 +37,11 @@ private:
 
 	std::vector<SampleWav> m_SampleWavList;
 
+	bool m_sorted;
+
+	static int compareSampleWav(const void* a, const void* b);
+	void _sort();
+
 };
 
 

@@ -5,6 +5,8 @@
 #include <ReadWav.h>
 #include <float.h>
 
+#include <stdlib.h>
+
 #include "FrequencyDetection.h"
 
 #include "fft.h"
@@ -20,7 +22,7 @@
 
 InstrumentMultiSampler::InstrumentMultiSampler()
 {
-
+	m_sorted = false;
 }
 
 InstrumentMultiSampler::~InstrumentMultiSampler()
@@ -49,6 +51,8 @@ bool InstrumentMultiSampler::LoadWav(const char* instrument_name, const char* fi
 	wav._fetchOriginFreq(instrument_name, filename);
 
 	m_SampleWavList.push_back(wav);
+
+	m_sorted = false;
 
 	return true;
 }
@@ -149,54 +153,94 @@ void InstrumentMultiSampler::_interpolateBuffers(const float* src1, const float*
 	}	
 }
 
+int InstrumentMultiSampler::compareSampleWav(const void* a, const void* b)
+{
+	SampleWav& wavA = *((SampleWav*)a);
+	SampleWav& wavB = *((SampleWav*)b);
+
+	float origin_SampleFreqA = wavA.m_origin_freq / (float)wavA.m_origin_sample_rate;
+	float origin_SampleFreqB = wavB.m_origin_freq / (float)wavB.m_origin_sample_rate;
+
+	return origin_SampleFreqA > origin_SampleFreqB ? 1 : -1;
+}
+
+
+void InstrumentMultiSampler::_sort()
+{
+	std::qsort(m_SampleWavList.data(), m_SampleWavList.size(), sizeof(SampleWav), compareSampleWav);
+	m_sorted = true;
+}
+
+
 void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 {
 	if (m_SampleWavList.size() < 1) return;
+	if (!m_sorted) _sort();
 
-	unsigned nearestI = 0;
-	unsigned nearestI2 = 0;
-	float nearestDiff = FLT_MAX;
-	float nearestDiff2 = FLT_MAX;
+	bool useSingle = false;
+	unsigned I;
 
-	for (size_t i = 0; i < m_SampleWavList.size(); i++)
 	{
-		SampleWav& wav = m_SampleWavList[i];
+		SampleWav& wav = m_SampleWavList[0];
 		float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
-		float diff = fabsf(logf(sampleFreq) - logf(origin_SampleFreq));
 
-		if (diff < nearestDiff)
+		if (sampleFreq <= origin_SampleFreq)
 		{
-			nearestDiff2 = nearestDiff;
-			nearestI2 = nearestI;
-
-			nearestDiff = diff;
-			nearestI = (unsigned)i;
-		}
-		else if (diff < nearestDiff2)
-		{
-			nearestDiff2 = diff;
-			nearestI2 = (unsigned)i;
+			I = 0;
+			useSingle = true;
 		}
 	}
 
-	SampleWav& wav1 = m_SampleWavList[nearestI];
-	SampleWav& wav2 = m_SampleWavList[nearestI2];
+	if (!useSingle)
+	{
+		SampleWav& wav = m_SampleWavList[m_SampleWavList.size()-1];
+		float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
+
+		if (sampleFreq >= origin_SampleFreq)
+		{
+			I = (unsigned)(m_SampleWavList.size() - 1);
+			useSingle = true;
+		}
+	}
+
+	if (!useSingle)
+	{
+		for (size_t i = 0; i < m_SampleWavList.size() - 1; i++)
+		{
+			SampleWav& wav = m_SampleWavList[i+1];
+			float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
+
+			if (sampleFreq == origin_SampleFreq)
+			{
+				I = (unsigned)(i+1);
+				useSingle = true; 
+				break;
+			}
+			else if (sampleFreq < origin_SampleFreq)
+			{
+				I = (unsigned)i;
+				break;
+			}
+		}
+	}
+
+	
+	SampleWav& wav1 = m_SampleWavList[I];
+	SampleWav& wav2 = m_SampleWavList[I+1];
 	float origin_SampleFreq1 = wav1.m_origin_freq / (float)wav1.m_origin_sample_rate;
 	float origin_SampleFreq2 = wav2.m_origin_freq / (float)wav2.m_origin_sample_rate;
 
-	if (((origin_SampleFreq1 <= sampleFreq) && (origin_SampleFreq2 <= sampleFreq)) ||
-		((origin_SampleFreq1 >= sampleFreq) && (origin_SampleFreq2 >= sampleFreq)))  /// Single Sample
-
+	if (useSingle)
 	{
 		NoteBuffer tmpBuffer;
-		_generateNoteWave(nearestI, fNumOfSamples, sampleFreq, &tmpBuffer);
+		_generateNoteWave(I, fNumOfSamples, sampleFreq, &tmpBuffer);
 
 		noteBuf->m_sampleNum = tmpBuffer.m_sampleNum;
 		noteBuf->Allocate();
 
 		for (unsigned j = 0; j < noteBuf->m_sampleNum; j++)
 		{
-			float x2 = (float)j / fNumOfSamples;
+			float x2 = (float)j / (float)noteBuf->m_sampleNum;
 			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
 			noteBuf->m_data[j] = amplitude*tmpBuffer.m_data[j];
@@ -205,10 +249,10 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 	else
 	{
 		NoteBuffer tmpBuffer1;
-		_generateNoteWave(nearestI, fNumOfSamples, sampleFreq, &tmpBuffer1);
+		_generateNoteWave(I, fNumOfSamples, sampleFreq, &tmpBuffer1);
 
 		NoteBuffer tmpBuffer2;
-		_generateNoteWave(nearestI2, fNumOfSamples, sampleFreq, &tmpBuffer2);
+		_generateNoteWave(I+1, fNumOfSamples, sampleFreq, &tmpBuffer2);
 
 		unsigned minLength = min(tmpBuffer1.m_sampleNum, tmpBuffer2.m_sampleNum);
 
@@ -219,7 +263,7 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 
 		for (unsigned j = 0; j < noteBuf->m_sampleNum; j++)
 		{
-			float x2 = (float)j / fNumOfSamples;
+			float x2 = (float)j / (float)noteBuf->m_sampleNum;
 			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
 			noteBuf->m_data[j] *= amplitude;
