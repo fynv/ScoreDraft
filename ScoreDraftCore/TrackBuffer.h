@@ -37,8 +37,12 @@ public:
 
 	float Sample(unsigned index);
 	float MaxValue();
+
+	// buffer read
+	void GetSamples(unsigned startIndex, unsigned length, float* buffer);
 		
 	static bool CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffer_deferred* tracks);
+	unsigned GetLocalBufferSize();
 
 private:
 	unsigned m_rate;

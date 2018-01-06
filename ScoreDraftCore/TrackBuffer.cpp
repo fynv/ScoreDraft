@@ -10,7 +10,11 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-static const unsigned s_localBufferSize=65536;
+static const unsigned s_localBufferSize = 65536;
+unsigned TrackBuffer::GetLocalBufferSize()
+{
+	return s_localBufferSize;
+}
 
 TrackBuffer::TrackBuffer(unsigned rate) : m_rate(rate)
 {
@@ -192,6 +196,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 
 float TrackBuffer::Sample(unsigned index)
 {
+	if (index >= m_length) return 0.0f;
 	if (m_localBufferPos==(unsigned)(-1) || m_localBufferPos>index || m_localBufferPos+s_localBufferSize<=index)
 	{
 		m_localBufferPos=(index/s_localBufferSize)*s_localBufferSize;
@@ -203,6 +208,28 @@ float TrackBuffer::Sample(unsigned index)
 
 	return m_localBuffer[index-m_localBufferPos];
 	
+}
+
+void TrackBuffer::GetSamples(unsigned startIndex, unsigned length, float* buffer)
+{
+	while (length > 0)
+	{
+		if (startIndex >= m_length) break;
+		if (m_localBufferPos == (unsigned)(-1) || m_localBufferPos > startIndex || m_localBufferPos + s_localBufferSize <= startIndex)
+		{
+			m_localBufferPos = (startIndex / s_localBufferSize)*s_localBufferSize;
+			unsigned num = NumberOfSamples();
+
+			fseek(m_fp, m_localBufferPos*sizeof(float), SEEK_SET);
+			fread(m_localBuffer, sizeof(float), min(s_localBufferSize, num - m_localBufferPos), m_fp);
+		}
+
+		unsigned readLength = min(length, m_localBufferPos + s_localBufferSize - startIndex);
+		memcpy(buffer, m_localBuffer + (startIndex - m_localBufferPos), sizeof(float)* readLength);
+		startIndex += readLength;
+		length -= readLength;
+		buffer += readLength;
+	}
 }
 
 float TrackBuffer::MaxValue()

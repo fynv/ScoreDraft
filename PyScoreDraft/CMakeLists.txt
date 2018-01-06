@@ -18,11 +18,14 @@ set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
+../WavUtil
 )
 
 set (LINK_LIBS 
 ${PYTHON_LIBRARIES}
-ScoreDraftCore)
+ScoreDraftCore
+WavUtil
+)
 
 if (WIN32) 
 set (DEFINES  ${DEFINES}

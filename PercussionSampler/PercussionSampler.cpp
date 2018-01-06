@@ -11,6 +11,7 @@
 
 #include <string.h>
 #include <math.h>
+#include <ReadWav.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -21,23 +22,13 @@
 #endif
 
 
-struct WavHeader
-{
-	unsigned short wFormatTag;
-	unsigned short wChannels;
-	unsigned int dwSamplesPerSec;
-	unsigned int dwAvgBytesPerSec;
-	unsigned short wBlockAlign;
-	unsigned short wBitsPerSample;
-};
-
 class PercussionSampler : public Percussion
 {
 public:
 	PercussionSampler()
 	{
 		m_wav_length = 0;
-		m_wav_samples = 0;
+		m_wav_samples = nullptr;
 	}
 
 	~PercussionSampler()
@@ -49,117 +40,21 @@ public:
 	{
 		char filename[1024];
 		sprintf(filename, "PercussionSamples/%s.wav", name);
+
 		delete[] m_wav_samples;
 		m_wav_length = 0;
-		m_wav_samples = 0;
+		m_wav_samples = nullptr;
 
-		char c_riff[4] = { 'R', 'I', 'F', 'F' };
-		unsigned& u_riff = *(unsigned*)c_riff;
+		ReadWav reader;
+		reader.OpenFile(filename);
+		if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length)) return false;
 
-		char c_wave[4] = { 'W', 'A', 'V', 'E' };
-		unsigned& u_wave = *(unsigned*)c_wave;
-
-		char c_fmt[4] = { 'f', 'm', 't', ' ' };
-		unsigned& u_fmt = *(unsigned*)c_fmt;
-
-		char c_data[4] = { 'd', 'a', 't', 'a' };
-		unsigned& u_data = *(unsigned*)c_data;
-
-		unsigned buf32;
-		
-		FILE *fp = fopen(filename, "rb");
-		if (!fp) return false;
-		fread(&buf32, 4, 1, fp);
-		if (buf32 != u_riff)
-		{
-			fclose(fp);
-			return false;
-		}
-		
-		unsigned chunkSize;
-		fread(&chunkSize, 4, 1, fp);
-
-		fread(&buf32, 4, 1, fp);
-		if (buf32 != u_wave)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		fread(&buf32, 4, 1, fp);
-		if (buf32 != u_fmt)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		unsigned headerSize;
-		fread(&headerSize, 4, 1, fp);
-		if (headerSize != sizeof(WavHeader))
-		{
-			fclose(fp);
-			return false;
-		}
-
-		WavHeader header;
-		fread(&header, sizeof(WavHeader), 1, fp);
-
-		if (header.wFormatTag!=1)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		unsigned channels = header.wChannels;
-		if (channels<1 || channels>2)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		m_origin_sample_rate = header.dwSamplesPerSec;
-		
-		if (header.wBitsPerSample!=16)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		fread(&buf32, 4, 1, fp);
-		if (buf32 != u_data)
-		{
-			fclose(fp);
-			return false;
-		}
-
-		unsigned dataSize;
-		fread(&dataSize, 4, 1, fp);
-
-		short* data = new short[dataSize/2];
-
-		fread(data, sizeof(short), dataSize / 2, fp);
-
-		m_wav_length = dataSize / channels / 2;
 		m_wav_samples = new float[m_wav_length];
-
-		m_max_v = 0.0f;
-
-		for (unsigned i = 0; i < m_wav_length; i++)
+		if (!reader.ReadSamples(m_wav_samples, m_wav_length, m_max_v))
 		{
-			float v = 0.0f;
-			for (unsigned j = 0; j < channels; j++)
-			{
-				v += (float)data[i * channels + j];
-			}
-			v /= 32767.0f*(float)channels;
-			m_wav_samples[i] = v;
-			m_max_v = max(m_max_v, fabsf(v));
-
+			delete[] m_wav_samples;
+			return false;
 		}
-
-		delete[] data;
-
-		fclose(fp);
 
 		return true;
 	}
@@ -180,7 +75,7 @@ public:
 				float x2 = (float)j / fNumOfSamples;
 				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-				beatBuf->m_data[j] = amplitude*m_wav_samples[j];
+				beatBuf->m_data[j] = amplitude*m_wav_samples[j] * mult;
 			}
 		}
 		else
@@ -231,7 +126,7 @@ public:
 					wave = sum / (float)count;
 				}
 
-				beatBuf->m_data[j] = amplitude*wave;
+				beatBuf->m_data[j] = amplitude*wave* mult;
 			}
 		}
 	}

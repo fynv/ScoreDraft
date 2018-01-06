@@ -29,9 +29,10 @@ WinPCMPlayer.h
 set (INCLUDE_DIR
 .
 ../ScoreDraftCore
+../WavUtil
 )
 
-set (LINK_LIBS ScoreDraftCore)
+set (LINK_LIBS ScoreDraftCore WavUtil)
 
 if (WIN32) 
 set (DEFINES  ${DEFINES}

@@ -3,22 +3,30 @@ cmake_minimum_required (VERSION 3.0)
 set(SOURCES
 complex.cpp
 fft.cpp
-InstrumentSampler.cpp
+InstrumentSingleSampler.cpp
+InstrumentMultiSampler.cpp
+InstrumentSamplerFactory.cpp
+FrequencyDetection.cpp
 )
 
 set(HEADERS 
 complex.h
 fft.h
+InstrumentSingleSampler.h
+InstrumentMultiSampler.h
+FrequencyDetection.h
 )
 
 set (INCLUDE_DIR
 .
 ../ScoreDraftCore
+../WavUtil
 ../PyScoreDraft
 )
 
 set (LINK_LIBS 
-ScoreDraftCore)
+ScoreDraftCore
+WavUtil)
 
 if (WIN32) 
 set (DEFINES  ${DEFINES}
@@ -32,7 +40,7 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (InstrumentSampler SHARED ${SOURCES})
+add_library (InstrumentSampler SHARED ${SOURCES} ${HEADERS})
 target_link_libraries(InstrumentSampler ${LINK_LIBS})
 
 install(TARGETS InstrumentSampler DESTINATION Extensions)

@@ -7,11 +7,14 @@ PercussionSampler.cpp
 set (INCLUDE_DIR
 .
 ../ScoreDraftCore
+../WavUtil
 ../PyScoreDraft
 )
 
 set (LINK_LIBS 
-ScoreDraftCore)
+ScoreDraftCore
+WavUtil
+)
 
 if (WIN32) 
 set (DEFINES  ${DEFINES}
