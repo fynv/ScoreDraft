@@ -6,6 +6,8 @@ Instrument.cpp
 Note.cpp
 Percussion.cpp
 TrackBuffer.cpp
+VoicePiece.cpp
+Singer.cpp
 instruments/BottleBlow.cpp
 instruments/NaivePiano.cpp
 instruments/PureSin.cpp
@@ -23,6 +25,8 @@ Note.h
 Percussion.h
 RefCounted.h
 TrackBuffer.h
+VoicePiece.h
+Singer.h
 instruments/BottleBlow.h
 instruments/NaivePiano.h
 instruments/PureSin.h

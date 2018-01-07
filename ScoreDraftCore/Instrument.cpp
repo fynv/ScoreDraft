@@ -32,13 +32,6 @@ void NoteBuffer::Allocate()
 	m_data=new float[m_sampleNum];
 }
 
-class NoteTableItem
-{
-public:
-	Note m_note;
-	NoteBuffer m_noteBuffer;
-};
-
 #include <cmath>
 #include <time.h>
 Instrument::Instrument() : m_noteVolume(1.0f)
@@ -61,14 +54,6 @@ void Instrument::Silence(unsigned numOfSamples, NoteBuffer* noteBuf)
 void Instrument::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 {
 	Silence((unsigned)ceilf(fNumOfSamples), noteBuf);
-}
-
-inline float rand01()
-{
-	float f = (float)rand() / (float)RAND_MAX;
-	if (f < 0.0000001f) f = 0.0000001f;
-	if (f > 0.9999999f) f = 0.9999999f;
-	return f;
 }
 
 void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo, float RefFreq)

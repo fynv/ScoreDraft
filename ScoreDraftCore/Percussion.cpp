@@ -33,13 +33,6 @@ void BeatBuffer::Allocate()
 	m_data = new float[m_sampleNum];
 }
 
-class BeatTableItem
-{
-public:
-	int m_duration;
-	BeatBuffer m_beatBuffer;
-};
-
 #include <cmath>
 #include <time.h>
 Percussion::Percussion() : m_beatVolume(1.0f)
@@ -63,14 +56,6 @@ void Percussion::Silence(unsigned numOfSamples, BeatBuffer* noteBuf)
 void Percussion::GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
 {
 	Silence((unsigned)ceilf(fNumOfSamples), beatBuf);
-}
-
-inline float rand01()
-{
-	float f = (float)rand() / (float)RAND_MAX;
-	if (f < 0.0000001f) f = 0.0000001f;
-	if (f > 0.9999999f) f = 0.9999999f;
-	return f;
 }
 
 void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)

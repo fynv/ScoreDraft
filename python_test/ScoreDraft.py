@@ -14,6 +14,12 @@ class Percussion:
 	def tune(self, cmd):
 		PyScoreDraft.PercussionTune(self.perc_id, cmd)
 
+class Singer:
+	def __init__(self, clsId):
+		self.singer_id=PyScoreDraft.InitSinger(clsId)
+	def tune(self, cmd):
+		PyScoreDraft.SingerTune(self.perc_id, cmd)
+
 g_instList=PyScoreDraft.ListInstruments();
 for i in range(len(g_instList)):
 	funcDef="""
@@ -26,6 +32,13 @@ for i in range(len(g_percList)):
 	funcDef="""
 def """+g_percList[i]+"""():
 	return Percussion("""+str(i)+""")"""
+	exec(funcDef)
+
+g_singerList=PyScoreDraft.ListSingers();
+for i in range(len(g_singerList)):
+	funcDef="""
+def """+g_singerList[i]+"""():
+	return Singer("""+str(i)+""")"""
 	exec(funcDef)
 
 
@@ -42,6 +55,10 @@ class Document:
 	def playBeatSeq(self, seq, percList, volume=1.0):
 		percIdList= [perc.perc_id for perc in percList]
 		bufferId= PyScoreDraft.PercussionPlay(percIdList, seq, volume, self.tempo)
+		self.bufferList.append(bufferId)
+
+	def sing(self, seq, singer, volume=1.0):
+		bufferId = PyScoreDraft.Sing(singer.singer_id, seq, volume, self.tempo, self.refFreq)
 		self.bufferList.append(bufferId)
 
 	def trackToWav(self,trackIndex, filename):

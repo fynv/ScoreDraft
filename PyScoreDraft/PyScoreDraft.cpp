@@ -25,11 +25,15 @@
 #include <Beat.h>
 #include "percussions/TestPerc.h"
 
+#include <VoicePiece.h>
+
 #include <vector>
 #include <string.h>
 
 static std::vector<Instrument_deferred> s_InstrumentMap;
 static std::vector<Percussion_deferred> s_PercussionMap;
+static std::vector<Singer_deferred> s_SingerMap;
+
 static std::vector<TrackBuffer_deferred> s_TrackBufferMap;
 
 static std::vector<std::string> s_AllInstruments;
@@ -39,6 +43,10 @@ static std::vector<unsigned> s_ClassIndicesOfInstruments;
 static std::vector<std::string> s_AllPercussions;
 static std::vector<InstrumentFactory*> s_FactoriesOfPercussions;
 static std::vector<unsigned> s_ClassIndicesOfPercussions;
+
+static std::vector<std::string> s_AllSingers;
+static std::vector<InstrumentFactory*> s_FactoriesOfSingers;
+static std::vector<unsigned> s_ClassIndicesOfSingers;
 
 static TypicalInstrumentFactory* GetDefaultFactory()
 {
@@ -83,6 +91,20 @@ static void RegisterFactory(InstrumentFactory* factory)
 			s_AllPercussions.push_back(percList[i]);
 			s_FactoriesOfPercussions.push_back(factory);
 			s_ClassIndicesOfPercussions.push_back((unsigned)i);
+		}
+	}
+
+	{
+
+		std::vector<std::string> singerList;
+		factory->GetSingerList(singerList);
+
+		for (size_t i = 0; i < singerList.size(); i++)
+		{
+			printf("Registering Singer, clsId=%lu, name=%s\n", s_AllSingers.size(), singerList[i].data());
+			s_AllSingers.push_back(singerList[i]);
+			s_FactoriesOfSingers.push_back(factory);
+			s_ClassIndicesOfSingers.push_back((unsigned)i);
 		}
 	}
 
@@ -182,7 +204,6 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 		PyObject *item = PyList_GetItem(seq_py, i);
 		if (PyObject_TypeCheck(item, &PyTuple_Type))
 		{
-
 			Note note;
 			note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
 			note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
@@ -280,6 +301,70 @@ static PyObject* PercussionTune(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
+static PyObject* Sing(PyObject *self, PyObject *args)
+{
+	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	PyObject *seq_py = PyTuple_GetItem(args, 1);
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
+
+	Singer_deferred singer = s_SingerMap[SingerId];
+
+	TrackBuffer_deferred buffer;
+	s_TrackBufferMap.push_back(buffer);
+
+	size_t piece_count = PyList_Size(seq_py);
+	for (size_t i = 0; i < piece_count; i++)
+	{
+		PyObject *item = PyList_GetItem(seq_py, i);
+		if (PyObject_TypeCheck(item, &PyTuple_Type))
+		{
+			size_t tupleSize = PyTuple_Size(item);
+			PyObject *_item = PyTuple_GetItem(item, 0);
+			if (PyObject_TypeCheck(_item, &PyUnicode_Type))
+			{
+				VoicePiece piece;
+				piece.m_lyric = _PyUnicode_AsString(_item);
+				size_t piece_count = PyList_Size(seq_py);
+				for (size_t j = 0; j < tupleSize - 1; j++)
+				{
+					_item = PyTuple_GetItem(item, j + 1);
+					Note note;
+					note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
+					note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+					piece.m_notes.push_back(note);
+				}
+				singer->SingPiece(*buffer, piece, tempo, RefFreq);
+			}
+
+		}
+		else if (PyObject_TypeCheck(item, &PyUnicode_Type))
+		{
+			singer->Tune(_PyUnicode_AsString(item));
+		}
+	}
+	float maxV = buffer->MaxValue();
+	buffer->SetVolume(volume / maxV);
+
+	return PyLong_FromUnsignedLong((unsigned long)(s_TrackBufferMap.size() - 1));
+}
+
+
+static PyObject* SingerTune(PyObject *self, PyObject *args)
+{
+	unsigned SingerId;
+	const char* cmd;
+
+	if (!PyArg_ParseTuple(args, "Is", &SingerId, &cmd))
+		return NULL;
+
+	Singer_deferred singer = s_SingerMap[SingerId];
+	singer->Tune(cmd);
+	return PyLong_FromLong(0);
+}
+
+
 static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 {
 	PyObject *list = PyTuple_GetItem(args, 0);
@@ -342,7 +427,6 @@ static PyObject* InitInstrument(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong((unsigned long)(s_InstrumentMap.size() - 1));
 }
 
-
 static PyObject* ListPercussions(PyObject *self, PyObject *args)
 {
 	PyObject* list = PyList_New(0);
@@ -353,7 +437,6 @@ static PyObject* ListPercussions(PyObject *self, PyObject *args)
 	}
 	return list;
 }
-
 
 static PyObject* InitPercussion(PyObject *self, PyObject *args)
 {
@@ -367,6 +450,32 @@ static PyObject* InitPercussion(PyObject *self, PyObject *args)
 	factory->InitiatePercussion(clsId, perc);
 	s_PercussionMap.push_back(perc);
 	return PyLong_FromUnsignedLong((unsigned long)(s_PercussionMap.size() - 1));
+}
+
+
+static PyObject* ListSingers(PyObject *self, PyObject *args)
+{
+	PyObject* list = PyList_New(0);
+	size_t count = s_AllSingers.size();
+	for (size_t i = 0; i < count; i++)
+	{
+		PyList_Append(list, PyUnicode_FromString(s_AllSingers[i].data()));
+	}
+	return list;
+}
+
+static PyObject* InitSinger(PyObject *self, PyObject *args)
+{
+	unsigned glbClsId;
+	if (!PyArg_ParseTuple(args, "I", &glbClsId))
+		return NULL;
+
+	InstrumentFactory* factory = s_FactoriesOfSingers[glbClsId];
+	unsigned clsId = s_ClassIndicesOfSingers[glbClsId];
+	Singer_deferred singer;
+	factory->InitiateSinger(clsId, singer);
+	s_SingerMap.push_back(singer);
+	return PyLong_FromUnsignedLong((unsigned long)(s_SingerMap.size() - 1));
 }
 
 static PyObject* WriteNoteSequencesToMidi(PyObject *self, PyObject *args)
@@ -429,6 +538,18 @@ static PyMethodDef PyScoreDraftMethods[] = {
 		""
 	},
 	{
+		"Sing",
+		Sing,
+		METH_VARARGS,
+		""
+	},
+	{
+		"SingerTune",
+		SingerTune,
+		METH_VARARGS,
+		""
+	},
+	{
 		"MixTrackBufferList",
 		MixTrackBufferList,
 		METH_VARARGS,
@@ -461,6 +582,18 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"InitPercussion",
 		InitPercussion,
+		METH_VARARGS,
+		""
+	},
+	{
+		"ListSingers",
+		ListSingers,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InitSinger",
+		InitSinger,
 		METH_VARARGS,
 		""
 	},
