@@ -84,13 +84,12 @@ void Singer::SingPiece(TrackBuffer& buffer, const VoicePiece& piece, unsigned te
 			if (aNote.m_duration>0)
 			{
 				buffer.MoveCursor(fNumOfSamples);
-				return;
 			}
 			else if (aNote.m_duration<0)
 			{
 				buffer.MoveCursor(-fNumOfSamples);
-				return;
 			}
+			continue;
 		}
 
 		SingerNoteParams param;

@@ -40,7 +40,7 @@ float fetchFrequency(unsigned length, float *samples, unsigned sampleRate)
 	}
 
 	ifft(fftData, l);
-	if (fftData[0].Re<0.4)	return -1.0f;
+	if (fftData[0].Re<0.2)	return -1.0f;
 	
 	unsigned maxi = (unsigned)(-1);
 	

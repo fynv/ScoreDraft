@@ -337,6 +337,18 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 				}
 				singer->SingPiece(*buffer, piece, tempo, RefFreq);
 			}
+			else if (PyObject_TypeCheck(_item, &PyFloat_Type))
+			{
+				VoicePiece piece;
+				piece.m_lyric = "";
+
+				Note note;
+				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+
+				piece.m_notes.push_back(note);
+				singer->SingPiece(*buffer, piece, tempo, RefFreq);
+			}
 
 		}
 		else if (PyObject_TypeCheck(item, &PyUnicode_Type))
