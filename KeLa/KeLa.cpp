@@ -448,6 +448,8 @@ public:
 		unsigned pos_final = 0;
 		float targetPos = 0.0f;
 
+		float multFac = m_noteVolume / maxv;
+
 		for (size_t i = 0; i < notes.size(); i++)
 		{
 			float sampleFreq = notes[i].sampleFreq;
@@ -469,7 +471,7 @@ public:
 				float x2 = (float)pos_final / trueSumLen;
 				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-				noteBuf->m_data[pos_final] = amplitude*value*m_noteVolume;
+				noteBuf->m_data[pos_final] = amplitude*value*multFac;
 			}
 
 
