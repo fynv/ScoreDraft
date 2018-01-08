@@ -12,7 +12,6 @@
 #include <string.h>
 #include <cmath>
 #include <ReadWav.h>
-#include "fft.h"
 #include "FrequencyDetection.h"
 #include <float.h>
 
@@ -23,6 +22,8 @@
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
+
+#define PI 3.14159265359f
 
 struct Buffer
 {
@@ -125,7 +126,7 @@ void MergeWindowToBuffer(const Window& win, Buffer& buf, float pos)
 
 void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned step, float& ave_freq)
 {
-	unsigned halfWinLen = 512;
+	unsigned halfWinLen = 1024;
 	float* temp = new float[halfWinLen * 2];
 
 	for (unsigned center = 0; center < buf.m_data.size(); center += step)
@@ -136,8 +137,7 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 		for (int i = -(int)halfWinLen; i < (int)halfWinLen; i++)
 			temp[i + halfWinLen] = win.GetSample(i);
 
-		bool suc;
-		float freq = fetchFrequency(halfWinLen * 2, temp, buf.m_sampleRate, suc);
+		float freq = fetchFrequency(halfWinLen * 2, temp, buf.m_sampleRate);
 
 		frequencies.push_back(freq);
 	}
@@ -165,7 +165,7 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 
 	for (size_t i = 0; i < frequencies.size(); i++)
 	{
-		if (frequencies[i] != 0)
+		if (frequencies[i] > 0)
 		{
 			if (CurRange.begin == (unsigned)(-1))
 			{
@@ -185,10 +185,20 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 
 	ave_freq = 0.0f;
 	float count = 0.0f;
+	unsigned sampleBegin = (unsigned) (-1);
+	size_t sampleEnd = (unsigned)(-1);
 	for (size_t i = 0; i < frequencies.size(); i++)
 	{
-		if (i<BestRange.begin || i>BestRange.end)
+		if ((i<BestRange.begin || i>BestRange.end) && frequencies[i] > 0.0f)
+		{
 			frequencies[i] = 0.0f;
+		}
+		if (frequencies[i] >= 0.0f)
+		{
+			if (sampleBegin == (unsigned)(-1))
+				sampleBegin = (unsigned)i;
+			sampleEnd = (unsigned)i+1;
+		}		
 		if (frequencies[i] > 0.0f)
 		{
 			ave_freq += frequencies[i];
@@ -196,6 +206,10 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 		}
 	}
 	ave_freq /= count;
+
+	for (unsigned i = sampleBegin; i < sampleEnd; i++)
+		if (frequencies[i] < 0.0f) frequencies[i] = 0.0f;
+
 }
 
 class KeLa : public Singer
@@ -204,7 +218,7 @@ public:
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
 	{
 		char path[1024];
-		sprintf(path, "KeLaSamples/%s.wav", lyric);
+		sprintf(path, "KeLaSamples/%s/%s.wav", m_name.data(), lyric);
 
 		Buffer source;
 		float maxv;
@@ -214,11 +228,12 @@ public:
 		std::vector<float> frequencies;
 		float ave_freq;
 
-		sprintf(path, "KeLaSamples/%s.freq", lyric);
+		sprintf(path, "KeLaSamples/%s/%s.freq", m_name.data(), lyric);
 		FILE* fp = fopen(path, "r");
 		if (fp)
 		{
-			fscanf(fp, "%f", &ave_freq);
+			ave_freq = 0.0f;
+			float count = 0.0f;
 			while (!feof(fp))
 			{
 				float f;
@@ -227,22 +242,28 @@ public:
 					frequencies.push_back(f);
 				}
 				else break;
+
+				if (f > 0.0f)
+				{
+					ave_freq += f;
+					count += 1.0f;
+				}
 			}
 			fclose(fp);
+
+			ave_freq /= count;
 		}
 		else
 		{
 			DetectFreqs(source, frequencies, freq_step, ave_freq);
 			fp = fopen(path, "w");
-			fprintf(fp, "%f\n", ave_freq);
-
 			for (size_t i = 0; i < frequencies.size(); i++)
 			{
 				fprintf(fp, "%f\n", frequencies[i]);
 			}
-
 			fclose(fp);
 		}
+
 
 		float minSampleFreq = FLT_MAX;
 		float trueSumLen = 0.0f;
@@ -266,6 +287,9 @@ public:
 		unsigned voiceBegin = (unsigned)(-1);
 		unsigned voiceEnd = (unsigned)(-1);
 
+		unsigned sampleBegin = (unsigned)(-1);
+		unsigned sampleEnd = (unsigned)(-1);
+
 		float srcPos = 0.0f;
 		while ((unsigned)srcPos < source.m_data.size())
 		{
@@ -273,11 +297,22 @@ public:
 			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
+			bool inSample;
 			bool voicing;
 			{
-				unsigned nearestSrcFreqPos = min((unsigned)(srcFreqPos + 0.5f), frequencies.size() - 1);
+				unsigned nearestSrcFreqPos = min((unsigned)(srcFreqPos + 0.5f), (unsigned)frequencies.size() - 1);
+				inSample = frequencies[nearestSrcFreqPos] >= 0.0f;
 				voicing = frequencies[nearestSrcFreqPos] > 0.0f;
 			}
+			if (inSample)
+			{
+				if (sampleBegin == (unsigned)(-1)) sampleBegin = (unsigned)bufResampled.m_data.size();
+			}
+			else if (sampleBegin != (unsigned)(-1))
+			{
+				if (sampleEnd == (unsigned)(-1)) sampleEnd = (unsigned)bufResampled.m_data.size();
+			}
+
 			if (voicing)
 			{
 				if (voiceBegin == (unsigned)(-1)) voiceBegin = (unsigned)bufResampled.m_data.size();
@@ -291,14 +326,14 @@ public:
 			if (uSrcFreqPos >= frequencies.size() - 1)
 			{
 				srcFreq = frequencies[frequencies.size() - 1];
-				if (srcFreq == 0.0f) srcFreq = ave_freq;
+				if (srcFreq <= 0.0f) srcFreq = ave_freq;
 			}
 			else
 			{
 				float freq1 = frequencies[uSrcFreqPos];
-				if (freq1 == 0.0f) freq1 = ave_freq;
+				if (freq1 <= 0.0f) freq1 = ave_freq;
 				float freq2 = frequencies[uSrcFreqPos + 1];
-				if (freq2 == 0.0f) freq2 = ave_freq;
+				if (freq2 <= 0.0f) freq2 = ave_freq;
 				srcFreq = freq1*(1.0f - fracSrcFreqPos) + freq2*fracSrcFreqPos;
 			}
 
@@ -341,6 +376,7 @@ public:
 
 			srcPos += speed;
 		}
+		if (sampleEnd == (unsigned)(-1)) sampleEnd = (unsigned)bufResampled.m_data.size();
 		if (voiceEnd == (unsigned)(-1)) voiceEnd = (unsigned)bufResampled.m_data.size();
 
 		// CreateWindows
@@ -358,8 +394,9 @@ public:
 
 		voiceEnd = (unsigned)(center - halfWinWidth);
 
-		unsigned VoicedLen = voiceEnd - voiceBegin + 1;
-		unsigned UnvoidedLen = (unsigned)bufResampled.m_data.size() - VoicedLen;
+		unsigned SampleLen = sampleEnd - sampleBegin;
+		unsigned VoicedLen = voiceEnd - voiceBegin;
+		unsigned UnvoidedLen = SampleLen - VoicedLen;
 
 		float stretch_rate = (sumLen - (float)UnvoidedLen) / (float)VoicedLen;
 
@@ -371,13 +408,13 @@ public:
 		DestBuf.SetZero();
 
 		unsigned destPos = 0;
-		for (; destPos < destLen && destPos < voiceBegin; destPos++)
+		for (unsigned srcPos = sampleBegin; destPos < destLen && srcPos < voiceBegin; destPos++, srcPos++)
 		{
-			float srcV = bufResampled.m_data[destPos];
+			float srcV = bufResampled.m_data[srcPos];
 
-			if ((float)(voiceBegin - destPos) < halfWinWidth)
+			if ((float)(voiceBegin - srcPos) < halfWinWidth)
 			{
-				float window = (cosf(((float)destPos + halfWinWidth - (float)voiceBegin) * (float)PI / halfWinWidth) + 1.0f)*0.5f;
+				float window = (cosf(((float)srcPos + halfWinWidth - (float)voiceBegin) * (float)PI / halfWinWidth) + 1.0f)*0.5f;
 				DestBuf.m_data[destPos] = srcV*window;
 			}
 			else
@@ -425,7 +462,7 @@ public:
 			destPos = (unsigned)(winCenter - halfWinWidth);
 		}
 
-		for (unsigned srcPos = voiceEnd; destPos < destLen && srcPos < (unsigned)bufResampled.m_data.size(); srcPos++, destPos++)
+		for (unsigned srcPos = voiceEnd; destPos < destLen && srcPos < (unsigned)sampleEnd; srcPos++, destPos++)
 		{
 			float srcV = bufResampled.m_data[srcPos];
 			if ((float)(srcPos - voiceEnd)< halfWinWidth)
@@ -477,13 +514,75 @@ public:
 
 		}
 	}
+
+	void SetName(const char* name)
+	{
+		m_name = name;
+	}
+
+private:
+	std::string m_name;
+};
+
+
+class KeLaFactory : public InstrumentFactory
+{
+public:
+	KeLaFactory()
+	{
+#ifdef _WIN32
+		WIN32_FIND_DATAA ffd;
+		HANDLE hFind = INVALID_HANDLE_VALUE;
+
+		hFind = FindFirstFileA("KeLaSamples\\*", &ffd);
+		if (INVALID_HANDLE_VALUE == hFind) return;
+
+		do
+		{
+			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
+			{
+				m_SingerList.push_back(ffd.cFileName);
+			}
+
+		} while (FindNextFile(hFind, &ffd) != 0);
+
+#else
+		DIR *dir;
+		struct dirent *entry;
+
+		if (dir = opendir("KeLaSamples"))
+		{
+			while ((entry = readdir(dir)) != NULL)
+			{
+				if (entry->d_type == DT_DIR)
+				{
+					if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+						m_SingerList.push_back(entry->d_name);				
+				}
+			}
+		}
+#endif
+	}
+
+	virtual void GetSingerList(std::vector<std::string>& list)
+	{
+		list = m_SingerList;
+	}
+
+	virtual void InitiateSinger(unsigned clsInd, Singer_deferred& singer)
+	{
+		singer = Singer_deferred::Instance<KeLa>();
+		singer.DownCast<KeLa>()->SetName(m_SingerList[clsInd].data());
+	}
+
+private:
+	std::vector<std::string> m_SingerList;
 };
 
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE GetFactory()
 {
-	static TypicalInstrumentFactory fac;
-	fac.AddSinger<KeLa>("KeLa");
+	static KeLaFactory fac;
 	return &fac;
 }
 

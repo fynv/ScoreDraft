@@ -21,7 +21,7 @@ public:
 	virtual void InitiatePercussion(unsigned clsInd, Percussion_deferred& perc) {}
 
 	virtual void GetSingerList(std::vector<std::string>& list){}
-	virtual void InitiateSinger(unsigned clsInd, Singer_deferred& inst) {}
+	virtual void InitiateSinger(unsigned clsInd, Singer_deferred& singer) {}
 };
 
 typedef Instrument_deferred(InstrumentInitializer)();
@@ -97,9 +97,9 @@ public:
 		list = m_SingerList;
 	}
 
-	virtual void InitiateSinger(unsigned clsInd, Singer_deferred& inst)
+	virtual void InitiateSinger(unsigned clsInd, Singer_deferred& singer)
 	{
-		inst = m_SingerInitializers[clsInd]();
+		singer = m_SingerInitializers[clsInd]();
 	}
 
 protected:

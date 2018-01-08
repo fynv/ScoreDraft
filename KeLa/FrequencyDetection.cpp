@@ -1,6 +1,7 @@
 #include "FrequencyDetection.h"
 #include "fft.h"
 #include <memory.h>
+#include <stdio.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -10,7 +11,7 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-float fetchFrequency(unsigned length, float *samples, unsigned sampleRate, bool& success)
+float fetchFrequency(unsigned length, float *samples, unsigned sampleRate)
 {
 	unsigned len = 1;
 	unsigned l = 0;
@@ -39,59 +40,48 @@ float fetchFrequency(unsigned length, float *samples, unsigned sampleRate, bool&
 	}
 
 	ifft(fftData, l);
-
-	if (fftData[0].Re<0.05)
-	{
-		success = false;
-		return 0.0f;
-	}
-
+	if (fftData[0].Re<0.4)	return -1.0f;
+	
 	unsigned maxi = (unsigned)(-1);
-	double threshRate = 0.8;
+	
+	double lastV = fftData[0].Re;
+	double maxV = 0.0f;
+	bool ascending = false;
 
-	while (maxi == (unsigned)(-1) && threshRate>0.4)
+	for (unsigned i = sampleRate / 500; i < min(sampleRate / 40, len / 2); i++)
 	{
-		double thresh = fftData[0].Re*threshRate;
-		double lastV = fftData[0].Re;
-		bool ascending = false;
-
-		for (unsigned i = sampleRate / 500; i < min(sampleRate / 60, len / 2); i++)
+		double v = fftData[i].Re;
+		if (!ascending)
 		{
-			double v = fftData[i].Re;
-			if (v > thresh)
+			if (v > lastV) ascending = true;
+		}
+		else
+		{
+			if (v < lastV)
 			{
-				if (!ascending)
+				if (fftData[i - 1].Re>maxV)
 				{
-					if (v > lastV) ascending = true;
+					maxV = fftData[i - 1].Re;
+					maxi = i - 1;
 				}
-				else
-				{
-					if (v < lastV)
-					{
-						maxi = i - 1;
-						break;
-					}
-				}
-				lastV = v;
+				ascending = false;
 			}
 		}
-		threshRate -= 0.15;
+		lastV = v;
 	}
-
-	delete[] fftData;
 
 	float freq;
 
-	if (maxi != (unsigned)(-1))
+	if (maxi != (unsigned)(-1) && maxV>0.4f* fftData[0].Re)
 	{
 		freq = (float)sampleRate / (float)maxi;
-		success = true;
 	}
 	else
 	{
 		freq = 0.0f;
-		success = false;
 	}
+
+	delete[] fftData;
 
 	return freq;
 }
