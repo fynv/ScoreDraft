@@ -23,7 +23,7 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-#define PI 3.14159265359f
+#include "fft.h"
 
 struct Buffer
 {
@@ -62,23 +62,24 @@ bool ReadWavToBuffer(const char* filename, Buffer& buf, float& maxV)
 	return reader.ReadSamples(buf.m_data.data(), numSamples, maxV);
 }
 
-struct Window
+class Window
 {
+public:
 	float m_halfWidth;
 	std::vector<float> m_data;
 
-	float GetSample(int i) const
+	virtual float GetSample(int i) const
 	{
 		size_t u_width = m_data.size();
-		if (i < -(int)u_width || i >= (int)u_width) return 0.0f;
+		if (i <= -(int)u_width || i >= (int)u_width) return 0.0f;
 		unsigned pos = (unsigned)(i + (int)u_width) % u_width;
 		return m_data[pos];
 	}
 
-	void SetSample(int i, float v)
+	virtual void SetSample(int i, float v)
 	{
 		size_t u_width = m_data.size();
-		if (i < -(int)u_width || i >= (int)u_width) return;
+		if (i <= -(int)u_width || i >= (int)u_width) return;
 		unsigned pos = (unsigned)(i + (int)u_width) % u_width;
 		m_data[pos] = v;
 	}
@@ -87,42 +88,231 @@ struct Window
 	{
 		memset(m_data.data(), 0, sizeof(float)*m_data.size());
 	}
+
+	void CreateFromBuffer(const Buffer& src, float center, float halfWidth)
+	{
+		unsigned u_halfWidth = (unsigned)ceilf(halfWidth);
+		unsigned u_width = u_halfWidth << 1;
+
+		m_halfWidth = halfWidth;
+		m_data.resize(u_width);
+
+		unsigned u_Center = (unsigned)center;
+
+		for (int i = -(int)u_halfWidth; i < (int)u_halfWidth; i++)
+		{
+			float window = (cosf((float)i * (float)PI / halfWidth) + 1.0f)*0.5f;
+
+			int srcIndex = (int)u_Center + i;
+			float v_src = src.GetSample(srcIndex);
+
+			SetSample(i, window* v_src);
+		}
+	}
+
+	void MergeToBuffer(Buffer& buf, float pos)
+	{
+		int ipos = (int)pos;
+		unsigned u_halfWidth = (unsigned)ceilf(m_halfWidth);
+		unsigned u_width = u_halfWidth << 1;
+
+		for (int i = max(-(int)u_halfWidth, -ipos); i < (int)u_halfWidth; i++)
+		{
+			int dstIndex = ipos + i;
+			if (dstIndex >= (int)buf.m_data.size()) break;
+			buf.m_data[dstIndex] += GetSample(i);
+		}
+	}
+
 };
 
-void HanningWindow(const Buffer& src, float center, float halfWidth, Window& dst)
+
+class SymmetricWindow : public Window
 {
-	unsigned u_halfWidth = (unsigned)ceilf(halfWidth);
-	unsigned u_width = u_halfWidth << 1;
-
-	dst.m_halfWidth = halfWidth;
-	dst.m_data.resize(u_width);
-
-	unsigned u_Center = (unsigned)center;
-
-	for (int i = -(int)u_halfWidth; i < (int)u_halfWidth; i++)
+public:
+	virtual float GetSample(int i) const
 	{
-		float window = (cosf((float)i * (float)PI / halfWidth) + 1.0f)*0.5f;
-
-		int srcIndex = (int)u_Center + i;
-		float v_src = src.GetSample(srcIndex);
-
-		dst.SetSample(i, window* v_src);
+		if (i < 0) i = -i;
+		if (i >= m_data.size()) return 0.0f;
+		return m_data[i];
 	}
-}
+	virtual void SetSample(int i, float v)
+	{
+		if (i < 0) i = -i;
+		if (i >= m_data.size()) return;
+		m_data[i] = v;
+	}
 
-void MergeWindowToBuffer(const Window& win, Buffer& buf, float pos)
+	void CreateFromAsymmetricWindow(const Window& src)
+	{
+		unsigned u_srcHalfWidth = (unsigned)ceilf(src.m_halfWidth);
+		unsigned u_srcWidth = u_srcHalfWidth << 1;
+
+		unsigned l = 0;
+		unsigned fftLen = 1;
+		while (fftLen < u_srcWidth)
+		{
+			l++;
+			fftLen <<= 1;
+		}
+
+		m_halfWidth = src.m_halfWidth;
+		m_data.resize(fftLen / 2);
+
+		DComp* fftBuf = new DComp[fftLen];
+		memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+		for (unsigned i = 0; i < u_srcHalfWidth; i++)
+		{
+			fftBuf[i].Re = (double)src.m_data[i];
+			fftBuf[fftLen - 1 - i].Re = (double)src.m_data[u_srcWidth - 1 - i];
+		}
+
+		fft(fftBuf, l);
+
+		fftBuf[0].Re = 0.0f;
+		fftBuf[0].Im = 0.0f;
+
+		for (unsigned i = 1; i < fftLen; i++)
+		{
+			double absv = DCAbs(&fftBuf[i]);
+			fftBuf[i].Re = absv;
+			fftBuf[i].Im = 0.0f;
+		}
+
+		ifft(fftBuf, l);
+
+		for (unsigned i = 0; i < fftLen / 2; i++)
+			m_data[i] = (float)fftBuf[i].Re;
+
+		delete[] fftBuf;
+
+	}
+
+	void Scale(const SymmetricWindow& src, float targetHalfWidth)
+	{
+		m_halfWidth = targetHalfWidth;
+		unsigned u_TargetHalfWidth = (unsigned)ceilf(targetHalfWidth);
+		m_data.resize(u_TargetHalfWidth);
+
+		float rate = src.m_halfWidth / targetHalfWidth;
+		bool interpolation = rate < 1.0f;
+		for (unsigned i = 0; i < u_TargetHalfWidth; i++)
+		{
+			float destValue;
+			float srcPos = (float)i*rate;
+			if (interpolation)
+			{
+				int ipos1 = (int)floorf(srcPos);
+				float frac = srcPos - (float)ipos1;
+				int ipos2 = ipos1 + 1;
+				int ipos0 = ipos1 - 1;
+				int ipos3 = ipos1 + 2;
+
+				float p0 = src.GetSample(ipos0);
+				float p1 = src.GetSample(ipos1);
+				float p2 = src.GetSample(ipos2);
+				float p3 = src.GetSample(ipos3);
+
+				destValue = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+					(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+					(-0.5f*p0 + 0.5f*p2)*frac + p1;
+			}
+			else
+			{
+				int ipos1 = (int)ceilf(srcPos - rate*0.5f);
+				int ipos2 = (int)floorf(srcPos + rate*0.5f);
+
+				float sum = 0.0f;
+				for (int ipos = ipos1; ipos <= ipos2; ipos++)
+				{
+					sum += src.GetSample(ipos);
+				}
+				destValue = sum / (float)(ipos2 - ipos1 + 1);
+
+			}
+
+			m_data[i] = destValue;
+
+		}
+	}
+
+	void Repitch_FormantPreserved(const SymmetricWindow& src, float targetHalfWidth)
+	{
+		m_halfWidth = targetHalfWidth;
+		unsigned u_TargetHalfWidth = (unsigned)ceilf(targetHalfWidth);
+		m_data.resize(u_TargetHalfWidth);
+
+		float srcHalfWidth = src.m_halfWidth;
+		unsigned uSrcHalfWidth = (unsigned)src.m_data.size();
+		float rate = targetHalfWidth / srcHalfWidth;
+
+		float targetWidth = targetHalfWidth*2.0f;
+
+		for (unsigned i = 0; (float)i < targetHalfWidth; i++)
+		{
+			m_data[i] = 0.0f;
+
+			float srcPos = (float)i;
+			unsigned uSrcPos = (unsigned)(srcPos + 0.5f);
+
+			while (uSrcPos < uSrcHalfWidth)
+			{
+				m_data[i] += src.m_data[uSrcPos];
+				srcPos += targetWidth;
+				uSrcPos = (unsigned)(srcPos + 0.5f);
+			}
+
+			srcPos = targetWidth - (float)i;
+			uSrcPos = (unsigned)(srcPos + 0.5f);
+
+			while (uSrcPos < uSrcHalfWidth)
+			{
+				m_data[i] += src.m_data[uSrcPos];
+				srcPos += targetWidth;
+				uSrcPos = (unsigned)(srcPos + 0.5f);
+			}
+
+			srcPos = (float)i + targetHalfWidth;
+			uSrcPos = (unsigned)(srcPos + 0.5f);
+
+			while (uSrcPos < uSrcHalfWidth)
+			{
+				m_data[i] += src.m_data[uSrcPos];
+				srcPos += targetWidth;
+				uSrcPos = (unsigned)(srcPos + 0.5f);
+			}
+
+			srcPos = -(float)i + targetHalfWidth;
+			uSrcPos = (unsigned)(srcPos + 0.5f);
+
+			while (uSrcPos < uSrcHalfWidth)
+			{
+				m_data[i] += src.m_data[uSrcPos];
+				srcPos += targetWidth;
+				uSrcPos = (unsigned)(srcPos + 0.5f);
+			}
+		}
+
+		// rewindow
+		float amplitude = sqrtf(rate);
+		for (unsigned i = 0; (float)i < targetHalfWidth; i++)
+		{
+			float window = (cosf((float)i * (float)PI / targetHalfWidth) + 1.0f)*0.5f;
+			m_data[i] *= amplitude*window;
+		}
+
+
+	}
+
+};
+
+struct SymmetricWindowWithPosition
 {
-	int ipos = (int)pos;
-	unsigned u_halfWidth = (unsigned)ceilf(win.m_halfWidth);
-	unsigned u_width = u_halfWidth << 1;
+	SymmetricWindow win;
+	float center;
+};
 
-	for (int i = max(-(int)u_halfWidth, -ipos); i < (int)u_halfWidth; i++)
-	{
-		int dstIndex = ipos + i;
-		if (dstIndex >= (int)buf.m_data.size()) break;
-		buf.m_data[dstIndex] += win.GetSample(i);
-	}
-}
 
 void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned step, float& ave_freq)
 {
@@ -132,7 +322,7 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 	for (unsigned center = 0; center < buf.m_data.size(); center += step)
 	{
 		Window win;
-		HanningWindow(buf, (float)center, (float)halfWinLen, win);
+		win.CreateFromBuffer(buf, (float)center, (float)halfWinLen);
 
 		for (int i = -(int)halfWinLen; i < (int)halfWinLen; i++)
 			temp[i + halfWinLen] = win.GetSample(i);
@@ -217,6 +407,8 @@ class KeLa : public Singer
 public:
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
 	{
+		if (notes.size() < 1) return; 
+
 		char path[1024];
 		sprintf(path, "KeLaSamples/%s/%s.wav", m_name.data(), lyric);
 
@@ -264,84 +456,146 @@ public:
 			fclose(fp);
 		}
 
-
 		float minSampleFreq = FLT_MAX;
-		float trueSumLen = 0.0f;
-		for (size_t i = 0; i < notes.size(); i++)
-		{
-			float sampleFreq = notes[i].sampleFreq;
-			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
-			trueSumLen += notes[i].fNumOfSamples;
-		}
-
 		float sumLen = 0.0f;
 		for (size_t i = 0; i < notes.size(); i++)
 		{
 			float sampleFreq = notes[i].sampleFreq;
-			sumLen += notes[i].fNumOfSamples *sampleFreq / minSampleFreq;
+			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
+			sumLen += notes[i].fNumOfSamples;
 		}
-		
-		Buffer bufResampled;
-		bufResampled.m_sampleRate = source.m_sampleRate;
 
-		unsigned voiceBegin = (unsigned)(-1);
-		unsigned voiceEnd = (unsigned)(-1);
-
-		unsigned sampleBegin = (unsigned)(-1);
-		unsigned sampleEnd = (unsigned)(-1);
-
-		float srcPos = 0.0f;
-		while ((unsigned)srcPos < source.m_data.size())
+		float tempLen = 0.0f;
+		std::vector<float> accLen;
+		for (size_t i = 0; i < notes.size(); i++)
 		{
-			float srcFreqPos = srcPos / (float)freq_step;
+			float sampleFreq = notes[i].sampleFreq;
+			tempLen += notes[i].fNumOfSamples *sampleFreq / minSampleFreq;
+			accLen.push_back(tempLen);
+		}
+
+		unsigned unvoicedBegin = (unsigned)(-1);
+		unsigned voicedBegin = (unsigned)(-1);
+		unsigned voicedEnd = (unsigned)(-1);
+		unsigned unvoicedEnd = (unsigned)(-1);
+
+		unsigned voicedBegin_id = (unsigned)(-1);
+		unsigned voicedEnd_id = (unsigned)(-1);
+
+		float firstFreq;
+		float lastFreq;
+
+		for (size_t i = 0; i < frequencies.size(); i++)
+		{
+			if (frequencies[i] >= 0.0f && unvoicedBegin == (unsigned)(-1))
+				unvoicedBegin = i>0?(unsigned)i*freq_step - (freq_step/2):0;
+			if (frequencies[i] > 0.0f && voicedBegin == (unsigned)(-1))
+			{
+				voicedBegin_id = (unsigned)i;
+				voicedBegin = i > 0 ? (unsigned)i*freq_step - (freq_step / 2) : 0;
+				firstFreq = frequencies[i];
+			}
+
+			if (frequencies[i] <= 0.0f && voicedBegin != (unsigned)(-1) && voicedEnd == (unsigned)(-1))
+			{
+				voicedEnd_id = (unsigned)i;
+				voicedEnd = (unsigned)i*freq_step - (freq_step / 2);
+				lastFreq = frequencies[i - 1];
+			}
+
+			if (frequencies[i] < 0.0f && voicedEnd != (unsigned)(-1) && unvoicedEnd == (unsigned)(-1))
+			{
+				unvoicedEnd = (unsigned)i*freq_step - (freq_step / 2);
+				break;
+			}
+		}
+		if (voicedEnd == (unsigned)(-1))
+		{
+			voicedEnd = (unsigned)source.m_data.size();
+			lastFreq = frequencies[frequencies.size() - 1];
+		}
+		if (unvoicedEnd == (unsigned)(-1))
+		{
+			unvoicedEnd = (unsigned)source.m_data.size();
+		}
+
+		std::vector<SymmetricWindow> windows;
+		float fPeriodCount = 0.0f;
+		for (unsigned srcPos = voicedBegin; srcPos < voicedEnd; srcPos++)
+		{
+			float srcFreqPos = (float)srcPos / (float)freq_step;
 			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
-
-			bool inSample;
-			bool voicing;
-			{
-				unsigned nearestSrcFreqPos = min((unsigned)(srcFreqPos + 0.5f), (unsigned)frequencies.size() - 1);
-				inSample = frequencies[nearestSrcFreqPos] >= 0.0f;
-				voicing = frequencies[nearestSrcFreqPos] > 0.0f;
-			}
-			if (inSample)
-			{
-				if (sampleBegin == (unsigned)(-1)) sampleBegin = (unsigned)bufResampled.m_data.size();
-			}
-			else if (sampleBegin != (unsigned)(-1))
-			{
-				if (sampleEnd == (unsigned)(-1)) sampleEnd = (unsigned)bufResampled.m_data.size();
-			}
-
-			if (voicing)
-			{
-				if (voiceBegin == (unsigned)(-1)) voiceBegin = (unsigned)bufResampled.m_data.size();
-			}
-			else if (voiceBegin != (unsigned)(-1))
-			{
-				if (voiceEnd == (unsigned)(-1)) voiceEnd = (unsigned)bufResampled.m_data.size();
-			}
 
 			float srcFreq;
 			if (uSrcFreqPos >= frequencies.size() - 1)
 			{
-				srcFreq = frequencies[frequencies.size() - 1];
-				if (srcFreq <= 0.0f) srcFreq = ave_freq;
+				if (frequencies.size() - 1 >= voicedEnd_id) srcFreq = lastFreq;
+				else srcFreq = frequencies[frequencies.size() - 1];
 			}
 			else
 			{
-				float freq1 = frequencies[uSrcFreqPos];
-				if (freq1 <= 0.0f) freq1 = ave_freq;
-				float freq2 = frequencies[uSrcFreqPos + 1];
-				if (freq2 <= 0.0f) freq2 = ave_freq;
+				float freq1;
+				if (uSrcFreqPos < voicedBegin_id) freq1 = firstFreq;
+				else if (uSrcFreqPos >= voicedEnd_id) freq1 = lastFreq;
+				else freq1 = frequencies[uSrcFreqPos];
+
+				float freq2;
+				if (uSrcFreqPos + 1 < voicedBegin_id) freq2 = firstFreq;
+				else if (uSrcFreqPos + 1 >= voicedEnd_id) freq2 = lastFreq;
+				else freq2 = frequencies[uSrcFreqPos + 1];
+
 				srcFreq = freq1*(1.0f - fracSrcFreqPos) + freq2*fracSrcFreqPos;
 			}
 
-			float speed = minSampleFreq* (float)source.m_sampleRate / srcFreq;
-			bool interpolation = speed < 1.0f;
+			unsigned winId = (unsigned)fPeriodCount;
+			if (winId >= windows.size())
+			{
+				float srcHalfWinWidth = (float)source.m_sampleRate / srcFreq;
+				Window srcWin;
+				srcWin.CreateFromBuffer(source, (float)srcPos, srcHalfWinWidth);
 
-			float dstValue;
+				SymmetricWindow symWin;
+				symWin.CreateFromAsymmetricWindow(srcWin);
 
+				windows.push_back(symWin);
+			}
+
+			fPeriodCount += srcFreq / (float)source.m_sampleRate;
+
+		}
+
+		unsigned uTempLen = (unsigned)ceilf(tempLen);
+		Buffer tempBuf;
+		tempBuf.m_sampleRate = source.m_sampleRate;
+		tempBuf.m_data.resize(uTempLen);
+		tempBuf.SetZero();
+
+		float rateUnvoiced0 = minSampleFreq * (float)source.m_sampleRate / firstFreq;
+		float lenUnvoiced0 = (float)(voicedBegin - unvoicedBegin) / rateUnvoiced0;
+
+		float rateUnvoiced1 = minSampleFreq * (float)source.m_sampleRate / lastFreq;
+		float lenUnvoiced1 = (float)(unvoicedEnd - voicedEnd) / rateUnvoiced1;
+
+		if (lenUnvoiced0 > tempLen)
+		{
+			lenUnvoiced0 = tempLen;
+			lenUnvoiced1 = 0.0f;
+		}
+
+		if (lenUnvoiced0 + lenUnvoiced1 > tempLen)
+			lenUnvoiced1 = tempLen - lenUnvoiced0;
+
+		float lenVoiced = tempLen - lenUnvoiced0 - lenUnvoiced1;
+		
+		float tempHalfWinLen = 1.0f / minSampleFreq;
+
+		// unvoiced 0
+		float srcPos = (float)unvoicedBegin;
+		bool interpolation = rateUnvoiced0 < 1.0f;
+		for (unsigned uTmpPos = 0; (float)uTmpPos < lenUnvoiced0 && uTmpPos < uTempLen; uTmpPos++, srcPos += rateUnvoiced0)
+		{
+			float tmpValue;
 			if (interpolation)
 			{
 				int ipos1 = (int)floorf(srcPos);
@@ -355,130 +609,138 @@ public:
 				float p2 = source.GetSample(ipos2);
 				float p3 = source.GetSample(ipos3);
 
-				dstValue = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+				tmpValue = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
 					(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
 					(-0.5f*p0 + 0.5f*p2)*frac + p1;
 			}
 			else
 			{
-				int ipos1 = (int)ceilf(srcPos - speed*0.5f);
-				int ipos2 = (int)floorf(srcPos + speed*0.5f);
+				int ipos1 = (int)ceilf(srcPos - rateUnvoiced0*0.5f);
+				int ipos2 = (int)floorf(srcPos + rateUnvoiced0*0.5f);
 
 				float sum = 0.0f;
 				for (int ipos = ipos1; ipos <= ipos2; ipos++)
 				{
 					sum += source.GetSample(ipos);
 				}
-				dstValue = sum / (float)(ipos2 - ipos1 + 1);
+				tmpValue = sum / (float)(ipos2 - ipos1 + 1);
 
 			}
-			bufResampled.m_data.push_back(dstValue);
 
-			srcPos += speed;
-		}
-		if (sampleEnd == (unsigned)(-1)) sampleEnd = (unsigned)bufResampled.m_data.size();
-		if (voiceEnd == (unsigned)(-1)) voiceEnd = (unsigned)bufResampled.m_data.size();
-
-		// CreateWindows
-
-		float halfWinWidth = 1.0f / minSampleFreq;
-
-		std::vector<Window> windows;
-		float center;
-		for (center = (float)voiceBegin; center < (float)voiceEnd; center += halfWinWidth)
-		{
-			Window win;
-			HanningWindow(bufResampled, center, halfWinWidth, win);
-			windows.push_back(win);
-		}
-
-		voiceEnd = (unsigned)(center - halfWinWidth);
-
-		unsigned SampleLen = sampleEnd - sampleBegin;
-		unsigned VoicedLen = voiceEnd - voiceBegin;
-		unsigned UnvoidedLen = SampleLen - VoicedLen;
-
-		float stretch_rate = (sumLen - (float)UnvoidedLen) / (float)VoicedLen;
-
-		unsigned destLen = (unsigned)ceilf(sumLen);
-
-		Buffer DestBuf;
-		DestBuf.m_sampleRate = bufResampled.m_sampleRate;
-		DestBuf.m_data.resize(destLen);
-		DestBuf.SetZero();
-
-		unsigned destPos = 0;
-		for (unsigned srcPos = sampleBegin; destPos < destLen && srcPos < voiceBegin; destPos++, srcPos++)
-		{
-			float srcV = bufResampled.m_data[srcPos];
-
-			if ((float)(voiceBegin - srcPos) < halfWinWidth)
+			float ampl = 1.0f;
+			if (uTmpPos>lenUnvoiced0 - tempHalfWinLen)
 			{
-				float window = (cosf(((float)srcPos + halfWinWidth - (float)voiceBegin) * (float)PI / halfWinWidth) + 1.0f)*0.5f;
-				DestBuf.m_data[destPos] = srcV*window;
+				float progress = (uTmpPos - (lenUnvoiced0 - tempHalfWinLen)) / tempHalfWinLen;
+				ampl = (cosf(progress * (float)PI) + 1.0f)*0.5f;
+			}
+
+			tempBuf.m_data[uTmpPos] = tmpValue*ampl;
+		}
+
+		// voiced
+		float fTmpWinCenter;
+		unsigned noteId = 0;
+		for (fTmpWinCenter = lenUnvoiced0; fTmpWinCenter < lenUnvoiced0 + lenVoiced; fTmpWinCenter += tempHalfWinLen)
+		{
+			float fWinId = (float)windows.size()* (fTmpWinCenter - lenUnvoiced0) / lenVoiced;
+			unsigned winId0 = min((unsigned)fWinId, (unsigned)windows.size() - 1);
+			unsigned winId1 = min(winId0 + 1, (unsigned)windows.size() - 1);
+			float k = fWinId - (float)winId0;
+
+			while (fTmpWinCenter > accLen[noteId]) noteId++;
+
+			float destSampleFreq = notes[noteId].sampleFreq;
+			float destHalfWinLen = 1.0f / destSampleFreq;
+
+			SymmetricWindow& win0 = windows[winId0];
+			SymmetricWindow shiftedWin0;
+
+			SymmetricWindow& win1 = windows[winId1];
+			SymmetricWindow shiftedWin1;
+
+			SymmetricWindow l_win;
+			SymmetricWindow* destWin = &l_win;
+
+			shiftedWin0.Repitch_FormantPreserved(win0, destHalfWinLen);
+
+			if (winId0 == winId1)
+			{
+				destWin = &shiftedWin0;
 			}
 			else
 			{
-				DestBuf.m_data[destPos] = srcV;
+				shiftedWin1.Repitch_FormantPreserved(win1, destHalfWinLen);
+				l_win.m_halfWidth = destHalfWinLen;
+				unsigned u_halfWidth = (unsigned)ceilf(destHalfWinLen);
+				l_win.m_data.resize(u_halfWidth);
+
+				for (unsigned i = 0; i < destHalfWinLen; i++)
+					l_win.m_data[i] = (1.0f - k) *shiftedWin0.m_data[i] + k* shiftedWin1.m_data[i];
 			}
+
+			SymmetricWindow l_win2;
+			SymmetricWindow *winToMerge = &l_win2;
+			if (destHalfWinLen == tempHalfWinLen)
+			{
+				winToMerge = destWin;
+			}
+			else
+			{
+				l_win2.Scale(*destWin, tempHalfWinLen);
+			}
+			winToMerge->MergeToBuffer(tempBuf, fTmpWinCenter);
+
 		}
 
-		if (stretch_rate > 0.0f)
+		// unvoiced 1
+		float unvoicedBegin1 = fTmpWinCenter - tempHalfWinLen;
+		srcPos = (float)voicedEnd;
+		for (unsigned uTmpPos = (unsigned)ceilf(unvoicedBegin1); uTmpPos < uTempLen; uTmpPos++, srcPos += rateUnvoiced1)
 		{
-			unsigned numWin = (unsigned)((float)windows.size()*stretch_rate);
-			float winCenter = (float)destPos;
-			for (unsigned w = 0; w < numWin; w++, winCenter += halfWinWidth)
+			float tmpValue;
+			if (interpolation)
 			{
-				float fsrcw = w / stretch_rate;
-				unsigned usrcw = (unsigned)fsrcw;
-				float frac = fsrcw - (float)usrcw;
+				int ipos1 = (int)floorf(srcPos);
+				float frac = srcPos - (float)ipos1;
+				int ipos2 = ipos1 + 1;
+				int ipos0 = ipos1 - 1;
+				int ipos3 = ipos1 + 2;
 
-				Window l_win;
-				Window* winToMerge = &l_win;
+				float p0 = source.GetSample(ipos0);
+				float p1 = source.GetSample(ipos1);
+				float p2 = source.GetSample(ipos2);
+				float p3 = source.GetSample(ipos3);
 
-				if (usrcw >= windows.size() - 1)
-					winToMerge = &windows[windows.size() - 1];
-				else
+				tmpValue = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+					(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+					(-0.5f*p0 + 0.5f*p2)*frac + p1;
+			}
+			else
+			{
+				int ipos1 = (int)ceilf(srcPos - rateUnvoiced0*0.5f);
+				int ipos2 = (int)floorf(srcPos + rateUnvoiced0*0.5f);
+
+				float sum = 0.0f;
+				for (int ipos = ipos1; ipos <= ipos2; ipos++)
 				{
-					Window& win1 = windows[usrcw];
-					Window& win2 = windows[usrcw + 1];
-
-					l_win.m_halfWidth = halfWinWidth;
-					unsigned u_HalfWidth = (unsigned)ceilf(halfWinWidth);
-					unsigned u_Width = u_HalfWidth << 1;
-
-					l_win.m_data.resize(u_Width);
-
-					for (int i = -(int)u_HalfWidth; i < (int)u_HalfWidth; i++)
-					{
-						float v1 = win1.GetSample(i);
-						float v2 = win2.GetSample(i);
-						l_win.SetSample(i, v1*(1.0f - frac) + v2*frac);
-					}
+					sum += source.GetSample(ipos);
 				}
-				MergeWindowToBuffer(*winToMerge, DestBuf, winCenter);
+				tmpValue = sum / (float)(ipos2 - ipos1 + 1);
+
 			}
 
-			destPos = (unsigned)(winCenter - halfWinWidth);
-		}
-
-		for (unsigned srcPos = voiceEnd; destPos < destLen && srcPos < (unsigned)sampleEnd; srcPos++, destPos++)
-		{
-			float srcV = bufResampled.m_data[srcPos];
-			if ((float)(srcPos - voiceEnd)< halfWinWidth)
+			float ampl = 1.0f;
+			if (uTmpPos < unvoicedBegin1 + tempHalfWinLen)
 			{
-				float window = (cosf(((float)(srcPos - voiceEnd) - halfWinWidth) * (float)PI / halfWinWidth) + 1.0f)*0.5f;
-				DestBuf.m_data[destPos] = srcV*window;
+				float progress = (uTmpPos - (unvoicedBegin1 + tempHalfWinLen)) / tempHalfWinLen;
+				ampl = (cosf(progress * (float)PI) + 1.0f)*0.5f;
 			}
-			else
-			{
-				DestBuf.m_data[destPos] = srcV;
-			}
+			tempBuf.m_data[uTmpPos] += tmpValue*ampl;
 		}
 
 		// post processing
-		unsigned finalSize = (unsigned)ceilf(trueSumLen);
-		noteBuf->m_sampleNum = finalSize;
+		unsigned uSumLen = (unsigned)ceilf(sumLen);
+		noteBuf->m_sampleNum = uSumLen;
 		noteBuf->Allocate();
 
 		float pos_DstBuf = 0.0f;
@@ -493,7 +755,7 @@ public:
 			targetPos += notes[i].fNumOfSamples;
 			float speed = sampleFreq / minSampleFreq;
 
-			for (; (float)pos_final < targetPos; pos_final++, pos_DstBuf+=speed)
+			for (; (float)pos_final < targetPos; pos_final++, pos_DstBuf += speed)
 			{
 				int ipos1 = (int)ceilf(pos_DstBuf - speed*0.5f);
 				int ipos2 = (int)floorf(pos_DstBuf + speed*0.5f);
@@ -501,18 +763,19 @@ public:
 				float sum = 0.0f;
 				for (int ipos = ipos1; ipos <= ipos2; ipos++)
 				{
-					sum += DestBuf.GetSample(ipos);
+					sum += tempBuf.GetSample(ipos);
 				}
 				float value = sum / (float)(ipos2 - ipos1 + 1);
 
-				float x2 = (float)pos_final / trueSumLen;
+				float x2 = (float)pos_final / sumLen;
 				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
 				noteBuf->m_data[pos_final] = amplitude*value*multFac;
 			}
 
-
 		}
+
+
 	}
 
 	void SetName(const char* name)
