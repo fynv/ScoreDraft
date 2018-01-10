@@ -201,8 +201,8 @@ namespace VoiceUtil
 
 			for (unsigned i = 0; i < u_srcHalfWidth; i++)
 			{
-				fftBuf[i].Re = (double)src.m_data[i];
-				if (i>0) fftBuf[fftLen - i].Re = (double)src.m_data[u_srcWidth - i];
+				fftBuf[i].Re = (double)src.GetSample((int)i);
+				if (i > 0) fftBuf[fftLen - i].Re = (double)src.GetSample(-(int)(i));
 			}
 
 			fft(fftBuf, l);
