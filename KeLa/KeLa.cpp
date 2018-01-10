@@ -187,39 +187,38 @@ public:
 		/// Viberation
 		/*for (pos = 0; pos < uSumLen; pos++)
 		{
-			float vib = 1.0f - 0.01f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
+			float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
 			freqMap[pos] *= vib;
 		}*/
 
+		_generateWave(lyric, sumLen, freqMap, noteBuf);
+
+		delete[] freqMap;	
+
+	}
+private:
+	void _generateWave(const char* lyric, float sumLen, float* freqMap, VoiceBuffer* noteBuf)
+	{
+		unsigned uSumLen = (unsigned)ceilf(sumLen);
+
 		/// calculate finalBuffer->tmpBuffer map
 		float minSampleFreq = FLT_MAX;
-		for (pos = 0; pos < uSumLen; pos++)
+		for (unsigned pos = 0; pos < uSumLen; pos++)
 		{
 			float sampleFreq = freqMap[pos];
 			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
 		}
 
 		float* stretchingMap = new float[uSumLen];
-		
+
 		float pos_tmpBuf = 0.0f;
-		for (pos = 0; pos < uSumLen; pos++)
+		for (unsigned pos = 0; pos < uSumLen; pos++)
 		{
-			sampleFreq = freqMap[pos];
+			float sampleFreq = freqMap[pos];
 			float speed = sampleFreq / minSampleFreq;
 			pos_tmpBuf += speed;
 			stretchingMap[pos] = pos_tmpBuf;
 		}
-
-		_generateWave(lyric, sumLen, minSampleFreq, freqMap, stretchingMap, noteBuf);
-
-		delete[] stretchingMap;
-		delete[] freqMap;	
-
-	}
-private:
-	void _generateWave(const char* lyric, float sumLen, float minSampleFreq, float* freqMap, float* stretchingMap, VoiceBuffer* noteBuf)
-	{
-		unsigned uSumLen = (unsigned)ceilf(sumLen);
 
 		char path[1024];
 		sprintf(path, "KeLaSamples/%s/%s.wav", m_name.data(), lyric);
@@ -561,6 +560,8 @@ private:
 
 			noteBuf->m_data[pos] = amplitude*value*multFac;
 		}
+
+		delete[] stretchingMap;
 	}
 
 	std::string m_name;
