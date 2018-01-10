@@ -1,26 +1,19 @@
 cmake_minimum_required (VERSION 3.0)
 
 set(SOURCES
-KeLa.cpp
-FrequencyDetection.cpp
+fft.cpp
+complex.cpp
 )
 
 set(HEADERS 
-FrequencyDetection.h
+fft.h
+complex.h
+VoiceUtil.h
 )
 
 set (INCLUDE_DIR
 .
-../ScoreDraftCore
-../WavUtil
-../DSPUtil
-../PyScoreDraft
 )
-
-set (LINK_LIBS 
-ScoreDraftCore
-WavUtil
-DSPUtil)
 
 if (WIN32) 
 set (DEFINES  ${DEFINES}
@@ -34,10 +27,9 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (KeLa SHARED ${SOURCES} ${HEADERS})
-target_link_libraries(KeLa ${LINK_LIBS})
+add_library (DSPUtil ${SOURCES} ${HEADERS})
 
-install(TARGETS KeLa DESTINATION Extensions)
+
 
 
 

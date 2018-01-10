@@ -1,8 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
 set(SOURCES
-complex.cpp
-fft.cpp
 InstrumentSingleSampler.cpp
 InstrumentMultiSampler.cpp
 InstrumentSamplerFactory.cpp
@@ -10,8 +8,6 @@ FrequencyDetection.cpp
 )
 
 set(HEADERS 
-complex.h
-fft.h
 InstrumentSingleSampler.h
 InstrumentMultiSampler.h
 FrequencyDetection.h
@@ -21,12 +17,14 @@ set (INCLUDE_DIR
 .
 ../ScoreDraftCore
 ../WavUtil
+../DSPUtil
 ../PyScoreDraft
 )
 
 set (LINK_LIBS 
 ScoreDraftCore
-WavUtil)
+WavUtil
+DSPUtil)
 
 if (WIN32) 
 set (DEFINES  ${DEFINES}
