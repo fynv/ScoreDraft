@@ -125,6 +125,10 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 class KeLa : public Singer
 {
 public:
+	KeLa()
+	{
+		m_transition = 0.1f;
+	}
 	void SetName(const char* name)
 	{
 		m_name = name;
@@ -133,14 +137,10 @@ public:
 	{
 		if (notes.size() < 1) return;
 
-		float minSampleFreq = FLT_MAX;
 		float sumLen = 0.0f;
 		for (size_t i = 0; i < notes.size(); i++)
-		{
-			float sampleFreq = notes[i].sampleFreq;
-			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
 			sumLen += notes[i].fNumOfSamples;
-		}
+		
 		unsigned uSumLen = (unsigned)ceilf(sumLen);		
 		float *freqMap = new float[uSumLen];
 
@@ -164,7 +164,41 @@ public:
 
 		/// Make frequency tweakings here
 
+		/// Transition
+		if (m_transition > 0.0f && m_transition<1.0f)
+		{
+			targetPos = 0.0f;
+			for (size_t i = 0; i < notes.size() - 1; i++)
+			{
+				float sampleFreq0 = notes[i].sampleFreq;
+				float sampleFreq1 = notes[i + 1].sampleFreq;
+				targetPos += notes[i].fNumOfSamples;
+
+				float transStart = targetPos - m_transition*notes[i].fNumOfSamples;
+				for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
+				{
+					float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
+					freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
+				}
+
+			}
+		}
+
+		/// Viberation
+		/*for (pos = 0; pos < uSumLen; pos++)
+		{
+			float vib = 1.0f - 0.01f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
+			freqMap[pos] *= vib;
+		}*/
+
 		/// calculate finalBuffer->tmpBuffer map
+		float minSampleFreq = FLT_MAX;
+		for (pos = 0; pos < uSumLen; pos++)
+		{
+			float sampleFreq = freqMap[pos];
+			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
+		}
+
 		float* stretchingMap = new float[uSumLen];
 		
 		float pos_tmpBuf = 0.0f;
@@ -530,6 +564,8 @@ private:
 	}
 
 	std::string m_name;
+
+	float m_transition;
 };
 
 
