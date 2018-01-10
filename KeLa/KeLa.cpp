@@ -125,9 +125,67 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 class KeLa : public Singer
 {
 public:
+	void SetName(const char* name)
+	{
+		m_name = name;
+	}
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
 	{
-		if (notes.size() < 1) return; 
+		if (notes.size() < 1) return;
+
+		float minSampleFreq = FLT_MAX;
+		float sumLen = 0.0f;
+		for (size_t i = 0; i < notes.size(); i++)
+		{
+			float sampleFreq = notes[i].sampleFreq;
+			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
+			sumLen += notes[i].fNumOfSamples;
+		}
+		unsigned uSumLen = (unsigned)ceilf(sumLen);		
+		float *freqMap = new float[uSumLen];
+
+		unsigned pos = 0;
+		float targetPos = 0.0f;
+		float sampleFreq;
+		for (size_t i = 0; i < notes.size(); i++)
+		{
+			sampleFreq = notes[i].sampleFreq;
+			targetPos += notes[i].fNumOfSamples;
+		
+			for (; (float)pos < targetPos; pos++)
+			{
+				freqMap[pos] = sampleFreq;
+			}
+		}
+		for (; pos < uSumLen; pos++)
+		{
+			freqMap[pos] = sampleFreq;
+		}
+
+		/// Make frequency tweakings here
+
+		/// calculate finalBuffer->tmpBuffer map
+		float* stretchingMap = new float[uSumLen];
+		
+		float pos_tmpBuf = 0.0f;
+		for (pos = 0; pos < uSumLen; pos++)
+		{
+			sampleFreq = freqMap[pos];
+			float speed = sampleFreq / minSampleFreq;
+			pos_tmpBuf += speed;
+			stretchingMap[pos] = pos_tmpBuf;
+		}
+
+		_generateWave(lyric, sumLen, minSampleFreq, freqMap, stretchingMap, noteBuf);
+
+		delete[] stretchingMap;
+		delete[] freqMap;	
+
+	}
+private:
+	void _generateWave(const char* lyric, float sumLen, float minSampleFreq, float* freqMap, float* stretchingMap, VoiceBuffer* noteBuf)
+	{
+		unsigned uSumLen = (unsigned)ceilf(sumLen);
 
 		char path[1024];
 		sprintf(path, "KeLaSamples/%s/%s.wav", m_name.data(), lyric);
@@ -176,24 +234,6 @@ public:
 			fclose(fp);
 		}
 
-		float minSampleFreq = FLT_MAX;
-		float sumLen = 0.0f;
-		for (size_t i = 0; i < notes.size(); i++)
-		{
-			float sampleFreq = notes[i].sampleFreq;
-			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
-			sumLen += notes[i].fNumOfSamples;
-		}
-
-		float tempLen = 0.0f;
-		std::vector<float> accLen;
-		for (size_t i = 0; i < notes.size(); i++)
-		{
-			float sampleFreq = notes[i].sampleFreq;
-			tempLen += notes[i].fNumOfSamples *sampleFreq / minSampleFreq;
-			accLen.push_back(tempLen);
-		}
-
 		unsigned unvoicedBegin = (unsigned)(-1);
 		unsigned voicedBegin = (unsigned)(-1);
 		unsigned voicedEnd = (unsigned)(-1);
@@ -208,7 +248,7 @@ public:
 		for (size_t i = 0; i < frequencies.size(); i++)
 		{
 			if (frequencies[i] >= 0.0f && unvoicedBegin == (unsigned)(-1))
-				unvoicedBegin = i>0?(unsigned)i*freq_step - (freq_step/2):0;
+				unvoicedBegin = i>0 ? (unsigned)i*freq_step - (freq_step / 2) : 0;
 			if (frequencies[i] > 0.0f && voicedBegin == (unsigned)(-1))
 			{
 				voicedBegin_id = (unsigned)i;
@@ -285,6 +325,7 @@ public:
 
 		}
 
+		float tempLen = stretchingMap[uSumLen - 1];
 		unsigned uTempLen = (unsigned)ceilf(tempLen);
 		Buffer tempBuf;
 		tempBuf.m_sampleRate = source.m_sampleRate;
@@ -307,7 +348,7 @@ public:
 			lenUnvoiced1 = tempLen - lenUnvoiced0;
 
 		float lenVoiced = tempLen - lenUnvoiced0 - lenUnvoiced1;
-		
+
 		float tempHalfWinLen = 1.0f / minSampleFreq;
 
 		// unvoiced 0
@@ -359,7 +400,8 @@ public:
 
 		// voiced
 		float fTmpWinCenter;
-		unsigned noteId = 0;
+		unsigned pos_final = 0;
+
 		for (fTmpWinCenter = lenUnvoiced0; fTmpWinCenter < lenUnvoiced0 + lenVoiced; fTmpWinCenter += tempHalfWinLen)
 		{
 			float fWinId = (float)windows.size()* (fTmpWinCenter - lenUnvoiced0) / lenVoiced;
@@ -367,9 +409,9 @@ public:
 			unsigned winId1 = min(winId0 + 1, (unsigned)windows.size() - 1);
 			float k = fWinId - (float)winId0;
 
-			while (fTmpWinCenter > accLen[noteId]) noteId++;
+			while (fTmpWinCenter > stretchingMap[pos_final]) pos_final++;
 
-			float destSampleFreq = notes[noteId].sampleFreq;
+			float destSampleFreq = freqMap[pos_final];
 			float destHalfWinLen = 1.0f / destSampleFreq;
 
 			SymmetricWindow& win0 = windows[winId0];
@@ -459,51 +501,34 @@ public:
 		}
 
 		// post processing
-		unsigned uSumLen = (unsigned)ceilf(sumLen);
 		noteBuf->m_sampleNum = uSumLen;
 		noteBuf->Allocate();
 
-		float pos_DstBuf = 0.0f;
-		unsigned pos_final = 0;
-		float targetPos = 0.0f;
-
 		float multFac = m_noteVolume / maxv;
 
-		for (size_t i = 0; i < notes.size(); i++)
+		for (unsigned pos = 0; pos < uSumLen; pos++)
 		{
-			float sampleFreq = notes[i].sampleFreq;
-			targetPos += notes[i].fNumOfSamples;
+			float pos_tmpBuf = stretchingMap[pos];
+			float sampleFreq = freqMap[pos];
 			float speed = sampleFreq / minSampleFreq;
 
-			for (; (float)pos_final < targetPos; pos_final++, pos_DstBuf += speed)
+			int ipos1 = (int)ceilf(pos_tmpBuf - speed*0.5f);
+			int ipos2 = (int)floorf(pos_tmpBuf + speed*0.5f);
+
+			float sum = 0.0f;
+			for (int ipos = ipos1; ipos <= ipos2; ipos++)
 			{
-				int ipos1 = (int)ceilf(pos_DstBuf - speed*0.5f);
-				int ipos2 = (int)floorf(pos_DstBuf + speed*0.5f);
-
-				float sum = 0.0f;
-				for (int ipos = ipos1; ipos <= ipos2; ipos++)
-				{
-					sum += tempBuf.GetSample(ipos);
-				}
-				float value = sum / (float)(ipos2 - ipos1 + 1);
-
-				float x2 = (float)pos_final / sumLen;
-				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
-				noteBuf->m_data[pos_final] = amplitude*value*multFac;
+				sum += tempBuf.GetSample(ipos);
 			}
+			float value = sum / (float)(ipos2 - ipos1 + 1);
 
+			float x2 = (float)pos / sumLen;
+			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+
+			noteBuf->m_data[pos] = amplitude*value*multFac;
 		}
-
-
 	}
 
-	void SetName(const char* name)
-	{
-		m_name = name;
-	}
-
-private:
 	std::string m_name;
 };
 
