@@ -132,6 +132,57 @@ public:
 	void SetName(const char* name)
 	{
 		m_name = name;
+#ifdef _WIN32
+		WIN32_FIND_DATAA ffd;
+		HANDLE hFind = INVALID_HANDLE_VALUE;
+
+		char searchPath[1024];
+		sprintf(searchPath, "KeLaSamples\\%s\\*.wav", m_name.data());
+
+		hFind = FindFirstFileA(searchPath, &ffd);
+		if (INVALID_HANDLE_VALUE != hFind)
+		{
+			do
+			{
+				if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+
+				char name[1024];
+				memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
+				name[strlen(ffd.cFileName) - 4] = 0;
+				m_defaultLyric = name;
+				break;
+
+			} while (FindNextFile(hFind, &ffd) != 0);
+		}
+#else
+		DIR *dir;
+		struct dirent *entry;
+
+		char dirPath[1024];
+		sprintf(dirPath, "KeLaSamples/%s", m_name.data());
+
+		if (dir = opendir(dirPath))
+		{
+			while ((entry = readdir(dir)) != NULL)
+			{
+				if (entry->d_type != DT_DIR)
+				{
+					const char* ext = entry->d_name + strlen(entry->d_name) - 4;
+					if (strcmp(ext, ".wav") == 0)
+					{
+						char name[1024];
+						memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
+						name[strlen(entry->d_name) - 4] = 0;
+						m_defaultLyric = name;
+						break;
+					}
+				}
+
+			}
+
+		}
+#endif
+
 	}
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
 	{

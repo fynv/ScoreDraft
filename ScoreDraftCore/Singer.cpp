@@ -137,7 +137,7 @@ bool Singer::Tune(const char* cmd)
 	if (strcmp(command, "volume") == 0)
 	{
 		float value;
-		sscanf(cmd+7, "%f", command, &value);
+		sscanf(cmd+7, "%f", &value);
 		m_noteVolume = value;
 		return true;
 	}

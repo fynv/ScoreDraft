@@ -139,7 +139,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
 				{
 					InstrumentSamplerInitializer initializer;
-					initializer.m_name = ffd.cFileName;
+					initializer.m_name = entry->d_name;
 					initializer.m_IsMultiSampler = true;
 					s_initializers.push_back(initializer);
 				}

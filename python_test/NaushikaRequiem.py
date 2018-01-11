@@ -70,7 +70,8 @@ seq1 = seq1 + [ti(5,192)]
 seq2 = seq2 + [soS(4,96), BK(96), ti(4,96), ti(3,96), BK(96), mi(4,96)]
 seq3 = seq3 + [mi(4,12), ti(3,12), soS(3,12), mi(3,12), soS(3,12), mi(3,12), ti(2,12), soS(2,12), mi(2,96)]
 
-doc.playNoteSeq(seq1, VoiceLah, 1.0)
+#doc.playNoteSeq(seq1, VoiceLah, 1.0)
+doc.sing(seq1, ScoreDraft.Up(), 1.0)
 doc.playNoteSeq(seq2, String, 0.5)
 doc.playNoteSeq(seq3, Cello, 0.5)
 doc.mixDown('NaushikaRequiem.wav')
