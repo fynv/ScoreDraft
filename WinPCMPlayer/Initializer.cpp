@@ -6,13 +6,13 @@
 #include "Deferred.h"
 
 static PyScoreDraft* s_pPyScoreDraft;
-static Deferred<WinPCMPlayer> s_pPlayer;
+static WinPCMPlayer s_Player;
 
 PyObject * PlayTrackBuffer(PyObject *args)
 {
 	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(args);
 	TrackBuffer_deferred buffer = s_pPyScoreDraft->GetTrackBuffer(BufferId);
-	s_pPlayer->PlayTrack(*buffer);
+	s_Player.PlayTrack(*buffer);
 	return PyLong_FromUnsignedLong(0);
 }
 

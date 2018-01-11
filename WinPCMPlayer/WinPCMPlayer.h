@@ -27,7 +27,8 @@ private:
 
 	WAVEOUTCAPS		m_WaveOutDevCaps;
     HWAVEOUT		m_WaveOut;
-	WAVEHDR			m_WaveHeader1,m_WaveHeader2;
+	WAVEHDR			*m_waveHeaderMem;
+	WAVEHDR			*m_WaveHeader1, *m_WaveHeader2;
     WAVEFORMATEX	m_WaveFormat;
 	
 };
