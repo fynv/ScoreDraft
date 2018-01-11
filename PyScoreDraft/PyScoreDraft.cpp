@@ -314,17 +314,33 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
 
-	size_t note_count = PyList_Size(seq_py);
-	for (size_t i = 0; i < note_count; i++)
+	size_t piece_count = PyList_Size(seq_py);
+	for (size_t i = 0; i < piece_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
 		if (PyObject_TypeCheck(item, &PyTuple_Type))
 		{
-			Note note;
-			note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
-			note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+			PyObject* _item = PyTuple_GetItem(item, 0);
+			if (PyObject_TypeCheck(_item, &PyFloat_Type))
+			{
+				Note note;
+				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
 
-			instrument->PlayNote(*buffer, note, tempo, RefFreq);
+				instrument->PlayNote(*buffer, note, tempo, RefFreq);
+			}
+			else if (PyObject_TypeCheck(_item, &PyUnicode_Type))
+			{
+				size_t tupleSize = PyTuple_Size(item);
+				for (size_t j = 0; j < tupleSize - 1; j++)
+				{
+					_item = PyTuple_GetItem(item, j + 1);
+					Note note;
+					note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
+					note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+					instrument->PlayNote(*buffer, note, tempo, RefFreq);
+				}
+			}
 		}
 		else if (PyObject_TypeCheck(item, &PyUnicode_Type))
 		{
@@ -442,8 +458,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type))
 			{
 				VoicePiece piece;
-				piece.m_lyric = _PyUnicode_AsString(_item);
-				size_t piece_count = PyList_Size(seq_py);
+				piece.m_lyric = _PyUnicode_AsString(_item);				
 				for (size_t j = 0; j < tupleSize - 1; j++)
 				{
 					_item = PyTuple_GetItem(item, j + 1);

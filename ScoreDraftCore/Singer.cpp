@@ -75,7 +75,9 @@ void Singer::SingPiece(TrackBuffer& buffer, const VoicePiece& piece, unsigned te
 		{
 			if (noteParams.size()>0)
 			{
-				GenerateWave(piece.m_lyric.data(), noteParams, &noteBuf);
+				std::string lyric = piece.m_lyric;
+				if (lyric == "") lyric = m_defaultLyric;
+				GenerateWave(lyric.data(), noteParams, &noteBuf);
 				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
 				noteParams.clear();
 				totalDuration = 0.0f;
@@ -102,7 +104,9 @@ void Singer::SingPiece(TrackBuffer& buffer, const VoicePiece& piece, unsigned te
 
 	if (noteParams.size()>0)
 	{
-		GenerateWave(piece.m_lyric.data(), noteParams, &noteBuf);
+		std::string lyric = piece.m_lyric;
+		if (lyric == "") lyric = m_defaultLyric;
+		GenerateWave(lyric.data(), noteParams, &noteBuf);
 		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
 	}
 
@@ -129,12 +133,19 @@ void Singer::SingSequence(TrackBuffer& buffer, const VoiceSequence& seq, unsigne
 bool Singer::Tune(const char* cmd)
 {
 	char command[1024];
-	float value;
-	sscanf(cmd, "%s %f", command, &value);
+	sscanf(cmd, "%s", command);
 	if (strcmp(command, "volume") == 0)
 	{
+		float value;
+		sscanf(cmd+7, "%f", command, &value);
 		m_noteVolume = value;
 		return true;
+	}
+	else if (strcmp(command, "default_lyric") == 0)
+	{
+		char lyric[1024];
+		sscanf(cmd + 14, "%s", lyric);
+		m_defaultLyric = lyric;
 	}
 	return false;
 }

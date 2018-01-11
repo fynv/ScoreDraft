@@ -2,6 +2,7 @@
 #define _scoredraft_Singer_h
 
 #include <vector>
+#include <string>
 
 class VoiceBuffer
 {
@@ -40,7 +41,7 @@ protected:
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf);
 
 	float m_noteVolume;
-
+	std::string m_defaultLyric;
 };
 
 #endif
