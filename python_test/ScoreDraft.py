@@ -48,26 +48,20 @@ def WriteTrackBufferToWav(buf, filename):
 
 
 g_instList=PyScoreDraft.ListInstruments();
-for i in range(len(g_instList)):
-	funcDef="""
-def """+g_instList[i]+"""():
-	return Instrument("""+str(i)+""")"""
+for funcDef in g_instList:
 	exec(funcDef)
 
 g_percList=PyScoreDraft.ListPercussions();
-for i in range(len(g_percList)):
-	funcDef="""
-def """+g_percList[i]+"""():
-	return Percussion("""+str(i)+""")"""
+for funcDef in g_percList:
 	exec(funcDef)
 
 g_singerList=PyScoreDraft.ListSingers();
-for i in range(len(g_singerList)):
-	funcDef="""
-def """+g_singerList[i]+"""():
-	return Singer("""+str(i)+""")"""
+for funcDef in g_singerList:
 	exec(funcDef)
 
+g_interfaceExtensionList= PyScoreDraft.ListInterfaceExtensions();
+for funcDef in g_interfaceExtensionList:
+	exec(funcDef)
 
 class Document:
 	def __init__ (self):

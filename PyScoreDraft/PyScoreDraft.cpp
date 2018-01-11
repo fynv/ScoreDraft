@@ -147,7 +147,10 @@ static PyObject* ListInstruments(PyObject *self, PyObject *args)
 	unsigned count = s_PyScoreDraft.NumOfIntrumentClasses();
 	for (unsigned i = 0; i < count; i++)
 	{
-		PyList_Append(list, PyUnicode_FromString(s_PyScoreDraft.GetInstrumentClass(i).first.data()));
+		std::string pythonCode =
+			std::string("def ") + s_PyScoreDraft.GetInstrumentClass(i).first.data() + "():\n"
+			+ "\treturn Instrument(" + std::to_string(i) + ")\n";
+		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
 	}
 	return list;
 }
@@ -158,7 +161,10 @@ static PyObject* ListPercussions(PyObject *self, PyObject *args)
 	unsigned count = s_PyScoreDraft.NumOfPercussionClasses();
 	for (unsigned i = 0; i < count; i++)
 	{
-		PyList_Append(list, PyUnicode_FromString(s_PyScoreDraft.GetPercussionClass(i).first.data()));
+		std::string pythonCode =
+			std::string("def ") + s_PyScoreDraft.GetPercussionClass(i).first.data() + "():\n"
+			+ "\treturn Percussion(" + std::to_string(i) + ")\n";
+		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
 	}
 	return list;
 }
@@ -169,7 +175,35 @@ static PyObject* ListSingers(PyObject *self, PyObject *args)
 	unsigned count = s_PyScoreDraft.NumOfSingerClasses();
 	for (unsigned i = 0; i < count; i++)
 	{
-		PyList_Append(list, PyUnicode_FromString(s_PyScoreDraft.GetSingerClass(i).first.data()));
+		std::string pythonCode =
+			std::string("def ") + s_PyScoreDraft.GetSingerClass(i).first.data() + "():\n"
+			+ "\treturn Singer(" + std::to_string(i) + ")\n";
+		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
+	}
+	return list;
+}
+
+static PyObject* ListInterfaceExtensions(PyObject *self, PyObject *args)
+{
+	PyObject* list = PyList_New(0);
+	unsigned count = s_PyScoreDraft.NumOfInterfaceExtensions();
+	for (unsigned i = 0; i < count; i++)
+	{
+		InterfaceExtension ext=s_PyScoreDraft.GetInterfaceExtension(i);
+
+		std::string pythonCode =
+			std::string("def ") + ext.m_name + "(" + ext.m_input_params + "):\n"
+			+ ext.m_param_conversion_code
+			+ "\t" + ext.m_call_return + "=PyScoreDraft.CallExtension(" + std::to_string(i);
+
+		if (ext.m_call_params != "") pythonCode += ",(" + ext.m_call_params + ")";
+
+		pythonCode+=
+			")\n"
+			+ ext.m_return_conversion_code
+			+ "\treturn " + ext.m_output_return + "\n";
+
+		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
 	}
 	return list;
 }
@@ -495,6 +529,19 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyObject* CallExtension(PyObject *self, PyObject *args)
+{
+	unsigned extId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	PyObject* params;
+	if (PyTuple_Size(args)<2) params = PyTuple_New(0);
+	else params = PyTuple_GetItem(args, 1);
+
+	InterfaceExtension ext = s_PyScoreDraft.GetInterfaceExtension(extId);
+	PyObject* ret=ext.m_func(params);
+	
+	return ret;
+}
+
 static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"ListInstruments",
@@ -511,6 +558,12 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"ListSingers",
 		ListSingers,
+		METH_VARARGS,
+		""
+	},
+	{
+		"ListInterfaceExtensions",
+		ListInterfaceExtensions,
 		METH_VARARGS,
 		""
 	},
@@ -607,6 +660,12 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"WriteTrackBufferToWav",
 		WriteTrackBufferToWav,
+		METH_VARARGS,
+		""
+	},
+	{
+		"CallExtension",
+		CallExtension,
 		METH_VARARGS,
 		""
 	},

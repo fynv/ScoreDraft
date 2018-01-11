@@ -63,12 +63,29 @@ public:
 	}
 };
 
+struct _object;
+typedef struct _object PyObject;
+typedef PyObject *(*PyScoreDraftExtensonFunc)(PyObject *param);
+
+struct InterfaceExtension
+{
+	std::string m_name;
+	PyScoreDraftExtensonFunc m_func;
+	std::string m_input_params;
+	std::string m_param_conversion_code;
+	std::string m_call_params;
+	std::string m_call_return;
+	std::string m_return_conversion_code;
+	std::string m_output_return;	
+};
+
 typedef std::pair<std::string, InstrumentInitializer*> InstrumentClass;
 typedef std::vector<InstrumentClass> InstrumentClassList;
 typedef std::pair<std::string, PercussionInitializer*> PercussionClass;
 typedef std::vector<PercussionClass> PercussionClassList;
 typedef std::pair<std::string, SingerInitializer*> SingerClass;
 typedef std::vector<SingerClass> SingerClassList;
+typedef std::vector<InterfaceExtension> InterfaceExtensionList;
 
 typedef std::vector<Instrument_deferred> InstrumentMap;
 typedef std::vector<Percussion_deferred> PercussionMap;
@@ -121,6 +138,30 @@ public:
 		}
 		m_SingerClasses.push_back(SingerClass(name, initializer));
 	}
+	
+	void RegisterInterfaceExtension(const char* name, PyScoreDraftExtensonFunc func,
+		const char* input_params="", const char* param_conversion_code="", const char* call_params="",
+		const char* call_return="ret", const char* return_conversion_code="", const char* output_return="ret")
+	{
+		if (m_logger != nullptr)
+		{
+			char line[1024];
+			sprintf(line, "Registering Extension, extId=%lu, name=%s", m_InterfaceExtensions.size(), name);
+			m_logger->PrintLine(line);
+		}
+
+		InterfaceExtension ext;
+		ext.m_name = name; 
+		ext.m_func = func;
+		ext.m_input_params = input_params;
+		ext.m_param_conversion_code = param_conversion_code;
+		ext.m_call_params = call_params;
+		ext.m_call_return = call_return;
+		ext.m_return_conversion_code = return_conversion_code;
+		ext.m_output_return = output_return;
+
+		m_InterfaceExtensions.push_back(ext);
+	}
 
 	unsigned NumOfIntrumentClasses()
 	{
@@ -150,6 +191,16 @@ public:
 	SingerClass GetSingerClass(unsigned i)
 	{
 		return m_SingerClasses[i];
+	}
+
+	unsigned NumOfInterfaceExtensions()
+	{
+		return (unsigned)m_InterfaceExtensions.size();
+	}
+
+	InterfaceExtension GetInterfaceExtension(unsigned i)
+	{
+		return m_InterfaceExtensions[i];
 	}
 
 	unsigned NumOfInstruments()
@@ -226,6 +277,7 @@ private:
 	InstrumentClassList m_InstrumentClasses;
 	PercussionClassList m_PercussionClasses;
 	SingerClassList m_SingerClasses;
+	InterfaceExtensionList m_InterfaceExtensions;
 
 	TrackBufferMap m_TrackBufferMap;
 
