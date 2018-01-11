@@ -151,3 +151,9 @@ instrument=ScoreDraft.Piano()
 doc.playNoteSeq(seq1, instrument, 1.0)
 doc.playNoteSeq(seq2, instrument, 1.0)
 doc.mixDown('FlyMeToTheMoon_just.wav')
+
+#targetBuf=ScoreDraft.TrackBuffer()
+#doc.mix(targetBuf)
+#ScoreDraft.PlayTrackBuffer(targetBuf)
+
+#os.system('pause')

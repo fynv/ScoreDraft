@@ -98,8 +98,11 @@ class Document:
 	def trackToWav(self, bufferIndex, filename):
 		WriteTrackBufferToWav(self.bufferList[bufferIndex], filename)
 
+	def mix(self, targetBuf):
+		MixTrackBufferList(targetBuf,self.bufferList)
+
 	def mixDown(self,filename):
-		targetBuf=TrackBuffer();
-		MixTrackBufferList(targetBuf,self.bufferList)		
+		targetBuf=TrackBuffer()
+		self.mix(targetBuf)
 		WriteTrackBufferToWav(targetBuf, filename)
 
