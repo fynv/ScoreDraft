@@ -5,13 +5,11 @@ find_package(PythonLibs 3 REQUIRED)
 set(SOURCES
 PyScoreDraft.cpp
 WinWavWriter.cpp
-MIDIWriter.cpp
 )
 
 set(HEADERS 
 PyScoreDraft.h
 WinWavWriter.h
-MIDIWriter.h
 )
 
 set (INCLUDE_DIR

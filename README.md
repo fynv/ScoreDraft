@@ -1,3 +1,6 @@
+Warning: Major changes are being made to the PyScoreDraft interface. Document will be updated soon.
+================
+
 ScoreDraft
 ================
 A simple software music synthesizer and text/script based score authoring. Used for music experiments. 

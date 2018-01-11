@@ -140,72 +140,66 @@ private:
 
 };
 
-class PercussionSamplerFactory : public InstrumentFactory
+class PercussionSamplerInitializer : public PercussionInitializer
 {
 public:
-	PercussionSamplerFactory()
+	std::string m_name;
+	virtual Percussion_deferred Init()
 	{
-#ifdef _WIN32
-		WIN32_FIND_DATAA ffd;
-		HANDLE hFind = INVALID_HANDLE_VALUE;
-
-		hFind = FindFirstFileA("PercussionSamples\\*.wav", &ffd);
-		if (INVALID_HANDLE_VALUE == hFind) return;
-
-		do
-		{
-			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-			char name[1024];
-			memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-			name[strlen(ffd.cFileName) - 4] = 0;
-			m_PercList.push_back(name);
-
-		} while (FindNextFile(hFind, &ffd) != 0);
-
-#else
-		DIR *dir;
-	    struct dirent *entry;
-
-	    if (dir = opendir("PercussionSamples"))
-	    {
-	    	while ((entry = readdir(dir)) != NULL)
-	    	{
-	    		const char* ext=entry->d_name+ strlen(entry->d_name)-4;
-	    		if (strcmp(ext,".wav")==0)
-	    		{
-	    			char name[1024];
-					memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
-					name[strlen(entry->d_name) - 4] = 0;
-					m_PercList.push_back(name);
-	    		}
-
-	    	}
-
-	    }
-
-#endif
+		Percussion_deferred perc = Percussion_deferred::Instance<PercussionSampler>();
+		perc.DownCast<PercussionSampler>()->LoadWav(m_name.data());
+		return perc;
 	}
 
-	virtual void GetPercussionList(std::vector<std::string>& list)
-	{
-		list = m_PercList;
-	}
-
-	virtual void InitiatePercussion(unsigned clsInd, Percussion_deferred& perc)
-	{
-		perc = Percussion_deferred::Instance<PercussionSampler>();
-		perc.DownCast<PercussionSampler>()->LoadWav(m_PercList[clsInd].data());
-	}
-
-private:
-	std::vector<std::string> m_PercList;
-	
 };
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE GetFactory()
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
-	static PercussionSamplerFactory fac;
-	return &fac;
-}
+	static std::vector<PercussionSamplerInitializer> s_initializers;
+#ifdef _WIN32
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
 
+	hFind = FindFirstFileA("PercussionSamples\\*.wav", &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) return;
+
+	do
+	{
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+
+		char name[1024];
+		memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
+		name[strlen(ffd.cFileName) - 4] = 0;
+
+		PercussionSamplerInitializer initializer;
+		initializer.m_name=name;
+		s_initializers.push_back(initializer);
+
+	} while (FindNextFile(hFind, &ffd) != 0);
+#else
+	DIR *dir;
+	struct dirent *entry;
+
+	if (dir = opendir("PercussionSamples"))
+	{
+		while ((entry = readdir(dir)) != NULL)
+		{
+			const char* ext = entry->d_name + strlen(entry->d_name) - 4;
+			if (strcmp(ext, ".wav") == 0)
+			{
+				char name[1024];
+				memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
+				name[strlen(entry->d_name) - 4] = 0;
+
+				PercussionSamplerInitializer initializer;
+				initializer.m_name=name;
+				s_initializers.push_back(initializer);
+			}
+		}
+	}
+
+#endif
+	for (unsigned i = 0; i < s_initializers.size();i++)
+		pyScoreDraft->RegisterPercussionClass(s_initializers[i].m_name.data(), &s_initializers[i]);
+
+}

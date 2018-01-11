@@ -569,65 +569,61 @@ private:
 	float m_transition;
 };
 
-
-class KeLaFactory : public InstrumentFactory
+class KeLaInitializer : public SingerInitializer
 {
 public:
-	KeLaFactory()
+	std::string m_name;
+	virtual Singer_deferred Init()
 	{
-#ifdef _WIN32
-		WIN32_FIND_DATAA ffd;
-		HANDLE hFind = INVALID_HANDLE_VALUE;
-
-		hFind = FindFirstFileA("KeLaSamples\\*", &ffd);
-		if (INVALID_HANDLE_VALUE == hFind) return;
-
-		do
-		{
-			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
-			{
-				m_SingerList.push_back(ffd.cFileName);
-			}
-
-		} while (FindNextFile(hFind, &ffd) != 0);
-
-#else
-		DIR *dir;
-		struct dirent *entry;
-
-		if (dir = opendir("KeLaSamples"))
-		{
-			while ((entry = readdir(dir)) != NULL)
-			{
-				if (entry->d_type == DT_DIR)
-				{
-					if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-						m_SingerList.push_back(entry->d_name);				
-				}
-			}
-		}
-#endif
+		Singer_deferred singer = Singer_deferred::Instance<KeLa>();
+		singer.DownCast<KeLa>()->SetName(m_name.data());
+		return singer;
 	}
-
-	virtual void GetSingerList(std::vector<std::string>& list)
-	{
-		list = m_SingerList;
-	}
-
-	virtual void InitiateSinger(unsigned clsInd, Singer_deferred& singer)
-	{
-		singer = Singer_deferred::Instance<KeLa>();
-		singer.DownCast<KeLa>()->SetName(m_SingerList[clsInd].data());
-	}
-
-private:
-	std::vector<std::string> m_SingerList;
 };
 
-
-PY_SCOREDRAFT_EXTENSION_INTERFACE GetFactory()
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
-	static KeLaFactory fac;
-	return &fac;
+	static std::vector<KeLaInitializer> s_initializers;
+
+#ifdef _WIN32
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+
+	hFind = FindFirstFileA("KeLaSamples\\*", &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) return;
+
+	do
+	{
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
+		{
+			KeLaInitializer initializer;
+			initializer.m_name = ffd.cFileName;
+			s_initializers.push_back(initializer);
+		}
+
+	} while (FindNextFile(hFind, &ffd) != 0);
+
+#else
+	DIR *dir;
+	struct dirent *entry;
+
+	if (dir = opendir("KeLaSamples"))
+	{
+		while ((entry = readdir(dir)) != NULL)
+		{
+			if (entry->d_type == DT_DIR)
+			{
+				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+				{
+					KeLaInitializer initializer;
+					initializer.m_name = entry->d_name;
+					s_initializers.push_back(initializer);
+				}	
+			}
+		}
+	}
+#endif
+	for (unsigned i = 0; i < s_initializers.size(); i++)
+		pyScoreDraft->RegisterSingerClass(s_initializers[i].m_name.data(), &s_initializers[i]);
 }
 

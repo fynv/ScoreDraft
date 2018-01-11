@@ -14,116 +14,43 @@
 #include "InstrumentSingleSampler.h"
 #include "InstrumentMultiSampler.h"
 
-class InstrumentSamplerFactory : public InstrumentFactory
+class InstrumentSamplerInitializer : public InstrumentInitializer
 {
 public:
-	InstrumentSamplerFactory()
+	std::string m_name;
+	bool m_IsMultiSampler;
+	virtual Instrument_deferred Init()
 	{
-#ifdef _WIN32
-		WIN32_FIND_DATAA ffd;
-		HANDLE hFind = INVALID_HANDLE_VALUE;
-
-		hFind = FindFirstFileA("InstrumentSamples\\*.wav", &ffd);
-		if (INVALID_HANDLE_VALUE == hFind) return;
-
-		do
+		if (m_IsMultiSampler)
 		{
-			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-			char name[1024];
-			memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-			name[strlen(ffd.cFileName) - 4] = 0;
-			m_InstList.push_back(name);
-			m_IsMultiSampler.push_back(false);
-
-		} while (FindNextFile(hFind, &ffd) != 0);
-
-
-		// build multi-samplers
-		hFind = FindFirstFileA("InstrumentSamples\\*", &ffd);
-		if (INVALID_HANDLE_VALUE == hFind) return;
-
-		do
-		{
-			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
-			{
-				m_InstList.push_back(ffd.cFileName);
-				m_IsMultiSampler.push_back(true);
-			}
-
-		} while (FindNextFile(hFind, &ffd) != 0);
-
-#else
-		DIR *dir;
-	    struct dirent *entry;
-
-	    if (dir = opendir("InstrumentSamples"))
-	    {
-	    	while ((entry = readdir(dir)) != NULL)
-	    	{
-				if (entry->d_type == DT_DIR)
-				{
-					if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-					m_InstList.push_back(entry->d_name);
-					m_IsMultiSampler.push_back(true);
-				}
-				else
-				{
-					const char* ext=entry->d_name+ strlen(entry->d_name)-4;
-					if (strcmp(ext,".wav")==0)
-					{
-						char name[1024];
-						memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
-						name[strlen(entry->d_name) - 4] = 0;
-						m_InstList.push_back(name);
-						m_IsMultiSampler.push_back(false);
-					}
-				}
-
-	    	}
-
-	    }
-
-#endif
-
-	}
-
-	virtual void GetInstrumentList(std::vector<std::string>& list)
-	{
-		list = m_InstList;
-	}
-
-	virtual void InitiateInstrument(unsigned clsInd, Instrument_deferred& inst)
-	{
-		if (m_IsMultiSampler[clsInd])
-		{
-			inst = Instrument_deferred::Instance<InstrumentMultiSampler>();
+			Instrument_deferred inst = Instrument_deferred::Instance<InstrumentMultiSampler>();
 #ifdef _WIN32
 			WIN32_FIND_DATAA ffd;
 			HANDLE hFind = INVALID_HANDLE_VALUE;
 
 			char searchPath[1024];
-			sprintf(searchPath, "InstrumentSamples\\%s\\*.wav", m_InstList[clsInd].data());
+			sprintf(searchPath, "InstrumentSamples\\%s\\*.wav", m_name.data());
 
 			hFind = FindFirstFileA(searchPath, &ffd);
-			if (INVALID_HANDLE_VALUE == hFind) return;
-
-			do
+			if (INVALID_HANDLE_VALUE != hFind)
 			{
-				if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+				do
+				{
+					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
 
-				char name[1024];
-				memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-				name[strlen(ffd.cFileName) - 4] = 0;
-				inst.DownCast<InstrumentMultiSampler>()->LoadWav(m_InstList[clsInd].data(), name);
+					char name[1024];
+					memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
+					name[strlen(ffd.cFileName) - 4] = 0;
+					inst.DownCast<InstrumentMultiSampler>()->LoadWav(m_name.data(), name);
 
-			} while (FindNextFile(hFind, &ffd) != 0);
+				} while (FindNextFile(hFind, &ffd) != 0);
+			}
 #else
 			DIR *dir;
 			struct dirent *entry;
 
 			char dirPath[1024];
-			sprintf(dirPath, "InstrumentSamples/%s", m_InstList[clsInd].data());
+			sprintf(dirPath, "InstrumentSamples/%s", m_name.data());
 
 			if (dir = opendir(dirPath))
 			{
@@ -137,7 +64,7 @@ public:
 							char name[1024];
 							memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
 							name[strlen(entry->d_name) - 4] = 0;
-							inst.DownCast<InstrumentMultiSampler>()->LoadWav(m_InstList[clsInd].data(), name);
+							inst.DownCast<InstrumentMultiSampler>()->LoadWav(m_name.data(), name);
 						}
 					}
 
@@ -145,23 +72,101 @@ public:
 
 			}
 #endif
+			return inst;
 		}
 		else
 		{
-			inst = Instrument_deferred::Instance<InstrumentSingleSampler>();
-			inst.DownCast<InstrumentSingleSampler>()->LoadWav(m_InstList[clsInd].data());
+			Instrument_deferred inst = Instrument_deferred::Instance<InstrumentSingleSampler>();
+			inst.DownCast<InstrumentSingleSampler>()->LoadWav(m_name.data());
+			return inst;
 		}
 	}
-
-private:
-	std::vector<std::string> m_InstList;
-	std::vector<bool> m_IsMultiSampler;
-
 };
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE GetFactory()
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
-	static InstrumentSamplerFactory fac;
-	return &fac;
-}
+	static std::vector<InstrumentSamplerInitializer> s_initializers;
 
+#ifdef _WIN32
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+
+	hFind = FindFirstFileA("InstrumentSamples\\*.wav", &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) return;
+
+	do
+	{
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+
+		char name[1024];
+		memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
+		name[strlen(ffd.cFileName) - 4] = 0;
+
+		InstrumentSamplerInitializer initializer;
+		initializer.m_name = name;
+		initializer.m_IsMultiSampler = false;
+		s_initializers.push_back(initializer);
+
+	} while (FindNextFile(hFind, &ffd) != 0);
+
+
+	// build multi-samplers
+	hFind = FindFirstFileA("InstrumentSamples\\*", &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) return;
+
+	do
+	{
+		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
+		{
+			InstrumentSamplerInitializer initializer;
+			initializer.m_name = ffd.cFileName;
+			initializer.m_IsMultiSampler = true;
+			s_initializers.push_back(initializer);
+		}
+
+	} while (FindNextFile(hFind, &ffd) != 0);
+
+#else
+	DIR *dir;
+	struct dirent *entry;
+
+	if (dir = opendir("InstrumentSamples"))
+	{
+		while ((entry = readdir(dir)) != NULL)
+		{
+			if (entry->d_type == DT_DIR)
+			{
+				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+				{
+					InstrumentSamplerInitializer initializer;
+					initializer.m_name = ffd.cFileName;
+					initializer.m_IsMultiSampler = true;
+					s_initializers.push_back(initializer);
+				}
+			}
+			else
+			{
+				const char* ext = entry->d_name + strlen(entry->d_name) - 4;
+				if (strcmp(ext, ".wav") == 0)
+				{
+					char name[1024];
+					memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
+					name[strlen(entry->d_name) - 4] = 0;
+
+					InstrumentSamplerInitializer initializer;
+					initializer.m_name = name;
+					initializer.m_IsMultiSampler = false;
+					s_initializers.push_back(initializer);
+
+				}
+			}
+
+		}
+
+	}
+
+#endif
+
+	for (unsigned i = 0; i < s_initializers.size(); i++)
+		pyScoreDraft->RegisterInstrumentClass(s_initializers[i].m_name.data(), &s_initializers[i]);
+}
