@@ -624,6 +624,10 @@ class KeLaInitializer : public SingerInitializer
 {
 public:
 	std::string m_name;
+	std::string GetComment()
+	{
+		return std::string("\t# A singer based on KeLa engine and samples in the directory ") + m_name + "\n";
+	}
 	virtual Singer_deferred Init()
 	{
 		Singer_deferred singer = Singer_deferred::Instance<KeLa>();
@@ -675,6 +679,6 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	}
 #endif
 	for (unsigned i = 0; i < s_initializers.size(); i++)
-		pyScoreDraft->RegisterSingerClass(s_initializers[i].m_name.data(), &s_initializers[i]);
+		pyScoreDraft->RegisterSingerClass(s_initializers[i].m_name.data(), &s_initializers[i], s_initializers[i].GetComment().data());
 }
 

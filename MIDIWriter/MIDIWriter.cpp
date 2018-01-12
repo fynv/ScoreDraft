@@ -264,6 +264,13 @@ PyObject * WriteToMidi(PyObject *args)
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
 	pyScoreDraft->RegisterInterfaceExtension("WriteNoteSequencesToMidi", WriteToMidi,
-		"seqList, tempo, refFreq, fileName", "", "seqList, tempo, refFreq, fileName");
+		"seqList, tempo, refFreq, fileName", "", "seqList, tempo, refFreq, fileName", "ret", "", "ret",
+		"\t'''\n"
+		"\tWrite a note sequence to a MIDI file.\n"
+		"\tseqList -- a note sequence.\n"
+		"\ttempo -- an integer indicating tempo in beats/minute.\n"
+		"\trefFreq -- a float indicating reference frequency in Hz.\n"
+		"\tfileName -- a string.\n"
+		"\t'''\n");
 
 }

@@ -67,6 +67,27 @@ struct _object;
 typedef struct _object PyObject;
 typedef PyObject *(*PyScoreDraftExtensonFunc)(PyObject *param);
 
+struct InstrumentClass
+{
+	std::string m_name;
+	InstrumentInitializer* m_initializer;
+	std::string m_comment;
+};
+
+struct PercussionClass
+{
+	std::string m_name;
+	PercussionInitializer* m_initializer;
+	std::string m_comment;
+};
+
+struct SingerClass
+{
+	std::string m_name;
+	SingerInitializer* m_initializer;
+	std::string m_comment;
+};
+
 struct InterfaceExtension
 {
 	std::string m_name;
@@ -77,13 +98,11 @@ struct InterfaceExtension
 	std::string m_call_return;
 	std::string m_return_conversion_code;
 	std::string m_output_return;	
+	std::string m_comment;
 };
 
-typedef std::pair<std::string, InstrumentInitializer*> InstrumentClass;
 typedef std::vector<InstrumentClass> InstrumentClassList;
-typedef std::pair<std::string, PercussionInitializer*> PercussionClass;
 typedef std::vector<PercussionClass> PercussionClassList;
-typedef std::pair<std::string, SingerInitializer*> SingerClass;
 typedef std::vector<SingerClass> SingerClassList;
 typedef std::vector<InterfaceExtension> InterfaceExtensionList;
 
@@ -107,7 +126,7 @@ public:
 		m_logger = logger;
 	}
 
-	void RegisterInstrumentClass(const char* name, InstrumentInitializer* initializer)
+	void RegisterInstrumentClass(const char* name, InstrumentInitializer* initializer, const char* comment="")
 	{
 		if (m_logger != nullptr)
 		{
@@ -115,10 +134,10 @@ public:
 			sprintf(line, "Registering instrument, clsId=%lu, name=%s", m_InstrumentClasses.size(), name);
 			m_logger->PrintLine(line);
 		}
-		m_InstrumentClasses.push_back(InstrumentClass(name, initializer));
+		m_InstrumentClasses.push_back(InstrumentClass({ name, initializer, comment }));
 		
 	}
-	void RegisterPercussionClass(const char* name, PercussionInitializer* initializer)
+	void RegisterPercussionClass(const char* name, PercussionInitializer* initializer, const char* comment = "")
 	{
 		if (m_logger != nullptr)
 		{
@@ -126,9 +145,9 @@ public:
 			sprintf(line, "Registering Percussion, clsId=%lu, name=%s", m_PercussionClasses.size(), name);
 			m_logger->PrintLine(line);
 		}
-		m_PercussionClasses.push_back(PercussionClass(name, initializer));
+		m_PercussionClasses.push_back(PercussionClass({ name, initializer, comment }));
 	}
-	void RegisterSingerClass(const char* name, SingerInitializer* initializer)
+	void RegisterSingerClass(const char* name, SingerInitializer* initializer, const char* comment = "")
 	{
 		if (m_logger != nullptr)
 		{
@@ -136,12 +155,12 @@ public:
 			sprintf(line, "Registering Singer, clsId=%lu, name=%s", m_SingerClasses.size(), name);
 			m_logger->PrintLine(line);
 		}
-		m_SingerClasses.push_back(SingerClass(name, initializer));
+		m_SingerClasses.push_back(SingerClass({ name, initializer, comment }));
 	}
 	
 	void RegisterInterfaceExtension(const char* name, PyScoreDraftExtensonFunc func,
 		const char* input_params="", const char* param_conversion_code="", const char* call_params="",
-		const char* call_return="ret", const char* return_conversion_code="", const char* output_return="ret")
+		const char* call_return = "ret", const char* return_conversion_code = "", const char* output_return = "ret", const char* comment = "")
 	{
 		if (m_logger != nullptr)
 		{
@@ -159,6 +178,7 @@ public:
 		ext.m_call_return = call_return;
 		ext.m_return_conversion_code = return_conversion_code;
 		ext.m_output_return = output_return;
+		ext.m_comment = comment;
 
 		m_InterfaceExtensions.push_back(ext);
 	}

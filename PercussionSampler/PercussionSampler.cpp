@@ -144,6 +144,10 @@ class PercussionSamplerInitializer : public PercussionInitializer
 {
 public:
 	std::string m_name;
+	std::string GetComment()
+	{
+		return std::string("\t# A percussion based on a single sample ") + m_name + ".wav\n";
+	}
 	virtual Percussion_deferred Init()
 	{
 		Percussion_deferred perc = Percussion_deferred::Instance<PercussionSampler>();
@@ -200,6 +204,6 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 
 #endif
 	for (unsigned i = 0; i < s_initializers.size();i++)
-		pyScoreDraft->RegisterPercussionClass(s_initializers[i].m_name.data(), &s_initializers[i]);
+		pyScoreDraft->RegisterPercussionClass(s_initializers[i].m_name.data(), &s_initializers[i], s_initializers[i].GetComment().data());
 
 }

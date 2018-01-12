@@ -19,6 +19,14 @@ class InstrumentSamplerInitializer : public InstrumentInitializer
 public:
 	std::string m_name;
 	bool m_IsMultiSampler;
+
+	std::string GetComment()
+	{
+		if (!m_IsMultiSampler)
+			return std::string("\t# An instrument based on a single sample ") + m_name + ".wav\n";
+		else 
+			return std::string("\t# An instrument based on samples in directory ") + m_name + "\n";
+	}
 	virtual Instrument_deferred Init()
 	{
 		if (m_IsMultiSampler)
@@ -168,5 +176,5 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 #endif
 
 	for (unsigned i = 0; i < s_initializers.size(); i++)
-		pyScoreDraft->RegisterInstrumentClass(s_initializers[i].m_name.data(), &s_initializers[i]);
+		pyScoreDraft->RegisterInstrumentClass(s_initializers[i].m_name.data(), &s_initializers[i], s_initializers[i].GetComment().data());
 }
