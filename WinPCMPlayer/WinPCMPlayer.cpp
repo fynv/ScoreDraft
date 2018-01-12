@@ -93,7 +93,7 @@ private:
 
 };
 
-static void CALLBACK SoundOutCallBack(HWAVEOUT hwo, UINT uMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2)
+static void CALLBACK SoundOutCallBack(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
 	if (uMsg==WOM_DONE)
 	{
@@ -120,10 +120,6 @@ WinPCMPlayer::WinPCMPlayer(unsigned bufferSize):m_bufferSize(bufferSize)
 	m_Buffer2=m_Buffer+bufferSize;
 	memset(m_Buffer,0,sizeof(short)*bufferSize*2);
 
-	m_waveHeaderMem = new WAVEHDR[2];
-	m_WaveHeader1 = m_waveHeaderMem;
-	m_WaveHeader2 = m_waveHeaderMem + 1;
-
 	m_BufferQueue=new BufferQueue;
 
 	m_initialized=false;
@@ -133,7 +129,6 @@ WinPCMPlayer::WinPCMPlayer(unsigned bufferSize):m_bufferSize(bufferSize)
 WinPCMPlayer::~WinPCMPlayer()
 {
 	delete m_BufferQueue;
-	delete[] m_waveHeaderMem;
 	delete[] m_Buffer;
 }
 
@@ -157,19 +152,19 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 
 		waveOutOpen(&m_WaveOut, 0, &m_WaveFormat, (DWORD_PTR)(SoundOutCallBack), (DWORD_PTR)m_BufferQueue, CALLBACK_FUNCTION);
 
-		m_WaveHeader1->lpData = (char *)m_Buffer1;
-		m_WaveHeader1->dwBufferLength = m_bufferSize*sizeof(short);
-		m_WaveHeader1->dwFlags = 0;
+		m_WaveHeader1.lpData = (char *)m_Buffer1;
+		m_WaveHeader1.dwBufferLength = m_bufferSize*sizeof(short);
+		m_WaveHeader1.dwFlags = 0;
 
-		waveOutPrepareHeader( m_WaveOut, m_WaveHeader1, sizeof(WAVEHDR) ); 
-		waveOutWrite(m_WaveOut, m_WaveHeader1, sizeof(WAVEHDR) );
+		waveOutPrepareHeader( m_WaveOut, &m_WaveHeader1, sizeof(WAVEHDR) ); 
+		waveOutWrite(m_WaveOut, &m_WaveHeader1, sizeof(WAVEHDR) );
 
-		m_WaveHeader2->lpData = (char *)m_Buffer2;
-		m_WaveHeader2->dwBufferLength = m_bufferSize*sizeof(short);
-		m_WaveHeader2->dwFlags = 0;
+		m_WaveHeader2.lpData = (char *)m_Buffer2;
+		m_WaveHeader2.dwBufferLength = m_bufferSize*sizeof(short);
+		m_WaveHeader2.dwFlags = 0;
 
-		waveOutPrepareHeader( m_WaveOut, m_WaveHeader2, sizeof(WAVEHDR) ); 
-		waveOutWrite(m_WaveOut, m_WaveHeader2, sizeof(WAVEHDR) );
+		waveOutPrepareHeader( m_WaveOut, &m_WaveHeader2, sizeof(WAVEHDR) ); 
+		waveOutWrite(m_WaveOut, &m_WaveHeader2, sizeof(WAVEHDR) );
 
 		m_initialized=true;
 	}
