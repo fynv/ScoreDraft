@@ -46,22 +46,15 @@ def MixTrackBufferList (targetbuf, bufferList):
 def WriteTrackBufferToWav(buf, filename):
 	PyScoreDraft.WriteTrackBufferToWav(buf.id, filename)
 
+# generate dynamic code
+g_generated_code_and_summary=PyScoreDraft.GenerateCode()
+exec(g_generated_code_and_summary[0])
 
-g_instList=PyScoreDraft.ListInstruments();
-for funcDef in g_instList:
-	exec(funcDef)
+def PrintGeneratedCode():
+	print (g_generated_code_and_summary[0])
 
-g_percList=PyScoreDraft.ListPercussions();
-for funcDef in g_percList:
-	exec(funcDef)
-
-g_singerList=PyScoreDraft.ListSingers();
-for funcDef in g_singerList:
-	exec(funcDef)
-
-g_interfaceExtensionList= PyScoreDraft.ListInterfaceExtensions();
-for funcDef in g_interfaceExtensionList:
-	exec(funcDef)
+def PrintGeneratedCodeSummary():
+	print (g_generated_code_and_summary[1])
 
 class Document:
 	def __init__ (self):

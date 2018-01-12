@@ -70,7 +70,7 @@ static void s_RegisterDefaultClasses()
 static bool s_ClassesRegistered = false;
 static void s_RegisterClasses()
 {
-	s_PyScoreDraft.SetLogger(&s_logger);
+	//s_PyScoreDraft.SetLogger(&s_logger);
 	s_RegisterDefaultClasses();
 
 
@@ -141,71 +141,92 @@ static void s_RegisterClasses()
 	s_ClassesRegistered = true;
 }
 
-static PyObject* ListInstruments(PyObject *self, PyObject *args)
+static PyObject* GenerateCode(PyObject *self, PyObject *args)
 {
-	PyObject* list = PyList_New(0);
+	std::string generatedCode = "";
+	std::string summary = "";
+	
+	// Instruments 
+	generatedCode += "# PyScoreDraft Generated Code\n\n";
+	generatedCode += "# Instruments\n\n";
+
+	summary += "=====================================\n";
+	summary += "PyScoreDraft Generated Code - Summary\n";
+	summary += "=====================================\n\n";
+	summary += "Instruments:\n";
+
 	unsigned count = s_PyScoreDraft.NumOfIntrumentClasses();
 	for (unsigned i = 0; i < count; i++)
 	{
-		std::string pythonCode =
+		generatedCode +=
 			std::string("def ") + s_PyScoreDraft.GetInstrumentClass(i).first.data() + "():\n"
-			+ "\treturn Instrument(" + std::to_string(i) + ")\n";
-		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
-	}
-	return list;
-}
+			+ "\treturn Instrument(" + std::to_string(i) + ")\n\n";
 
-static PyObject* ListPercussions(PyObject *self, PyObject *args)
-{
-	PyObject* list = PyList_New(0);
-	unsigned count = s_PyScoreDraft.NumOfPercussionClasses();
+		summary += std::to_string(i) + ": " + s_PyScoreDraft.GetInstrumentClass(i).first.data()+"\n";
+	}
+	summary += "\n";
+
+	//Percussions
+	generatedCode += "# Percussions\n\n";
+	summary += "Percussions:\n";
+
+	count = s_PyScoreDraft.NumOfPercussionClasses();
 	for (unsigned i = 0; i < count; i++)
 	{
-		std::string pythonCode =
+		generatedCode +=
 			std::string("def ") + s_PyScoreDraft.GetPercussionClass(i).first.data() + "():\n"
-			+ "\treturn Percussion(" + std::to_string(i) + ")\n";
-		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
-	}
-	return list;
-}
+			+ "\treturn Percussion(" + std::to_string(i) + ")\n\n";
 
-static PyObject* ListSingers(PyObject *self, PyObject *args)
-{
-	PyObject* list = PyList_New(0);
-	unsigned count = s_PyScoreDraft.NumOfSingerClasses();
+		summary += std::to_string(i) + ": " + s_PyScoreDraft.GetPercussionClass(i).first.data() + "\n";
+	}
+	summary += "\n";
+
+	//Singers
+	generatedCode += "# Singers\n\n";
+	summary += "Singers:\n";
+
+	count = s_PyScoreDraft.NumOfSingerClasses();
 	for (unsigned i = 0; i < count; i++)
 	{
-		std::string pythonCode =
+		generatedCode +=
 			std::string("def ") + s_PyScoreDraft.GetSingerClass(i).first.data() + "():\n"
-			+ "\treturn Singer(" + std::to_string(i) + ")\n";
-		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
-	}
-	return list;
-}
+			+ "\treturn Singer(" + std::to_string(i) + ")\n\n";
 
-static PyObject* ListInterfaceExtensions(PyObject *self, PyObject *args)
-{
-	PyObject* list = PyList_New(0);
-	unsigned count = s_PyScoreDraft.NumOfInterfaceExtensions();
+		summary += std::to_string(i) + ": " + s_PyScoreDraft.GetSingerClass(i).first.data() + "\n";
+	}
+	summary += "\n";
+
+	//Interfaces
+	generatedCode += "# Interfaces\n\n";
+	summary += "Interfaces:\n";
+	
+	count = s_PyScoreDraft.NumOfInterfaceExtensions();
 	for (unsigned i = 0; i < count; i++)
 	{
-		InterfaceExtension ext=s_PyScoreDraft.GetInterfaceExtension(i);
+		InterfaceExtension ext = s_PyScoreDraft.GetInterfaceExtension(i);
 
-		std::string pythonCode =
+		generatedCode +=
 			std::string("def ") + ext.m_name + "(" + ext.m_input_params + "):\n"
 			+ ext.m_param_conversion_code
 			+ "\t" + ext.m_call_return + "=PyScoreDraft.CallExtension(" + std::to_string(i);
 
-		if (ext.m_call_params != "") pythonCode += ",(" + ext.m_call_params + ")";
+		if (ext.m_call_params != "") generatedCode += ",(" + ext.m_call_params + ")";
 
-		pythonCode+=
+		generatedCode +=
 			")\n"
 			+ ext.m_return_conversion_code
-			+ "\treturn " + ext.m_output_return + "\n";
+			+ "\treturn " + ext.m_output_return + "\n\n";
 
-		PyList_Append(list, PyUnicode_FromString(pythonCode.data()));
+		summary += std::to_string(i) + ": " + ext.m_name + "\n";
 	}
+	summary += "\n";
+
+	PyObject* list = PyList_New(0);
+	PyList_Append(list, PyUnicode_FromString(generatedCode.data()));
+	PyList_Append(list, PyUnicode_FromString(summary.data()));
+
 	return list;
+
 }
 
 static PyObject* InitTrackBuffer(PyObject *self, PyObject *args)
@@ -559,26 +580,8 @@ static PyObject* CallExtension(PyObject *self, PyObject *args)
 
 static PyMethodDef PyScoreDraftMethods[] = {
 	{
-		"ListInstruments",
-		ListInstruments,
-		METH_VARARGS,
-		""
-	},
-	{
-		"ListPercussions",
-		ListPercussions,
-		METH_VARARGS,
-		""
-	},
-	{
-		"ListSingers",
-		ListSingers,
-		METH_VARARGS,
-		""
-	},
-	{
-		"ListInterfaceExtensions",
-		ListInterfaceExtensions,
+		"GenerateCode",
+		GenerateCode,
 		METH_VARARGS,
 		""
 	},

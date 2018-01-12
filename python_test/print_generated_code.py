@@ -1,0 +1,3 @@
+
+import ScoreDraft
+ScoreDraft.PrintGeneratedCode()

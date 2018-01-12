@@ -3,7 +3,7 @@
 
 #define Symmetric_Type_Axis 0
 #define Symmetric_Type_Center 1
-#define Symmetric_Type Symmetric_Type_Axis
+#define Symmetric_Type Symmetric_Type_Center
 
 #include <vector>
 #include <ReadWav.h>
