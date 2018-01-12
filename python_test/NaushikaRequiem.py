@@ -15,8 +15,8 @@ String = ScoreDraft.String()
 VoiceLah= ScoreDraft.Lah()
 
 doc=ScoreDraft.Document()
-doc.refFreq=264.0
-doc.tempo=75
+doc.setReferenceFreqeuncy(264.0)
+doc.setTempo(75)
 
 seq1 = [BL(192), la(5,48), do(6,24), ti(5,12), la(5,12), ti(5,24), mi(6,24), mi(5,48)]
 seq2 = [mi(4,96), BK(96), la(4,96), mi(4,96), BK(96), la(4,96),  mi(4,96), BK(96), la(4,96), mi(4,96), BK(96), soS(4,96)]
@@ -64,7 +64,7 @@ seq3 = seq3 + [la(2,24), fa(3,24), do(4,24), fa(3,24), la(2,24), fa(3,24), re(4,
 
 seq1 = seq1 + [do(6,24), ti(5,12), la(5,12), so(5,96), BL(24), mi(5,24)]
 seq2 = seq2 + [re(4,96), BK(96), so(4,96),re(4,96), BK(96), so(4,96)]
-seq3 = seq3 + [so(2,24), re(3,24), ti(4,24), re(3,24), so(2,96), BK(96), re(3,96)]
+seq3 = seq3 + [so(2,24), re(3,24), ti(3,24), re(3,24), so(2,96), BK(96), re(3,96)]
 
 seq1 = seq1 + [ti(5,192)]
 seq2 = seq2 + [soS(4,96), BK(96), ti(4,96), ti(3,96), BK(96), mi(4,96)]

@@ -21,7 +21,7 @@ def Bk(duration=48):
 	return (-1, -duration)
 
 doc=ScoreDraft.Document()
-doc.tempo=120
+doc.setTempo(120)
 
 seq = [dong(), ca(24), dong(24), dong(), ca(), dong(), ca(24), dong(24), dong(), ca()]
 

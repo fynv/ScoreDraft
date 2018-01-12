@@ -7,8 +7,8 @@ from ScoreDraftNotes import *
 Piano = ScoreDraft.Piano()
 
 doc=ScoreDraft.Document()
-doc.refFreq=318.0
-doc.tempo=80
+doc.setReferenceFreqeuncy(318.0)
+doc.setTempo(80)
 
 seq1 = [la(4,48), do(5,48), re(5,36), do(5,36), re(5,24)]
 seq2 = [la(3,96), BK(96), do(4,96), BK(96), mi(4,96), re(4,96), BK(96), fa(4,96), BK(96), la(4,96)]

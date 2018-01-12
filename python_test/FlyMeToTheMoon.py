@@ -11,8 +11,8 @@ def set_soS(freq):
 	Freqs[8]=freq
 
 doc=ScoreDraft.Document()
-doc.refFreq=264.0 *1.25
-doc.tempo=120
+doc.setReferenceFreqeuncy(264.0 *1.25)
+doc.setTempo(120)
 
 set_re(10.0/9.0)
 set_mi(5.0/4.0)

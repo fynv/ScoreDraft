@@ -62,6 +62,21 @@ class Document:
 		self.tempo=80
 		self.refFreq=264.0
 
+	def getBuffer(self, i):
+		return self.bufferList[i]
+
+	def getTempo(self):
+		return self.tempo
+
+	def setTempo(self,tempo):
+		self.tempo=tempo
+
+	def getReferenceFrequency(self):
+		return self.refFreq
+
+	def setReferenceFreqeuncy(self,refFreq):
+		self.refFreq=refFreq
+
 	def newBuf(self):
 		buf=TrackBuffer()
 		self.bufferList.append(buf)
@@ -72,7 +87,7 @@ class Document:
 			bufferIndex= self.newBuf()		
 		buf=self.bufferList[bufferIndex]
 		instrument.play(buf, seq, volume, self.tempo, self.refFreq)
-		return bufferIndex;		
+		return bufferIndex	
 
 	def playBeatSeq(self, seq, percList, volume=1.0, bufferIndex=-1):
 		if bufferIndex==-1:

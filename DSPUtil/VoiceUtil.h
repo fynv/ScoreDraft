@@ -246,7 +246,6 @@ namespace VoiceUtil
 #else
 				fftBuf[i].Re = 0.0f;
 				fftBuf[i].Im = absv;
-
 				fftBuf[fftLen-i].Re = 0.0f;
 				fftBuf[fftLen-i].Im = -absv;
 #endif
@@ -331,35 +330,11 @@ namespace VoiceUtil
 				while (uSrcPos < uSrcHalfWidth)
 				{
 					m_data[i] += src.m_data[uSrcPos];
-					srcPos += targetWidth;
+					srcPos += targetHalfWidth;
 					uSrcPos = (unsigned)(srcPos + 0.5f);
 				}
 
-				srcPos = targetWidth - (float)i;
-				uSrcPos = (unsigned)(srcPos + 0.5f);
-
-				while (uSrcPos < uSrcHalfWidth)
-				{										
-#if Symmetric_Type == Symmetric_Type_Axis
-					m_data[i] += src.m_data[uSrcPos];	
-#else
-					m_data[i] -= src.m_data[uSrcPos];
-#endif
-					srcPos += targetWidth;
-					uSrcPos = (unsigned)(srcPos + 0.5f);
-				}
-
-				srcPos = (float)i + targetHalfWidth;
-				uSrcPos = (unsigned)(srcPos + 0.5f);
-
-				while (uSrcPos < uSrcHalfWidth)
-				{
-					m_data[i] += src.m_data[uSrcPos];
-					srcPos += targetWidth;
-					uSrcPos = (unsigned)(srcPos + 0.5f);
-				}
-
-				srcPos = -(float)i + targetHalfWidth;
+				srcPos = targetHalfWidth - (float)i;
 				uSrcPos = (unsigned)(srcPos + 0.5f);
 
 				while (uSrcPos < uSrcHalfWidth)
@@ -369,7 +344,7 @@ namespace VoiceUtil
 #else
 					m_data[i] -= src.m_data[uSrcPos];
 #endif
-					srcPos += targetWidth;
+					srcPos += targetHalfWidth;
 					uSrcPos = (unsigned)(srcPos + 0.5f);
 				}
 			}
@@ -381,8 +356,6 @@ namespace VoiceUtil
 				float window = (cosf((float)i * (float)PI / targetHalfWidth) + 1.0f)*0.5f;
 				m_data[i] *= amplitude*window;
 			}
-
-
 		}
 
 	};

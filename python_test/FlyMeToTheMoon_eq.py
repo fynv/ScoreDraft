@@ -8,8 +8,8 @@ def soS(octave=5, duration=48):
 	return note(octave,Freqs[8],duration)
 
 doc=ScoreDraft.Document()
-doc.refFreq=264.0 *1.25
-doc.tempo=120
+doc.setReferenceFreqeuncy(264.0 *1.25)
+doc.setTempo(120)
 
 seq1 = [do(6,72), ti(5,24), la(5,24), so(5,72)]
 seq2 = [la(3,192), BK(144), mi(4,48), so(4,48), do(5,48)]
