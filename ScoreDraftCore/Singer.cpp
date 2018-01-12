@@ -1,5 +1,5 @@
 #include "Singer.h"
-#include "VoicePiece.h"
+#include "SingingPiece.h"
 #include "TrackBuffer.h"
 #include <memory.h>
 #include <cmath>
@@ -60,7 +60,7 @@ void Singer::GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes
 }
 
 
-void Singer::SingPiece(TrackBuffer& buffer, const VoicePiece& piece, unsigned tempo, float RefFreq)
+void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo, float RefFreq)
 {
 	std::vector<SingerNoteParams> noteParams;
 	VoiceBuffer noteBuf;
@@ -112,7 +112,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const VoicePiece& piece, unsigned te
 
 }
 
-void Singer::SingSequence(TrackBuffer& buffer, const VoiceSequence& seq, unsigned tempo, float RefFreq)
+void Singer::SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsigned tempo, float RefFreq)
 {
 	int i;
 	int prog = 0;

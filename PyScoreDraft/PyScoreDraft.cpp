@@ -13,7 +13,7 @@
 
 #include <Note.h>
 #include <Beat.h>
-#include <VoicePiece.h>
+#include <SingingPiece.h>
 
 #include <Instrument.h>
 #include <Percussion.h>
@@ -457,7 +457,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			PyObject *_item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type))
 			{
-				VoicePiece piece;
+				SingingPiece piece;
 				piece.m_lyric = _PyUnicode_AsString(_item);				
 				for (size_t j = 0; j < tupleSize - 1; j++)
 				{
@@ -471,7 +471,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type))
 			{
-				VoicePiece piece;
+				SingingPiece piece;
 				piece.m_lyric = "";
 
 				Note note;

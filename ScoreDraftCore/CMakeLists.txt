@@ -6,7 +6,7 @@ Instrument.cpp
 Note.cpp
 Percussion.cpp
 TrackBuffer.cpp
-VoicePiece.cpp
+SingingPiece.cpp
 Singer.cpp
 instruments/BottleBlow.cpp
 instruments/NaivePiano.cpp
@@ -25,7 +25,7 @@ Note.h
 Percussion.h
 RefCounted.h
 TrackBuffer.h
-VoicePiece.h
+SingingPiece.h
 Singer.h
 instruments/BottleBlow.h
 instruments/NaivePiano.h

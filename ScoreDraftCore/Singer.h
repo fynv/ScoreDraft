@@ -16,8 +16,8 @@ public:
 };
 
 class TrackBuffer;
-class VoicePiece;
-class VoiceSequence;
+class SingingPiece;
+class SingingSequence;
 
 struct SingerNoteParams
 {
@@ -31,8 +31,8 @@ public:
 	Singer();
 	~Singer();
 
-	void SingPiece(TrackBuffer& buffer, const VoicePiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
-	void SingSequence(TrackBuffer& buffer, const VoiceSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
+	void SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
+	void SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
 
 	virtual bool Tune(const char* cmd);
 
