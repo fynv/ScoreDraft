@@ -26,5 +26,5 @@ doc.setTempo(120)
 seq = [dong(), ca(24), dong(24), dong(), ca(), dong(), ca(24), dong(24), dong(), ca()]
 
 
-doc.playBeatSeq(seq, perc_list, 1.0)
+doc.playBeatSeq(seq, perc_list)
 doc.mixDown('test_perc.wav')

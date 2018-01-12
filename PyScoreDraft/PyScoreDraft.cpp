@@ -323,14 +323,27 @@ static PyObject* DelSinger(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
+static PyObject* TrackBufferSetVolume(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	float volume;
+	if (!PyArg_ParseTuple(args, "If", &BufferId, &volume))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	float maxV = buffer->MaxValue();
+	buffer->SetVolume(volume/maxV);
+
+	return PyLong_FromLong(0);
+}
+
 static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 {
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned InstrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
-	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 3));
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
-	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 5));
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
@@ -367,15 +380,10 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 		{
 			instrument->Tune(_PyUnicode_AsString(item));
 		}
-
 	}
-
-	float maxV = buffer->MaxValue();
-	buffer->SetVolume(volume / maxV);
 
 	return PyLong_FromUnsignedLong(0);
 }
-
 
 static PyObject* InstrumentTune(PyObject *self, PyObject *args)
 {
@@ -390,14 +398,12 @@ static PyObject* InstrumentTune(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
-
 static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 {
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	PyObject *percId_list = PyTuple_GetItem(args, 1);
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
-	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 3));
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 
@@ -433,10 +439,6 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 		}
 	}
 
-
-	float maxV = buffer->MaxValue();
-	buffer->SetVolume(volume / maxV);
-
 	delete[] perc_List;
 
 	return PyLong_FromUnsignedLong(0);
@@ -460,9 +462,8 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
-	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 3));
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
-	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 5));
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 
@@ -509,8 +510,6 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			singer->Tune(_PyUnicode_AsString(item));
 		}
 	}
-	float maxV = buffer->MaxValue();
-	buffer->SetVolume(volume / maxV);
 
 	return PyLong_FromUnsignedLong(0);
 }
@@ -544,9 +543,6 @@ static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 	}
 
 	TrackBuffer::CombineTracks(*targetBuffer, (unsigned)bufferCount, bufferList);
-	float maxV = targetBuffer->MaxValue();
-	targetBuffer->SetVolume(1.0f / maxV);
-
 	delete[] bufferList;
 
 	return PyLong_FromUnsignedLong(0);
@@ -560,7 +556,11 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 		return NULL;
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	float oldVolume = buffer->Volume();
+	float maxV = buffer->MaxValue();
+	buffer->SetVolume(1.0f / maxV);
 	WriteToWav(*buffer, fn);
+	buffer->SetVolume(oldVolume);
 
 	return PyLong_FromUnsignedLong(0);
 }
@@ -630,6 +630,12 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"DelSinger",
 		DelSinger,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferSetVolume",
+		TrackBufferSetVolume,
 		METH_VARARGS,
 		""
 	},

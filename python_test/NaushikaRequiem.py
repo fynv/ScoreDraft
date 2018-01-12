@@ -10,10 +10,6 @@ def soS(octave=5, duration=48):
 def set_soS(freq):
 	Freqs[8]=freq
 
-Cello=ScoreDraft.Cello()
-String = ScoreDraft.String()
-VoiceLah= ScoreDraft.Lah()
-
 doc=ScoreDraft.Document()
 doc.setReferenceFreqeuncy(264.0)
 doc.setTempo(75)
@@ -70,8 +66,15 @@ seq1 = seq1 + [ti(5,192)]
 seq2 = seq2 + [soS(4,96), BK(96), ti(4,96), ti(3,96), BK(96), mi(4,96)]
 seq3 = seq3 + [mi(4,12), ti(3,12), soS(3,12), mi(3,12), soS(3,12), mi(3,12), ti(2,12), soS(2,12), mi(2,96)]
 
-#doc.playNoteSeq(seq1, VoiceLah, 1.0)
-doc.sing(seq1, ScoreDraft.Up(), 1.0)
-doc.playNoteSeq(seq2, String, 0.5)
-doc.playNoteSeq(seq3, Cello, 0.5)
+Up_La=ScoreDraft.Up();
+Cello=ScoreDraft.Cello()
+String = ScoreDraft.String()
+
+track0=doc.sing(seq1, Up_La)
+track1=doc.playNoteSeq(seq2, String)
+track2=doc.playNoteSeq(seq3, Cello)
+
+doc.setTrackVolume(track1,0.5)
+doc.setTrackVolume(track2,0.5)
+
 doc.mixDown('NaushikaRequiem.wav')
