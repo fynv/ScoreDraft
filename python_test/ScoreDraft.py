@@ -24,10 +24,10 @@ class Percussion:
 		PyScoreDraft.DelPercussion(self.id)		
 	def tune(self, cmd):
 		PyScoreDraft.PercussionTune(self.id, cmd)
-
-def PercussionPlay(buf, seq, percList, volume=1.0, tempo=80):
-		percIdList= [perc.id for perc in percList]
-		PyScoreDraft.PercussionPlay(buf.id, percIdList, seq, volume, tempo)
+	@staticmethod
+	def play(percList, buf, seq, volume=1.0, tempo=80):
+			percIdList= [perc.id for perc in percList]
+			PyScoreDraft.PercussionPlay(buf.id, percIdList, seq, volume, tempo)
 
 class Singer:
 	def __init__(self, clsId):
@@ -93,7 +93,7 @@ class Document:
 		if bufferIndex==-1:
 			bufferIndex= self.newBuf()		
 		buf=self.bufferList[bufferIndex]			
-		PercussionPlay(buf, seq, percList, volume, self.tempo)
+		Percussion.play(percList, buf, seq, volume, self.tempo)
 		return bufferIndex
 
 	def sing(self, seq, singer, volume=1.0, bufferIndex=-1):
