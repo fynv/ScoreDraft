@@ -1,6 +1,10 @@
 #ifndef _VoiceUtil_h
 #define _VoiceUtil_h
 
+#define Symmetric_Type_Axis 0
+#define Symmetric_Type_Center 1
+#define Symmetric_Type Symmetric_Type_Axis
+
 #include <vector>
 #include <ReadWav.h>
 
@@ -169,15 +173,33 @@ namespace VoiceUtil
 		}
 		virtual float GetSample(int i) const
 		{
-			if (i < 0) i = -i;
-			if (i >= m_data.size()) return 0.0f;
-			return m_data[i];
+			if (i < 0)
+			{
+				if (-i >= m_data.size()) return 0.0f;
+#if Symmetric_Type == Symmetric_Type_Axis
+				return m_data[-i];
+#else
+				return -m_data[-i];
+#endif
+			}
+			else
+			{
+				if (i >= m_data.size()) return 0.0f;
+				return m_data[i];
+			}			
 		}
 		virtual void SetSample(int i, float v)
 		{
-			if (i < 0) i = -i;
-			if (i >= m_data.size()) return;
-			m_data[i] = v;
+			if (i < 0)
+			{
+				if (-i >= m_data.size()) return;
+#if Symmetric_Type == Symmetric_Type_Axis
+				m_data[-i] = v;
+#else
+				m_data[-i] = -v;
+#endif
+
+			}
 		}
 
 		void CreateFromAsymmetricWindow(const Window& src)
@@ -209,12 +231,25 @@ namespace VoiceUtil
 
 			fftBuf[0].Re = 0.0f;
 			fftBuf[0].Im = 0.0f;
+			fftBuf[fftLen / 2].Re = 0.0f;
+			fftBuf[fftLen / 2].Im = 0.0f;
 
-			for (unsigned i = 1; i < fftLen; i++)
+			for (unsigned i = 1; i < fftLen /2; i++)
 			{
 				double absv = DCAbs(&fftBuf[i]);
+
+#if Symmetric_Type == Symmetric_Type_Axis
 				fftBuf[i].Re = absv;
 				fftBuf[i].Im = 0.0f;
+				fftBuf[fftLen-i].Re = absv;
+				fftBuf[fftLen-i].Im = 0.0f;
+#else
+				fftBuf[i].Re = 0.0f;
+				fftBuf[i].Im = absv;
+
+				fftBuf[fftLen-i].Re = 0.0f;
+				fftBuf[fftLen-i].Im = -absv;
+#endif
 			}
 
 			ifft(fftBuf, l);
@@ -304,8 +339,12 @@ namespace VoiceUtil
 				uSrcPos = (unsigned)(srcPos + 0.5f);
 
 				while (uSrcPos < uSrcHalfWidth)
-				{
-					m_data[i] += src.m_data[uSrcPos];
+				{										
+#if Symmetric_Type == Symmetric_Type_Axis
+					m_data[i] += src.m_data[uSrcPos];	
+#else
+					m_data[i] -= src.m_data[uSrcPos];
+#endif
 					srcPos += targetWidth;
 					uSrcPos = (unsigned)(srcPos + 0.5f);
 				}
@@ -325,7 +364,11 @@ namespace VoiceUtil
 
 				while (uSrcPos < uSrcHalfWidth)
 				{
-					m_data[i] += src.m_data[uSrcPos];
+#if Symmetric_Type == Symmetric_Type_Axis
+					m_data[i] += src.m_data[uSrcPos];	
+#else
+					m_data[i] -= src.m_data[uSrcPos];
+#endif
 					srcPos += targetWidth;
 					uSrcPos = (unsigned)(srcPos + 0.5f);
 				}
