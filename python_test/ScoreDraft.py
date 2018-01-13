@@ -149,7 +149,7 @@ class Singer:
 		'''
 		PyScoreDraft.SingerTune(self.id, cmd)
 
-	def sing(self, buf, seq, singer, tempo=80, refFreq=264.0):
+	def sing(self, buf, seq, tempo=80, refFreq=264.0):
 		'''
 		buf -- An instance of TrackBuffer, the result of play will be appended to the buffer.
 		seq -- A list of singing-segments [seg1, seg2, ... ]. Each of the seg is a tuple (lyric, note-sequence)
