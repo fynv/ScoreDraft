@@ -44,6 +44,7 @@ public:
 	BufferQueue()
 	{
 		m_curPos=0;
+		m_totalBufferLenth = 0;
 	}
 	~BufferQueue()
 	{
@@ -66,6 +67,8 @@ public:
 			newBuffer->m_data[i]=(short)(max(min(track.Sample(i)*volume,1.0f),-1.0f)*32767.0f);
 
 		m_queue.push(newBuffer);
+
+		m_totalBufferLenth += newBuffer->m_size;
 	}
 
 	short GetSample()
@@ -81,15 +84,22 @@ public:
 			}
 			m_curPos=0;
 			m_queue.pop();
+			m_totalBufferLenth -= buf->m_size;
 			delete buf;
 		}
 		return 0;
+	}
+
+	unsigned GetRemainingSamples()
+	{
+		return m_totalBufferLenth - m_curPos;
 	}
 
 
 private:
 	std::queue<Buffer*> m_queue;
 	unsigned m_curPos;
+	unsigned m_totalBufferLenth;
 
 };
 
@@ -124,6 +134,8 @@ WinPCMPlayer::WinPCMPlayer(unsigned bufferSize):m_bufferSize(bufferSize)
 
 	m_initialized=false;
 
+	m_Rate = 44100;
+
 }
 
 WinPCMPlayer::~WinPCMPlayer()
@@ -136,6 +148,7 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 {
 	if (!m_initialized)
 	{
+		m_Rate = track.Rate();
 		m_Volume = track.AbsoluteVolume();
 
 		waveOutGetNumDevs(); 
@@ -171,4 +184,10 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 	m_BufferQueue->AddBuffer(track,m_Volume);
 
 }
+
+float WinPCMPlayer::GetRemainingTime()
+{
+	return (float)m_BufferQueue->GetRemainingSamples() / (float)m_Rate;
+}
+
 #endif // WIN32

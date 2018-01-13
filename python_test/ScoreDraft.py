@@ -152,12 +152,11 @@ class Singer:
 	def sing(self, buf, seq, tempo=80, refFreq=264.0):
 		'''
 		buf -- An instance of TrackBuffer, the result of play will be appended to the buffer.
-		seq -- A list of singing-segments [seg1, seg2, ... ]. Each of the seg is a tuple (lyric, note-sequence)
+		seq -- A list of singing-segments [seg1, seg2, ... ]. Each of the seg is a tuple (lyric, note1, note2...)
 		       lyric: a string, telling the singer what lyric to sing
-		       note-sequence: the same kind of note-sequences used in instrument play. In many cases, it
-		                      can be a single note. Multiple notes allows the sound seamlessly transit 
-		                      between different pitch. When there are silence notes/backapsaces in the note
-		                      sequence, the singing-segment will be broken into multiple segments to sing.
+		       notes: they are the same kind of notes used in instrument play. In many cases, it can be a single 
+		              note. Multiple notes allows the sound seamlessly transit between different pitch. When there 
+		              are silence notes/backapsaces, the singing-segment will be broken into multiple segments to sing.
 		       Raw notes can be mixed with singing-segments in the list. They will be sung using the default lyric.
 		       Vice-versa, if you pass a singing-sequence to an instrument, the notes contained in the sequence will
 		       get played, and lyrics ignored. We aim to provide maximum compatibility between the two.

@@ -16,7 +16,11 @@ public:
 	unsigned Rate() const { return m_rate; }
 	void SetRate(unsigned rate) { m_rate = rate; }
 	float Volume() const  { return m_volume; }
-	float AbsoluteVolume() { return m_volume / MaxValue(); }
+	float AbsoluteVolume() 
+	{
+		float maxValue = MaxValue();
+		return maxValue>0.0f? m_volume / maxValue: 1.0f;
+	}
 	void SetVolume(float vol) {	m_volume = vol;	}
 
 	/// block read-write

@@ -156,4 +156,8 @@ doc.mixDown('FlyMeToTheMoon_just.wav')
 #doc.mix(targetBuf)
 #ScoreDraft.PlayTrackBuffer(targetBuf)
 
-#os.system('pause')
+#import time
+#while (ScoreDraft.PlayGetRemainingTime()>0.0):
+	#time.sleep(1.0)
+
+

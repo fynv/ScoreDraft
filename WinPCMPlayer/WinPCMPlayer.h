@@ -15,6 +15,8 @@ public:
 
 	void PlayTrack(TrackBuffer &track);
 
+	float GetRemainingTime();
+
 private:
 	unsigned m_bufferSize;
 	short  *m_Buffer;
@@ -29,6 +31,8 @@ private:
     HWAVEOUT		m_WaveOut;
 	WAVEHDR			m_WaveHeader1, m_WaveHeader2;
     WAVEFORMATEX	m_WaveFormat;
+
+	unsigned m_Rate;
 	
 };
 
