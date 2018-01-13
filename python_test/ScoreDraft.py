@@ -159,6 +159,8 @@ class Singer:
 		                      between different pitch. When there are silence notes/backapsaces in the note
 		                      sequence, the singing-segment will be broken into multiple segments to sing.
 		       Raw notes can be mixed with singing-segments in the list. They will be sung using the default lyric.
+		       Vice-versa, if you pass a singing-sequence to an instrument, the notes contained in the sequence will
+		       get played, and lyrics ignored. We aim to provide maximum compatibility between the two.
 		       Tuning commands can also be mixed in the list to tune the singer on the fly, example:
 		        [("ha",do(5,48),re(5,48)), ("la",mi(5,48)), "volume 2.0", "default_lyric ba", fa(5,48)... ]
 		tempo -- an integer defining the tempo of singing in beats/minute.

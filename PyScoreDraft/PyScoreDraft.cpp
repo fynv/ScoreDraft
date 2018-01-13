@@ -338,8 +338,7 @@ static PyObject* TrackBufferSetVolume(PyObject *self, PyObject *args)
 		return NULL;
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
-	float maxV = buffer->MaxValue();
-	buffer->SetVolume(volume/maxV);
+	buffer->SetVolume(volume);
 
 	return PyLong_FromLong(0);
 }
@@ -563,11 +562,7 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 		return NULL;
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
-	float oldVolume = buffer->Volume();
-	float maxV = buffer->MaxValue();
-	buffer->SetVolume(1.0f / maxV);
 	WriteToWav(*buffer, fn);
-	buffer->SetVolume(oldVolume);
 
 	return PyLong_FromUnsignedLong(0);
 }

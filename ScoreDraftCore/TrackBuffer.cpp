@@ -125,6 +125,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 	float *targetBuffer=new float[s_localBufferSize];
 	unsigned *lengths=new unsigned[num];
 	int* sourcePos = new int[num];
+	float* trackVolumes = new float[num];
 
 	// scan
 	unsigned i;
@@ -136,6 +137,8 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 	{
 		if (tracks[i]->Rate() != rate)
 		{
+			delete[] trackVolumes;
+			delete[] sourcePos;
 			delete[] targetBuffer;
 			delete[] lengths;
 			return false;
@@ -149,6 +152,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 		if (align > maxAlign) maxAlign = align;
 
 		sourcePos[i] = (int)(align);
+		trackVolumes[i] = tracks[i]->AbsoluteVolume();
 	}
 
 	for (i = 0; i < num; i++)
@@ -175,7 +179,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 				for (j=0;j<count;j++)
 				{
 					if ((int)j + sourcePos[i]>0)
-						targetBuffer[j] += tracks[i]->Sample((unsigned)((int)j + sourcePos[i]))* tracks[i]->Volume();
+						targetBuffer[j] += tracks[i]->Sample((unsigned)((int)j + sourcePos[i]))* trackVolumes[i];
 				}
 				sourcePos[i] += count;
 				if (lengths[i] - sourcePos[i]>0) finish = false;
@@ -186,6 +190,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 	}
 	sumbuffer.SetCursor(maxCursor);
 
+	delete[] trackVolumes;
 	delete[] sourcePos;
 	delete[] lengths;
 	delete[] targetBuffer;

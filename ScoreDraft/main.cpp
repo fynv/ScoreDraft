@@ -37,9 +37,6 @@ void Composite(const Document& doc, TrackBuffer& buffer)
 
 	TrackBuffer::CombineTracks(buffer, (unsigned)numTracks, tracks);
 
-	float maxV = buffer.MaxValue();
-	buffer.SetVolume(1.0f / maxV);
-
 	delete[] tracks;
 }
 
@@ -357,7 +354,5 @@ void TestPercussion()
 	percList[0] = Percussion_deferred::Instance<TestPerc>();
 
 	Percussion::PlayBeats(tb, percList, seq);
-	tb.SetVolume(1.0f / tb.MaxValue());
-
 	WriteToWav(tb, "perc.wav");
 }

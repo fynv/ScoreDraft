@@ -136,7 +136,7 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 {
 	if (!m_initialized)
 	{
-		m_Volume=track.Volume();
+		m_Volume = track.AbsoluteVolume();
 
 		waveOutGetNumDevs(); 
 
