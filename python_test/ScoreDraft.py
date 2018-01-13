@@ -279,7 +279,7 @@ class Document:
 		if bufferIndex==-1:
 			bufferIndex= self.newBuf()		
 		buf=self.bufferList[bufferIndex]
-		singer.sing( buf, seq, singer, self.tempo, self.refFreq)
+		singer.sing( buf, seq, self.tempo, self.refFreq)
 		return bufferIndex
 
 	def trackToWav(self, bufferIndex, filename):
