@@ -18,6 +18,8 @@ public:
 class TrackBuffer;
 class SingingPiece;
 class SingingSequence;
+class RapPiece;
+class RapSequence;
 
 struct SingerNoteParams
 {
@@ -34,14 +36,20 @@ public:
 	void SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
 	void SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
 
+	void RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
+	void RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
+
 	virtual bool Tune(const char* cmd);
 
 protected:
 	void Silence(unsigned numOfSamples, VoiceBuffer* noteBuf);
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf);
+	virtual void GenerateWave_Rap(const char* lyric, float fNumOfSamples, float baseSampleFreq, int tone, VoiceBuffer* noteBuf);
 
 	float m_noteVolume;
 	std::string m_defaultLyric;
+
+	float m_freq_rel_rap;
 };
 
 #endif

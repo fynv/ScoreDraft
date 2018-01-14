@@ -107,11 +107,12 @@ void Instrument::PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigne
 bool Instrument::Tune(const char* cmd)
 {
 	char command[1024];
-	float value;
-	sscanf(cmd, "%s %f", command, &value);
+	sscanf(cmd, "%s", command);
 	if (strcmp(command, "volume") == 0)
 	{
-		m_noteVolume = value;
+		float value;
+		if (sscanf(cmd + 7, "%f", &value))
+			m_noteVolume = value;
 		return true;
 	}
 	return false;

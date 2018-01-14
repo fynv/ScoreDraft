@@ -8,8 +8,12 @@ class Beat
 public:
 	int m_PercId;
 	int m_duration; // 1 beat = 48
-	Beat();
-	~Beat();
+	Beat()
+	{
+		m_PercId = -1; // silence
+		m_duration = 48; // 1 beat
+	}
+	~Beat(){}
 };
 
 

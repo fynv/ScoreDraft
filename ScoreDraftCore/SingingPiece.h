@@ -3,6 +3,7 @@
 
 #include "Note.h"
 #include <string>
+#include <vector>
 
 class SingingPiece
 {
@@ -10,8 +11,8 @@ public:
 	std::string m_lyric;
 	NoteSequence m_notes;
 
-	SingingPiece();
-	~SingingPiece();
+	SingingPiece(){}
+	~SingingPiece(){}
 };
 
 

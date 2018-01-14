@@ -1,12 +1,9 @@
 cmake_minimum_required (VERSION 3.0)
 
 set(SOURCES
-Beat.cpp
 Instrument.cpp
-Note.cpp
 Percussion.cpp
 TrackBuffer.cpp
-SingingPiece.cpp
 Singer.cpp
 instruments/BottleBlow.cpp
 instruments/NaivePiano.cpp
@@ -27,6 +24,7 @@ RefCounted.h
 TrackBuffer.h
 SingingPiece.h
 Singer.h
+RapPiece.h
 instruments/BottleBlow.h
 instruments/NaivePiano.h
 instruments/PureSin.h

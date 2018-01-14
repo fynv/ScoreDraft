@@ -1,5 +1,6 @@
 #include "Singer.h"
 #include "SingingPiece.h"
+#include "RapPiece.h"
 #include "TrackBuffer.h"
 #include <memory.h>
 #include <cmath>
@@ -32,7 +33,7 @@ void VoiceBuffer::Allocate()
 	m_data = new float[m_sampleNum];
 }
 
-Singer::Singer() : m_noteVolume(1.0f)
+Singer::Singer() : m_noteVolume(1.0f), m_freq_rel_rap(1.0f)
 {
 
 }
@@ -59,6 +60,10 @@ void Singer::GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes
 	Silence((unsigned)ceilf(totalDuration), noteBuf);
 }
 
+void Singer::GenerateWave_Rap(const char* lyric, float fNumOfSamples, float baseSampleFreq, int tone, VoiceBuffer* noteBuf)
+{
+	Silence((unsigned)ceilf(fNumOfSamples), noteBuf);
+}
 
 void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo, float RefFreq)
 {
@@ -130,6 +135,53 @@ void Singer::SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsig
 	printf("\n");
 }
 
+void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo, float RefFreq)
+{
+	VoiceBuffer noteBuf;
+
+	float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
+	float fNumOfSamples = buffer.Rate()*fduration;
+
+	if (piece.m_tone<0)
+	{
+		if (piece.m_duration>0)
+		{
+			buffer.MoveCursor(fNumOfSamples);
+			return;
+		}
+		else if (piece.m_duration<0)
+		{
+			buffer.MoveCursor(-fNumOfSamples);
+			return;
+		}
+		else return;
+	}
+
+	float baseFreq = RefFreq*m_freq_rel_rap;
+	float baseSampleFreq = baseFreq / (float)buffer.Rate();
+	GenerateWave_Rap(piece.m_lyric.data(), fNumOfSamples, baseSampleFreq, piece.m_tone, &noteBuf);
+
+	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples);
+}
+
+void Singer::RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo, float RefFreq)
+{
+	int i;
+	int prog = 0;
+	for (i = 0; i<(int)seq.size(); i++)
+	{
+		int newprog = (i + 1) * 10 / (int)seq.size();
+		if (newprog>prog)
+		{
+			printf("-");
+			prog = newprog;
+		}
+
+		RapAPiece(buffer, seq[i], tempo, RefFreq);
+	}
+	printf("\n");
+}
+
 bool Singer::Tune(const char* cmd)
 {
 	char command[1024];
@@ -137,15 +189,23 @@ bool Singer::Tune(const char* cmd)
 	if (strcmp(command, "volume") == 0)
 	{
 		float value;
-		sscanf(cmd+7, "%f", &value);
-		m_noteVolume = value;
+		if(sscanf(cmd+7, "%f", &value))
+			m_noteVolume = value;
 		return true;
 	}
 	else if (strcmp(command, "default_lyric") == 0)
 	{
 		char lyric[1024];
-		sscanf(cmd + 14, "%s", lyric);
-		m_defaultLyric = lyric;
+		if (sscanf(cmd + 14, "%s", lyric))
+			m_defaultLyric = lyric;
+		return true;
+	}
+	else if (strcmp(command, "rap_freq") == 0)
+	{
+		float value;
+		if (sscanf(cmd + 9, "%f", &value))
+			m_freq_rel_rap = value;
+		return true;
 	}
 	return false;
 }

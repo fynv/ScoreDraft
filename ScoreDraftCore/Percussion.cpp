@@ -112,11 +112,12 @@ void Percussion::PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionL
 bool Percussion::Tune(const char* cmd)
 {
 	char command[1024];
-	float value;
-	sscanf(cmd, "%s %f", command, &value);
+	sscanf(cmd, "%s", command);
 	if (strcmp(command, "volume") == 0)
 	{
-		m_beatVolume = value;
+		float value;
+		if (sscanf(cmd + 7, "%f", &value))
+			m_beatVolume = value;
 		return true;
 	}
 	return false;

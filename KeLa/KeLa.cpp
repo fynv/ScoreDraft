@@ -120,6 +120,7 @@ public:
 	KeLa()
 	{
 		m_transition = 0.1f;
+		m_rap_distortion = 10.0f;
 	}
 	void SetName(const char* name)
 	{
@@ -175,6 +176,22 @@ public:
 		}
 #endif
 
+	}
+	virtual bool Tune(const char* cmd)
+	{
+		if (!Singer::Tune(cmd))
+		{
+			char command[1024];
+			sscanf(cmd, "%s", command);
+
+			if (strcmp(command, "rap_distortion") == 0)
+			{
+				float value;
+				if (sscanf(cmd + strlen("rap_distortion")+1, "%f", &value))
+					m_rap_distortion = value;
+				return true;
+			}
+		}
 	}
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
 	{
@@ -239,6 +256,74 @@ public:
 		delete[] freqMap;	
 
 	}
+
+	virtual void GenerateWave_Rap(const char* lyric, float fNumOfSamples, float baseSampleFreq, int tone, VoiceBuffer* noteBuf)
+	{
+		float sumLen = fNumOfSamples;
+		unsigned uSumLen = (unsigned)ceilf(sumLen);
+		float *freqMap = new float[uSumLen];
+
+		if (tone <=1)
+		{
+			for (unsigned i = 0; i < uSumLen; i++)
+			{
+				freqMap[i] = baseSampleFreq;
+			}
+		}
+		else if (tone == 2)
+		{
+			float lowFreq = baseSampleFreq*0.5f;
+			for (unsigned i = 0; i < uSumLen; i++)
+			{
+				float x = (float)i / (float)(uSumLen - 1);
+				freqMap[i] = lowFreq + (baseSampleFreq - lowFreq)*(1.0f -expf(-x*5.0f));
+			}
+		}
+		else if (tone == 3)
+		{
+			float highFreq = baseSampleFreq*0.75f;
+			float lowFreq = baseSampleFreq*0.625f;
+			for (unsigned i = 0; i < uSumLen; i++)
+			{
+				float x = (float)i / (float)(uSumLen - 1);
+				freqMap[i] = lowFreq + (highFreq - lowFreq)*(1.0f - expf(-x*5.0f));
+			}
+		}
+		else if (tone == 4)
+		{
+			float lowFreq = baseSampleFreq*0.5f;
+			for (unsigned i = 0; i < uSumLen; i++)
+			{
+				float x = (float)i / (float)(uSumLen - 1);
+				freqMap[i] = baseSampleFreq + (lowFreq - baseSampleFreq)*x;
+			}
+		}
+	
+
+		_generateWave(lyric, sumLen, freqMap, noteBuf);
+
+		float maxV = 0.0f;
+		for (unsigned pos = 0; pos < uSumLen; pos++)
+		{
+			float v = noteBuf->m_data[pos];
+			if (fabsf(v) > maxV) maxV = v;
+		}
+
+		for (unsigned pos = 0; pos < uSumLen; pos++)
+		{
+			float x2 = (float)pos / sumLen;
+			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+
+			float v = noteBuf->m_data[pos];
+			v *= 10.0f;
+			if (v > maxV) v = maxV;
+			if (v < -maxV) v = -maxV;
+			noteBuf->m_data[pos] = v;
+		}
+
+		delete[] freqMap;
+	}
+
 private:
 	void _generateWave(const char* lyric, float sumLen, float* freqMap, VoiceBuffer* noteBuf)
 	{
@@ -531,6 +616,7 @@ private:
 	std::string m_name;
 
 	float m_transition;
+	float m_rap_distortion;
 };
 
 class KeLaInitializer : public SingerInitializer
