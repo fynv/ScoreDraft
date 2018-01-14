@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import time
+from random import random
 import ScoreDraft
 from ScoreDraftNotes import *
 
@@ -43,37 +44,64 @@ beats_repeat = [dong(), ca(), dong(), ca(), Bk(192), chi(24), chi(24), chi(24), 
 beats0 = beats_repeat + beats_repeat
 beats =[]
 
-voiceNotes = [mi(5,24),mi(5,24),mi(5,24),mi(5,24),mi(5,24),mi(5,24),mi(5,16),mi(5,16),mi(5,16)]
 beats += beats_repeat
 guitar_notes = [do(4,192), BK(186), mi(4,186), BK(180), so(4,180), BK(174), do(5,174)]
 
-voiceNotes += [so(5,24),so(5,24),so(5,24),so(5,24),so(5,24),so(5,24),so(5,16),so(5,16),so(5,16)]
 beats += beats_repeat
 guitar_notes += [so(3,192), BK(186), ti(3,186), BK(180), re(4,180), BK(174), so(4,174)]
 
-voiceNotes += [do(5,24),do(5,24),do(5,24),do(5,24),do(5,24),do(5,24),do(5,16),do(5,16),do(5,16)]
 beats += beats_repeat
 guitar_notes += [la(3,192), BK(186), do(4,186), BK(180), mi(4,180), BK(174), la(4,174)]
 
-voiceNotes += [mi(5,24),mi(5,24),mi(5,24),mi(5,24),mi(5,24),mi(5,24),mi(5,16),mi(5,16),mi(5,16)]
 beats += beats_repeat
 guitar_notes += [mi(3,192), BK(186), ti(4,186), BK(180), mi(4,180), BK(174), so(4,174)]
 
-voiceNotes += [la(4,24),la(4,24),la(4,24),la(4,24),la(4,24),la(4,24),la(4,16),la(4,16),la(4,16)]
 beats += beats_repeat
 guitar_notes += [fa(3,192), BK(186), do(5,186), BK(180), fa(4,180), BK(174), la(4,174)]
 
-voiceNotes += [so(4,24),so(4,24),so(4,24),so(4,24),so(4,24),so(4,24),so(4,16),so(4,16),so(4,16)]
 beats += beats_repeat
 guitar_notes += [do(4,192), BK(186), mi(4,186), BK(180), so(4,180), BK(174), do(5,174)]
 
-voiceNotes += [la(4,24),la(4,24),la(4,24),la(4,24),la(4,24),la(4,24),la(4,16),la(4,16),la(4,16)]
 beats += beats_repeat
 guitar_notes += [fa(3,192), BK(186), do(5,186), BK(180), fa(4,180), BK(174), la(4,174)]
 
-voiceNotes += [re(5,24),re(5,24),re(5,24),re(5,24),re(5,24),re(5,24),re(5,16),re(5,16),re(5,16)]
 beats += beats_repeat
 guitar_notes += [so(3,192), BK(186), ti(3,186), BK(180), re(4,180), BK(174), so(4,174)]
+
+durations = [24, 24, 24, 24, 24, 24, 16, 16, 16]
+
+def freqCalc(octave, i):
+    return Freqs[i]*(2.0**(octave-5.0))
+
+chords = [
+[ freqCalc(4, 7), freqCalc(5, 0), freqCalc(5, 4), freqCalc(5, 7), freqCalc(6, 0) ],
+[ freqCalc(4, 7), freqCalc(4, 11), freqCalc(5, 2), freqCalc(5, 7), freqCalc(5, 11) ],
+[ freqCalc(4, 9), freqCalc(5, 0), freqCalc(5, 4), freqCalc(5, 9), freqCalc(6, 0) ],
+[ freqCalc(4, 7), freqCalc(4, 11), freqCalc(5, 4), freqCalc(5, 7), freqCalc(5, 11) ],
+[ freqCalc(4, 9), freqCalc(5, 0), freqCalc(5, 5), freqCalc(5, 9), freqCalc(6, 0)],
+[ freqCalc(4, 7), freqCalc(5, 0), freqCalc(5, 4), freqCalc(5, 7), freqCalc(6, 0) ],
+[ freqCalc(4, 9), freqCalc(5, 0), freqCalc(5, 5), freqCalc(5, 9), freqCalc(6, 0)],
+[ freqCalc(4, 7), freqCalc(4, 11), freqCalc(5, 2), freqCalc(5, 7), freqCalc(5, 11) ]
+]
+
+def chooseFreq(chord, lastFreq):
+    weights= []
+    for i in range(len(chord)):
+        f = chord[i]
+        if f== lastFreq:
+            weights+=[0.0]
+        else:
+            weights+=[1.0/( (f-lastFreq)*(f-lastFreq))]
+            
+    div = sum(weights)
+    weights = [w/div for w in weights]
+
+    r=random()
+    acc=0.0
+    for i in range(len(weights)):
+        acc+= weights[i]
+        if r<=acc:
+         return chord[i]  
 
 # resources
 
@@ -103,10 +131,17 @@ track_drum=ScoreDraft.TrackBuffer()
 
 pi_calc= calcPi()
 
-singingSeq = [ (lyric_map[next(pi_calc)],voiceNotes[0]), ('dian', voiceNotes[1])]
+freq= freqCalc(5, 4)
+singingSeq = [ (lyric_map[next(pi_calc)], (freq, durations[0])), ('dian', (freq, durations[1]))]
 
-for i in range(2, len(voiceNotes) ):
-	singingSeq += [(lyric_map[next(pi_calc)], voiceNotes[i])]
+j0=2
+
+for i in range(8):
+    for j in range(j0, len(durations)):
+        singingSeq += [(lyric_map[next(pi_calc)], (freq, durations[j]))]
+    if i<7:
+        j0=0
+        freq=chooseFreq(chords[i+1], freq)
 
 singer.sing(track_sing,singingSeq, 120)
 guitar.play(track_guitar, guitar_notes, 120)
@@ -122,8 +157,11 @@ while 1:
     track_mix=ScoreDraft.TrackBuffer()
     track_sing=ScoreDraft.TrackBuffer()
     singingSeq = []
-    for j in range(len(voiceNotes) ):
-        singingSeq += [(lyric_map[next(pi_calc)], voiceNotes[j])]
+    for i in range(8):
+        freq=chooseFreq(chords[i], freq)
+        for j in range(len(durations) ):
+            singingSeq += [(lyric_map[next(pi_calc)], (freq, durations[j]))]
+            
     singer.sing(track_sing,singingSeq, 120)
     ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
     ScoreDraft.PlayTrackBuffer(track_mix)
