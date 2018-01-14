@@ -348,21 +348,27 @@ private:
 		unsigned voicedLen = voicedEnd - voicedBegin;
 		unsigned totalLen = unvoicedEnd - unvoicedBegin;
 		unsigned unvoicedLen = totalLen - voicedLen;
-		float voiced_portion = (float)voicedLen / (float)totalLen;
 
 		float voicedWeight;
 		float unvoicedWeight;
 
-		if (voiced_portion < 0.7f)
+		float k = 1.0f;
+
+		float voiced_portion = (float)voicedLen / (float)totalLen;
+		if (voiced_portion < 0.8f)
 		{
-			float k = voiced_portion * 0.3/0.7;
-			voicedWeight = 1.0f / (k* unvoicedLen + voicedLen);
-			unvoicedWeight = k* voicedWeight;
+			k = ((float)voicedLen / (float)(unvoicedLen))  * (0.2 / 0.8);
 		}
-		else
+
+		if (sumLen > totalLen)
 		{
-			voicedWeight = unvoicedWeight = 1.0f / (float)totalLen;
+			float k2 = (float)voicedLen / (float)(sumLen - unvoicedLen);
+			if (k2 < k) k = k2;
 		}
+
+		voicedWeight = 1.0f / (k* unvoicedLen + voicedLen);
+		unvoicedWeight = k* voicedWeight;
+
 
 		class SymmetricWindowWithPosition : public SymmetricWindow
 		{
