@@ -353,9 +353,9 @@ private:
 		float voicedWeight;
 		float unvoicedWeight;
 
-		if (voiced_portion < 0.9f)
+		if (voiced_portion < 0.7f)
 		{
-			float k = voiced_portion / 9.0f;
+			float k = voiced_portion * 0.3/0.7;
 			voicedWeight = 1.0f / (k* unvoicedLen + voicedLen);
 			unvoicedWeight = k* voicedWeight;
 		}

@@ -72,7 +72,7 @@ float fetchFrequency(unsigned length, float *samples, unsigned sampleRate)
 
 	float freq;
 
-	if (maxi != (unsigned)(-1) && maxV>0.4f* fftData[0].Re)
+	if (maxi != (unsigned)(-1) && maxV>0.6f* fftData[0].Re)
 	{
 		freq = (float)sampleRate / (float)maxi;
 	}
