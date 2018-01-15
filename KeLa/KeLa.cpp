@@ -120,7 +120,7 @@ public:
 	KeLa()
 	{
 		m_transition = 0.1f;
-		m_rap_distortion = 10.0f;
+		m_rap_distortion = 1.0f;
 	}
 	void SetName(const char* name)
 	{
@@ -302,27 +302,30 @@ public:
 	
 
 		_generateWave(lyric, sumLen, freqMap, noteBuf);
-
-		float maxV = 0.0f;
-		for (unsigned pos = 0; pos < uSumLen; pos++)
-		{
-			float v = noteBuf->m_data[pos];
-			if (fabsf(v) > maxV) maxV = v;
-		}
-
-		for (unsigned pos = 0; pos < uSumLen; pos++)
-		{
-			float x2 = (float)pos / sumLen;
-			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
-			float v = noteBuf->m_data[pos];
-			v *= 10.0f;
-			if (v > maxV) v = maxV;
-			if (v < -maxV) v = -maxV;
-			noteBuf->m_data[pos] = v;
-		}
-
 		delete[] freqMap;
+
+		/// Distortion 
+		if (m_rap_distortion > 1.0f)
+		{
+			float maxV = 0.0f;
+			for (unsigned pos = 0; pos < uSumLen; pos++)
+			{
+				float v = noteBuf->m_data[pos];
+				if (fabsf(v) > maxV) maxV = v;
+			}
+
+			for (unsigned pos = 0; pos < uSumLen; pos++)
+			{
+				float x2 = (float)pos / sumLen;
+				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+
+				float v = noteBuf->m_data[pos];
+				v *= 10.0f;
+				if (v > maxV) v = maxV;
+				if (v < -maxV) v = -maxV;
+				noteBuf->m_data[pos] = v;
+			}
+		}
 	}
 
 private:
@@ -399,24 +402,24 @@ private:
 		for (size_t i = 0; i < frequencies.size(); i++)
 		{
 			if (frequencies[i] >= 0.0f && unvoicedBegin == (unsigned)(-1))
-				unvoicedBegin = i>0 ? (unsigned)i*freq_step - (freq_step / 2) : 0;
+				unvoicedBegin = (unsigned)i*freq_step;
 			if (frequencies[i] > 0.0f && voicedBegin == (unsigned)(-1))
 			{
 				voicedBegin_id = (unsigned)i;
-				voicedBegin = i > 0 ? (unsigned)i*freq_step - (freq_step / 2) : 0;
+				voicedBegin = (unsigned)i*freq_step;
 				firstFreq = frequencies[i];
 			}
 
 			if (frequencies[i] <= 0.0f && voicedBegin != (unsigned)(-1) && voicedEnd == (unsigned)(-1))
 			{
 				voicedEnd_id = (unsigned)i;
-				voicedEnd = (unsigned)i*freq_step - (freq_step / 2);
+				voicedEnd = (unsigned)(i-1)*freq_step;
 				lastFreq = frequencies[i - 1];
 			}
 
 			if (frequencies[i] < 0.0f && voicedEnd != (unsigned)(-1) && unvoicedEnd == (unsigned)(-1))
 			{
-				unvoicedEnd = (unsigned)i*freq_step - (freq_step / 2);
+				unvoicedEnd = (unsigned)(i-1)*freq_step;
 				break;
 			}
 		}
@@ -452,7 +455,7 @@ private:
 			if (k2 < k) k = k2;
 		}
 
-		voicedWeight = 1.0f / (k* unvoicedLen + voicedLen);
+		voicedWeight = 1.0f / (k* (float)unvoicedLen + (float)voicedLen);
 		unvoicedWeight = k* voicedWeight;
 
 
