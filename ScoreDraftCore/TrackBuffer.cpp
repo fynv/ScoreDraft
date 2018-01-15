@@ -176,7 +176,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 			if ((int)lengths[i] > sourcePos[i])
 			{
 				int count = min(s_localBufferSize, (int)lengths[i] - sourcePos[i]);
-				maxCount=max(count,maxCount);
+				maxCount=(unsigned)max(count,(int)maxCount);
 				int j;
 				for (j=0;j<count;j++)
 				{

@@ -93,11 +93,7 @@ struct InterfaceExtension
 	std::string m_name;
 	PyScoreDraftExtensonFunc m_func;
 	std::string m_input_params;
-	std::string m_param_conversion_code;
 	std::string m_call_params;
-	std::string m_call_return;
-	std::string m_return_conversion_code;
-	std::string m_output_return;	
 	std::string m_comment;
 };
 
@@ -159,8 +155,7 @@ public:
 	}
 	
 	void RegisterInterfaceExtension(const char* name, PyScoreDraftExtensonFunc func,
-		const char* input_params="", const char* param_conversion_code="", const char* call_params="",
-		const char* call_return = "ret", const char* return_conversion_code = "", const char* output_return = "ret", const char* comment = "")
+		const char* input_params="", const char* call_params="", const char* comment = "")
 	{
 		if (m_logger != nullptr)
 		{
@@ -173,11 +168,7 @@ public:
 		ext.m_name = name; 
 		ext.m_func = func;
 		ext.m_input_params = input_params;
-		ext.m_param_conversion_code = param_conversion_code;
 		ext.m_call_params = call_params;
-		ext.m_call_return = call_return;
-		ext.m_return_conversion_code = return_conversion_code;
-		ext.m_output_return = output_return;
 		ext.m_comment = comment;
 
 		m_InterfaceExtensions.push_back(ext);

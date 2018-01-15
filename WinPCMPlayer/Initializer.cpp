@@ -25,14 +25,14 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
 	s_pPyScoreDraft = pyScoreDraft;
 	
-	pyScoreDraft->RegisterInterfaceExtension("PlayTrackBuffer", PlayTrackBuffer, "buf", "", "buf.id", "ret", "", "ret",
+	pyScoreDraft->RegisterInterfaceExtension("PlayTrackBuffer", PlayTrackBuffer, "buf", "buf.id",
 		"\t'''\n"
 		"\tUsing Win32 API to playback a track-buffer.\n"
 		"\tbuf -- an instance of TrackBuffer.\n"
 		"\tNote that this function is a async call. Please keep the main thread busy or do a sleep to let the playback continue.\n"
 		"\t'''\n");
 
-	pyScoreDraft->RegisterInterfaceExtension("PlayGetRemainingTime", PlayGetRemainingTime, "", "", "", "ret", "", "ret",
+	pyScoreDraft->RegisterInterfaceExtension("PlayGetRemainingTime", PlayGetRemainingTime, "", "",
 		"\t'''\n"
 		"\tMonitoring how much time in seconds is remaining in current play-back.\n"
 		"\t'''\n");

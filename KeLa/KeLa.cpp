@@ -192,6 +192,7 @@ public:
 				return true;
 			}
 		}
+		return false;
 	}
 	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
 	{
@@ -442,7 +443,7 @@ private:
 		float voiced_portion = (float)voicedLen / (float)totalLen;
 		if (voiced_portion < 0.8f)
 		{
-			k = ((float)voicedLen / (float)(unvoicedLen))  * (0.2 / 0.8);
+			k = ((float)voicedLen / (float)(unvoicedLen))  * (0.2f / 0.8f);
 		}
 
 		if (sumLen > totalLen)

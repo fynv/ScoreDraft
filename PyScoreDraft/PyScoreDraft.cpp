@@ -215,15 +215,11 @@ static PyObject* GenerateCode(PyObject *self, PyObject *args)
 		generatedCode +=
 			std::string("def ") + ext.m_name + "(" + ext.m_input_params + "):\n"
 			+ ext.m_comment
-			+ ext.m_param_conversion_code
-			+ "\t" + ext.m_call_return + "=PyScoreDraft.CallExtension(" + std::to_string(i);
+			+ "\treturn PyScoreDraft.CallExtension(" + std::to_string(i);
 
 		if (ext.m_call_params != "") generatedCode += ",(" + ext.m_call_params + ")";
 
-		generatedCode +=
-			")\n"
-			+ ext.m_return_conversion_code
-			+ "\treturn " + ext.m_output_return + "\n\n";
+		generatedCode += ")\n\n";
 
 		summary += std::to_string(i) + ": " + ext.m_name + "\n";
 	}
