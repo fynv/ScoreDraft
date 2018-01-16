@@ -5,6 +5,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 find_package(Qt5Widgets)
+find_package(Qt5Network)
 
 set(SOURCES
 main.cpp
@@ -22,6 +23,7 @@ set (INCLUDE_DIR
 
 set (LINK_LIBS 
 Qt5::Widgets
+Qt5::Network
 )
 
 set (DEFINES  ${DEFINES}
