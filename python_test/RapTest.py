@@ -20,7 +20,7 @@ GePing= ScoreDraft.GePing()
 
 durations=[ [48,48,24,24,48, 24,24,24,24,48] ]
 
-poem=poems[6]
+poem=poems[17]
 divider= poem[0]*2
 
 assert(divider==10)
