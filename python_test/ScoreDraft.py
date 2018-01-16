@@ -1,5 +1,14 @@
-import os 
 import PyScoreDraft
+import types 
+
+def ObjectToId(obj):
+	'''
+	Utility only used intenally. User don't use it.
+	'''
+	if type(obj) is list:
+		return [ObjectToId(sub_obj) for sub_obj in obj]
+	else:
+		return obj.id
 
 class TrackBuffer:
 	'''
@@ -116,8 +125,7 @@ class Percussion:
 
 		tempo -- an integer defining the tempo of play in beats/minute.		
 		'''
-		percIdList= [perc.id for perc in percList]
-		PyScoreDraft.PercussionPlay(buf.id, percIdList, seq, tempo)
+		PyScoreDraft.PercussionPlay(buf.id, ObjectToId(percList), seq, tempo)
 
 class Singer:
 	'''
@@ -174,8 +182,7 @@ def MixTrackBufferList (targetbuf, bufferList):
 	targetbuf -- an instance of TrackBuffer to contain the result
 	bufferList -- a list a track-buffers
 	'''
-	bufIdList=[buf.id for buf in bufferList] 
-	PyScoreDraft.MixTrackBufferList(targetbuf.id, bufIdList)
+	PyScoreDraft.MixTrackBufferList(targetbuf.id, ObjectToId(bufferList))
 
 def WriteTrackBufferToWav(buf, filename):
 	'''
