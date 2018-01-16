@@ -64,6 +64,15 @@ class Document:
 		self.tracks.append((name, typeId, performer, buf))
 		return len(self.tracks)-1
 
+	def newInstrumentTrack(self, name, instrument):
+		return self.newTrack(name, 0, insrument)
+
+	def newPercussionTrack(self, name, percList):
+		return self.newTrack(name, 1, percList)
+
+	def newSingerTrack(self, name, singer):
+		return self.newTrack(name, 2, singer)
+
 	def setTempo(self,tempo):
 		self.tempo=tempo
 
@@ -81,9 +90,6 @@ class Document:
 
 	def setTrackBufferVolume(self, trackIndex, volume):
 		self.tracks[trackIndex][3].setVolume(volume)
-
-	def trackToWav(self, trackIndex, filename):
-		ScoreDraft.WriteTrackBufferToWav(self.tracks[trackIndex][3], filename)
 
 	def mix(self, targetBuf):		
 		bufferList=[track[3] for track in self.tracks]
