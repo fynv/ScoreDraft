@@ -5,7 +5,7 @@ from ScoreDraftNotes import *
 from tang300 import poems
 
 doc=ScoreDraft.Document()
-doc.tempo=120
+doc.tempo=100
 
 GePing= ScoreDraft.GePing()
 
@@ -22,7 +22,7 @@ GePing= ScoreDraft.GePing()
 
 durations=[ [24,36,32,32,36, 24,36,32,32,36] ]
 
-poem=poems[1]
+poem=poems[28]
 divider= poem[0]*2
 
 assert(divider==10)
