@@ -7,16 +7,20 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt5Widgets)
 find_package(Qt5Network)
 find_package(Qt5Multimedia)
+find_package(Qt5OpenGL)
 find_package(PythonLibs 3 REQUIRED)
+find_package(OpenGL)
 
 set(SOURCES
 main.cpp
 QtPCMPlayer.cpp
+ViewWidget.cpp
 )
 
 
 set(HEADERS 
 QtPCMPlayer.h
+ViewWidget.h
 )
 
 set (INCLUDE_DIR
@@ -27,6 +31,8 @@ set (LINK_LIBS
 Qt5::Widgets
 Qt5::Network
 Qt5::Multimedia
+Qt5::OpenGL
+opengl32
 )
 
 

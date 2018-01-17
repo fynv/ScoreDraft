@@ -19,6 +19,9 @@ public:
 	virtual qint64 writeData(const char *data, qint64 len);
 	virtual qint64 bytesAvailable() const;
 
+signals:
+	void newbufferReady(short* data, unsigned count);
+
 private:
 	BufferQueue* m_BufferQueue;
 };
@@ -49,6 +52,7 @@ private:
 
 private slots:
 	void newConnection();
+	void newbufferReady(short* data, unsigned count);
 
 };
 

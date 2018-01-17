@@ -127,6 +127,7 @@ qint64 BufferFeeder::readData(char *data, qint64 len)
 	qint64 i;
 	for (i = 0; i<count; i++)
 		sdata[i] = m_BufferQueue->GetSample();
+	emit newbufferReady(sdata, (unsigned)count);
 	return count*sizeof(short);
 }
 
@@ -155,6 +156,7 @@ QtPCMPlayer::QtPCMPlayer(QLocalServer* server) : m_server(server)
 	m_audioOutput = nullptr;
 
 	connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
+	connect(m_Feeder, SIGNAL(newbufferReady(short*, unsigned)), this, SLOT(newbufferReady(short*, unsigned)));
 
 }
 
@@ -251,3 +253,12 @@ void QtPCMPlayer::newConnection()
 	
 }
 
+void QtPCMPlayer::newbufferReady(short* data, unsigned count)
+{
+	if (count > 2)
+	{
+		m_ui.view->m_data.resize(count);
+		memcpy(m_ui.view->m_data.data(), data, sizeof(short)*count);
+		m_ui.view->update();
+	}
+}
