@@ -45,6 +45,7 @@ public:
 	BufferQueue()
 	{
 		m_curPos = 0;
+		m_totalBufferLenth = 0;
 	}
 	~BufferQueue()
 	{
@@ -74,6 +75,7 @@ public:
 		file.remove();
 
 		m_queue.push(newBuffer);
+		m_totalBufferLenth += size;
 	}
 
 	short GetSample()
@@ -89,15 +91,21 @@ public:
 			}
 			m_curPos = 0;
 			m_queue.pop();
+			m_totalBufferLenth -= buf->m_size;
 			delete buf;
 		}
 		return 0;
 	}
 
+	unsigned GetRemainingSamples()
+	{
+		return m_totalBufferLenth - m_curPos;
+	}
 
 private:
 	std::queue<Buffer*> m_queue;
 	unsigned m_curPos;
+	unsigned m_totalBufferLenth;
 
 };
 
@@ -233,6 +241,12 @@ void QtPCMPlayer::newConnection()
 		char fn[100];
 		sscanf(line + strlen("NewBuffer") + 1, "%s", fn);
 		_playFile(fn);
+	}
+	else if (strcmp(cmd, "GetRemainingSec") == 0)
+	{
+		double secs = (double)m_BufferQueue->GetRemainingSamples() / 44100.0;		
+		sprintf(cmd, "%f", secs);
+		SendString(*clientConnection, cmd);
 	}
 	
 }

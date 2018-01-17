@@ -111,6 +111,30 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 }
 
 
+PyObject * QPlayGetRemainingTime(PyObject *args)
+{
+	int argc = 0;
+	QApplication app(argc, nullptr);
+
+	QLocalSocket socket;
+	socket.connectToServer("QtPCMPlayer");
+
+	if (!socket.waitForConnected(500))
+		return PyFloat_FromDouble(-1.0);
+
+	SendString(socket, "GetRemainingSec");
+
+	QByteArray str;
+	GetString(socket, str);
+
+	return PyFloat_FromDouble(str.toDouble());
+	
+	socket.disconnectFromServer();
+
+	return PyLong_FromUnsignedLong(0);
+}
+
+
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
@@ -120,7 +144,11 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		"\t'''\n"
 		"\tUsing Qt Multimedia API to playback a track-buffer.\n"
 		"\tbuf -- an instance of TrackBuffer.\n"
-		"\tNote that this function is a async call. Please keep the main thread busy or do a sleep to let the playback continue.\n"
+		"\t'''\n");
+
+	pyScoreDraft->RegisterInterfaceExtension("QPlayGetRemainingTime", QPlayGetRemainingTime, "", "",
+		"\t'''\n"
+		"\tMonitoring how much time in seconds is remaining in current play-back.\n"
 		"\t'''\n");
 }
 
