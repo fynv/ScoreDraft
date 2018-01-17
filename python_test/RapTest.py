@@ -5,7 +5,7 @@ from ScoreDraftNotes import *
 from tang300 import poems
 
 doc=ScoreDraft.Document()
-doc.tempo=100
+doc.tempo=120
 
 GePing= ScoreDraft.GePing()
 
@@ -18,11 +18,15 @@ GePing= ScoreDraft.GePing()
 #seq += [ ("ting", 2, 48), ("tai",2, 48), ("liu",4,24), ("qi", 1,24), ("zuo", 4, 48)]
 #seq += [ ("ba", 1, 24), ("jiu",3, 24), ("shi",2,24), ("zhi", 1,24), ("hua", 1, 48), BL(48)]
 
+
+'''
 #durations=[ [48,48,24,24,48, 24,24,24,24,48] ]
 
-durations=[ [24,36,32,32,36, 24,36,32,32,36] ]
+#durations=[ [24,36,32,32,36, 24,36,32,32,36] ]
 
-poem=poems[28]
+durations=[ [36,60,48,36,60, 36,60,48,36,60] ]
+
+poem=poems[35]
 divider= poem[0]*2
 
 assert(divider==10)
@@ -30,12 +34,31 @@ assert(divider==10)
 seq=[]
 
 for i in range(int(len(poem[1])/divider)):
-	for j in range(5):
+	for j in range(poem[0]):
 		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
-	seq+=[BL(32)]
-	for j in range(5,10):
+	seq+=[BL(48)]
+	for j in range(poem[0],divider):
 		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
-	seq+=[BL(32)]
+	seq+=[BL(48)]
+
+'''
+
+durations=[ [36,60,36,60,48,48,48, 36,60,36,60,48,48,48] ]
+
+poem=poems[40]
+divider= poem[0]*2
+
+assert(divider==14)
+
+seq=[]
+
+for i in range(int(len(poem[1])/divider)):
+	for j in range(poem[0]):
+		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
+	seq+=[BL(48)]
+	for j in range(poem[0],divider):
+		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
+	seq+=[BL(48)]
 
 doc.sing(seq, ScoreDraft.GePing())
 
