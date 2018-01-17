@@ -7,6 +7,7 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt5Widgets)
 find_package(Qt5Network)
 find_package(Qt5Multimedia)
+find_package(PythonLibs 3 REQUIRED)
 
 set(SOURCES
 main.cpp
@@ -47,4 +48,32 @@ target_link_libraries(QtPCMPlayer ${LINK_LIBS})
 install(TARGETS QtPCMPlayer DESTINATION .)
 
 
+set(SOURCES
+QtPCMPlayer_Ext.cpp
+)
 
+
+set(HEADERS 
+)
+
+set (INCLUDE_DIR
+${PYTHON_INCLUDE_DIRS}
+.
+../ScoreDraftCore
+../PyScoreDraft
+)
+
+
+set (LINK_LIBS 
+Qt5::Widgets
+Qt5::Network
+${PYTHON_LIBRARIES}
+ScoreDraftCore
+)
+
+
+include_directories(${INCLUDE_DIR})
+add_library (QtPCMPlayerExt SHARED ${SOURCES} ${HEADERS})
+target_link_libraries(QtPCMPlayerExt ${LINK_LIBS})
+
+install(TARGETS QtPCMPlayerExt DESTINATION Extensions)

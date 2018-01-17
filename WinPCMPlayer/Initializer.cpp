@@ -1,9 +1,6 @@
 #include <Python.h>
 #include "PyScoreDraft.h"
-#include "stdlib.h"
 #include "WinPCMPlayer.h"
-
-#include "Deferred.h"
 
 static PyScoreDraft* s_pPyScoreDraft;
 static WinPCMPlayer s_Player;

@@ -23,15 +23,19 @@ private:
 	BufferQueue* m_BufferQueue;
 };
 
+class QLocalServer;
+
 class QtPCMPlayer : public QWidget
 {
 	Q_OBJECT
 public:
-	QtPCMPlayer();
+	QtPCMPlayer(QLocalServer* server);
 	virtual ~QtPCMPlayer();
 
 private:
 	Ui_QtPCMPlayer m_ui;
+
+	QLocalServer* m_server;
 
 	BufferQueue* m_BufferQueue;
 	BufferFeeder* m_Feeder;
@@ -42,6 +46,10 @@ private:
 	bool m_initialized;
 
 	void _playFile(const char* filename);
+
+private slots:
+	void newConnection();
+
 };
 
 #endif

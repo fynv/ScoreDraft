@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	QLocalServer server;
 	if (!server.listen("QtPCMPlayer")) return -1;
 
-	QtPCMPlayer player;
+	QtPCMPlayer player(&server);
 	player.show();
 
 	int res= app.exec();

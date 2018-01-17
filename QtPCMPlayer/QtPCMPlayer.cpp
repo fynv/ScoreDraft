@@ -1,5 +1,10 @@
 #include <queue>
 #include <stdio.h>
+#include <string.h>
+#include <QtNetwork/QLocalSocket>
+#include <QtNetwork/QLocalServer>
+#include <QFile>
+
 #include "QtPCMPlayer.h"
 
 
@@ -65,6 +70,9 @@ public:
 		fread(newBuffer->m_data, sizeof(short), size, fp);
 		fclose(fp);
 
+		QFile file(filename);
+		file.remove();
+
 		m_queue.push(newBuffer);
 	}
 
@@ -129,7 +137,7 @@ qint64 BufferFeeder::bytesAvailable() const
 }
 
 
-QtPCMPlayer::QtPCMPlayer()
+QtPCMPlayer::QtPCMPlayer(QLocalServer* server) : m_server(server)
 {
 	m_ui.setupUi(this);
 
@@ -138,7 +146,8 @@ QtPCMPlayer::QtPCMPlayer()
 	m_initialized = false;
 	m_audioOutput = nullptr;
 
-	_playFile("test");
+	connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
+
 }
 
 QtPCMPlayer::~QtPCMPlayer()
@@ -169,4 +178,62 @@ void QtPCMPlayer::_playFile(const char* filename)
 
 }
 
+
+void SendString(QLocalSocket& socket, const char* str)
+{
+	QByteArray content = str;
+
+	QByteArray block;
+	QDataStream out(&block, QIODevice::WriteOnly);
+	out.setVersion(QDataStream::Qt_4_0);
+	out << (quint32)0;
+	out << content;
+	out.device()->seek(0);
+	out << (quint32)(block.size() - sizeof(quint32));
+
+	socket.write(block);
+	socket.flush();
+
+	socket.waitForBytesWritten(-1);
+}
+
+
+bool GetString(QLocalSocket& socket, QByteArray& str)
+{
+	socket.waitForReadyRead(-1);
+
+	QDataStream in(&socket);
+	in.setVersion(QDataStream::Qt_4_0);
+
+	quint32 blockSize;
+
+	if (socket.bytesAvailable() < (int)sizeof(quint32))	return false;
+	in >> blockSize;
+
+	if (socket.bytesAvailable() < blockSize || in.atEnd()) return false;
+	in >> str;
+
+	return true;
+}
+
+void QtPCMPlayer::newConnection()
+{
+	QLocalSocket *clientConnection = m_server->nextPendingConnection();
+	connect(clientConnection, SIGNAL(disconnected()), clientConnection, SLOT(deleteLater()));
+
+	QByteArray str;
+	GetString(*clientConnection, str);
+
+	const char* line = str.data();
+	char cmd[100];
+
+	sscanf(line, "%s", &cmd);
+	if (strcmp(cmd, "NewBuffer") == 0)
+	{
+		char fn[100];
+		sscanf(line + strlen("NewBuffer") + 1, "%s", fn);
+		_playFile(fn);
+	}
+	
+}
 
