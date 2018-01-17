@@ -148,12 +148,14 @@ guitar.play(track_guitar, guitar_notes, 120)
 ScoreDraft.Percussion.play(perc_list, track_drum, beats, 120)
 
 ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
-ScoreDraft.PlayTrackBuffer(track_mix)
+ScoreDraft.QPlayTrackBuffer(track_mix)
 
 # Mix 2~n
 while 1:
-    while (ScoreDraft.PlayGetRemainingTime()>5.0):
+    while (ScoreDraft.QPlayGetRemainingTime()>5.0):
         time.sleep(2.0)
+    if (ScoreDraft.QPlayGetRemainingTime()<0.0):
+        break
     track_mix=ScoreDraft.TrackBuffer()
     track_sing=ScoreDraft.TrackBuffer()
     singingSeq = []
@@ -164,4 +166,4 @@ while 1:
             
     singer.sing(track_sing,singingSeq, 120)
     ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
-    ScoreDraft.PlayTrackBuffer(track_mix)
+    ScoreDraft.QPlayTrackBuffer(track_mix)

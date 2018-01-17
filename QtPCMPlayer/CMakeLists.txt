@@ -32,7 +32,7 @@ Qt5::Widgets
 Qt5::Network
 Qt5::Multimedia
 Qt5::OpenGL
-opengl32
+${OPENGL_gl_LIBRARY}
 )
 
 

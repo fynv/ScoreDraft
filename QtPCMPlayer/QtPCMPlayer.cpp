@@ -237,7 +237,7 @@ void QtPCMPlayer::newConnection()
 	const char* line = str.data();
 	char cmd[100];
 
-	sscanf(line, "%s", &cmd);
+	sscanf(line, "%s", cmd);
 	if (strcmp(cmd, "NewBuffer") == 0)
 	{
 		char fn[100];

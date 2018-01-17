@@ -29,6 +29,12 @@ void ViewWidget::paintGL()
 	painter.begin(this);
 	painter.beginNativePainting();
 
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 

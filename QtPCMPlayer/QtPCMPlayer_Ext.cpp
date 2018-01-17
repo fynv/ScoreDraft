@@ -90,15 +90,22 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 
 	if (!socket.waitForConnected(500))
 	{
-		if (!QProcess::startDetached("QtPCMPlayer"))		
+		QString playerPath;
+#ifdef _WIN32
+		playerPath="QtPCMPlayer.exe";
+#else
+		playerPath = "./QtPCMPlayer";
+#endif
+		if (!QProcess::startDetached(playerPath))
 			return PyLong_FromUnsignedLong(0);
+
+		while (!socket.waitForConnected(500))
+		{
+			QThread::msleep(500);
+			socket.connectToServer("QtPCMPlayer");
+		}
 	}
 
-	while (!socket.waitForConnected(500))
-	{
-		QThread::msleep(500);
-		socket.connectToServer("QtPCMPlayer");
-	}
 
 	char cmd[200];
 	sprintf(cmd, "NewBuffer %s", fn);
