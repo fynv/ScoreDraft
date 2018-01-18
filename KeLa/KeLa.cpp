@@ -273,21 +273,21 @@ public:
 		}
 		else if (tone == 2)
 		{
-			float lowFreq = baseSampleFreq*0.5f;
+			float lowFreq = baseSampleFreq*0.7f;
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
 				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (baseSampleFreq - lowFreq)*(1.0f -expf(-x*5.0f));
+				freqMap[i] = lowFreq + (baseSampleFreq - lowFreq)*x;
 			}
 		}
 		else if (tone == 3)
 		{
 			float highFreq = baseSampleFreq*0.75f;
-			float lowFreq = baseSampleFreq*0.625f;
+			float lowFreq = baseSampleFreq*0.5f;
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
 				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (highFreq - lowFreq)*(1.0f - expf(-x*5.0f));
+				freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
 			}
 		}
 		else if (tone == 4)

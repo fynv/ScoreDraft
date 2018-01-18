@@ -4,11 +4,6 @@ import ScoreDraft
 from ScoreDraftNotes import *
 from tang300 import poems
 
-doc=ScoreDraft.Document()
-doc.tempo=120
-
-GePing= ScoreDraft.GePing()
-
 #seq = [ ("kan", 4, 48), ("jian", 4, 24), ("de", 4,24), ("kan", 4, 24), ("bu", 2, 24), ("jian", 4, 24), ("de", 4,24) ]
 #seq += [ ("shun", 4, 48), ("jian", 1,24), ("de", 4,24), ("yong",3,48), ("heng",2,24), ("de", 4,24)]
 
@@ -19,14 +14,14 @@ GePing= ScoreDraft.GePing()
 #seq += [ ("ba", 1, 24), ("jiu",3, 24), ("shi",2,24), ("zhi", 1,24), ("hua", 1, 48), BL(48)]
 
 
-'''
 #durations=[ [48,48,24,24,48, 24,24,24,24,48] ]
 
 #durations=[ [24,36,32,32,36, 24,36,32,32,36] ]
 
+'''
 durations=[ [36,60,48,36,60, 36,60,48,36,60] ]
 
-poem=poems[35]
+poem=poems[42]
 divider= poem[0]*2
 
 assert(divider==10)
@@ -41,11 +36,12 @@ for i in range(int(len(poem[1])/divider)):
 		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
 	seq+=[BL(48)]
 
+
 '''
 
 durations=[ [36,60,36,60,48,48,48, 36,60,36,60,48,48,48] ]
 
-poem=poems[40]
+poem=poems[44]
 divider= poem[0]*2
 
 assert(divider==14)
@@ -60,7 +56,10 @@ for i in range(int(len(poem[1])/divider)):
 		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
 	seq+=[BL(48)]
 
-doc.sing(seq, ScoreDraft.GePing())
 
+buf=ScoreDraft.TrackBuffer()
+GePing= ScoreDraft.GePing()
+GePing.sing(buf, seq, 120)
 
-doc.mixDown('RapTest.wav')
+ScoreDraft.QPlayTrackBuffer(buf)
+
