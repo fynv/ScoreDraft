@@ -157,7 +157,7 @@ QtPCMPlayer::QtPCMPlayer(QLocalServer* server) : m_server(server)
 
 	connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
 	connect(m_Feeder, SIGNAL(newbufferReady(short*, unsigned)), this, SLOT(newbufferReady(short*, unsigned)));
-
+	connect(m_ui.btnPlayPause, SIGNAL(toggled(bool)), this, SLOT(btnPlayPauseToggled(bool)));
 }
 
 QtPCMPlayer::~QtPCMPlayer()
@@ -181,6 +181,8 @@ void QtPCMPlayer::_playFile(const char* filename)
 
 		m_audioOutput = new QAudioOutput(m_format, this);
 		m_audioOutput->start(m_Feeder);
+
+		connect(m_audioOutput, SIGNAL(stateChanged(QAudio::State)), this, SLOT(playbackStateChanged(QAudio::State)));
 
 		m_initialized = true;
 	}
@@ -261,4 +263,30 @@ void QtPCMPlayer::newbufferReady(short* data, unsigned count)
 		memcpy(m_ui.view->m_data.data(), data, sizeof(short)*count);
 		m_ui.view->update();
 	}
+}
+
+void QtPCMPlayer::playbackStateChanged(QAudio::State state)
+{
+	/*if (state == QAudio::State::ActiveState)
+	{
+		m_ui.btnPlayPause->setChecked(true);
+	}
+	else
+	{
+		m_ui.btnPlayPause->setChecked(false);
+	}*/
+}
+
+void QtPCMPlayer::btnPlayPauseToggled(bool checked)
+{
+	if (m_audioOutput == nullptr) return;
+	if (checked)
+	{
+		m_audioOutput->resume();		
+	}
+	else
+	{
+		m_audioOutput->suspend();
+	}
+
 }

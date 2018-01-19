@@ -54,6 +54,9 @@ private slots:
 	void newConnection();
 	void newbufferReady(short* data, unsigned count);
 
+	void playbackStateChanged(QAudio::State state);
+	void btnPlayPauseToggled(bool checked);
+
 };
 
 #endif
