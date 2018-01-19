@@ -16,28 +16,6 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-class Buffer
-{
-public:
-	unsigned m_size;
-	short* m_data;
-
-	Buffer()
-	{
-		m_size = 0;
-		m_data = 0;
-	}
-	~Buffer()
-	{
-		delete[] m_data;
-	}
-	void Allocate()
-	{
-		delete[] m_data;
-		m_data = new short[m_size];
-	}
-};
-
 
 class BufferQueue
 {
@@ -51,9 +29,7 @@ public:
 	{
 		while (!m_queue.empty())
 		{
-			Buffer* buf = m_queue.front();
 			m_queue.pop();
-			delete buf;
 		}
 	}
 
@@ -64,11 +40,11 @@ public:
 		long size = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 		size /= 2;
-		Buffer* newBuffer = new Buffer;
-		newBuffer->m_size = size;
-		newBuffer->Allocate();
 
-		fread(newBuffer->m_data, sizeof(short), size, fp);
+		AudioBuffer_Deferred newBuffer;
+		newBuffer->resize((size_t)size);
+
+		fread(newBuffer->data(), sizeof(short), size, fp);
 		fclose(fp);
 
 		QFile file(filename);
@@ -82,17 +58,16 @@ public:
 	{
 		while (!m_queue.empty())
 		{
-			Buffer* buf = m_queue.front();
-			if (m_curPos<buf->m_size)
+			AudioBuffer_Deferred buf = m_queue.front();
+			if (m_curPos<(unsigned)buf->size())
 			{
-				short value = buf->m_data[m_curPos];
+				short value = (*buf)[m_curPos];
 				m_curPos++;
 				return value;
 			}
 			m_curPos = 0;
 			m_queue.pop();
-			m_totalBufferLenth -= buf->m_size;
-			delete buf;
+			m_totalBufferLenth -= (unsigned)buf->size();
 		}
 		return 0;
 	}
@@ -103,7 +78,7 @@ public:
 	}
 
 private:
-	std::queue<Buffer*> m_queue;
+	std::queue<AudioBuffer_Deferred> m_queue;
 	unsigned m_curPos;
 	unsigned m_totalBufferLenth;
 

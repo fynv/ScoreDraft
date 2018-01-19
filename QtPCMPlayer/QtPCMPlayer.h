@@ -7,6 +7,12 @@
 #include <QIODevice>
 #include <QtMultimedia/QAudioOutput>
 
+#include <Deferred.h>
+#include <vector>
+
+typedef std::vector<short> AudioBuffer;
+typedef Deferred<AudioBuffer> AudioBuffer_Deferred;
+
 class BufferQueue;
 class BufferFeeder : public QIODevice
 {
