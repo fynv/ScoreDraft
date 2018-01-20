@@ -39,6 +39,11 @@ public:
 	void RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
 	void RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
 
+	std::string GetLyricCharset()
+	{
+		return m_lyric_charset;
+	}
+
 	virtual bool Tune(const char* cmd);
 
 protected:
@@ -48,6 +53,7 @@ protected:
 
 	float m_noteVolume;
 	std::string m_defaultLyric;
+	std::string m_lyric_charset;
 
 	float m_freq_rel_rap;
 };

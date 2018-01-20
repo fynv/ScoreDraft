@@ -35,7 +35,7 @@ void VoiceBuffer::Allocate()
 
 Singer::Singer() : m_noteVolume(1.0f), m_freq_rel_rap(1.0f)
 {
-
+	m_lyric_charset = "utf-8";
 }
 
 Singer::~Singer()

@@ -486,6 +486,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 
 	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	std::string lyric_charset = singer->GetLyricCharset();
 
 	size_t piece_count = PyList_Size(seq_py);
 	for (size_t i = 0; i < piece_count; i++)
@@ -496,7 +497,8 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			PyObject *_item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
 			{	
-				std::string lyric = _PyUnicode_AsString(_item);
+				PyObject *byteCode = PyUnicode_AsEncodedString(_item, lyric_charset.data(), 0);
+				std::string lyric = PyBytes_AS_STRING(byteCode);
 				size_t tupleSize = PyTuple_Size(item);
 				_item = PyTuple_GetItem(item, 1);
 				if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note

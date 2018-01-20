@@ -155,7 +155,20 @@ public:
 	void SetName(const char* name)
 	{
 		m_name = name;
+
 #ifdef _WIN32
+
+		char charsetFn[1024];
+		sprintf(charsetFn, "KeLaSamples\\%s\\charset", m_name.data());
+		FILE* fp_charset = fopen(charsetFn, "r");
+		if (fp_charset)
+		{
+			char charsetName[100];
+			fscanf(fp_charset, "%s", charsetName);
+			m_lyric_charset = charsetName;
+			fclose(fp_charset);
+		}
+		
 		WIN32_FIND_DATAA ffd;
 		HANDLE hFind = INVALID_HANDLE_VALUE;
 
