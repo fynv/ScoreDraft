@@ -3,7 +3,8 @@
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
-#include <vector>
+#include <QTime>
+#include "BufferQueue.h"
 
 class ViewWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -12,12 +13,30 @@ public:
 	ViewWidget(QWidget* parent);
 	~ViewWidget();
 
-	std::vector<short> m_data;
-
+public slots:
+	void AddBuffer(AudioBuffer_Deferred buf)
+	{
+		m_BufferQueue.AddBuffer(buf);
+	}
+	void SetRefPos(QTime time, unsigned refPos)
+	{
+		m_timer = time;
+		m_refPos = refPos;
+	}
+	void Freeze();
+	
 protected:
 	void initializeGL() override;
 	void resizeGL(int w, int h) override;
 	void paintGL() override;
+
+	BufferQueue m_BufferQueue;
+
+	unsigned m_refPos;
+	QTime m_timer;
+	unsigned m_renderedPos;
+
+	float m_samples_per_ms;
 
 };
 

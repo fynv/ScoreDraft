@@ -6,6 +6,7 @@
 
 #include <QIODevice>
 #include <QtMultimedia/QAudioOutput>
+#include <QTime>
 
 #include <Deferred.h>
 #include <vector>
@@ -26,7 +27,7 @@ public:
 	virtual qint64 bytesAvailable() const;
 
 signals:
-	void newbufferReady(short* data, unsigned count);
+	void feedingPos(QTime time, unsigned pos);
 
 private:
 	BufferQueue* m_BufferQueue;
@@ -58,10 +59,10 @@ private:
 
 private slots:
 	void newConnection();
-	void newbufferReady(short* data, unsigned count);
 
 	void playbackStateChanged(QAudio::State state);
 	void btnPlayPauseToggled(bool checked);
+	void feedingPos(QTime time, unsigned pos);
 
 };
 

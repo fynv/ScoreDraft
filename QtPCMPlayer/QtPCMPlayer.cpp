@@ -6,7 +6,7 @@
 #include <QFile>
 
 #include "QtPCMPlayer.h"
-
+#include "BufferQueue.h"
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -15,74 +15,6 @@
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
-
-
-class BufferQueue
-{
-public:
-	BufferQueue()
-	{
-		m_curPos = 0;
-		m_totalBufferLenth = 0;
-	}
-	~BufferQueue()
-	{
-		while (!m_queue.empty())
-		{
-			m_queue.pop();
-		}
-	}
-
-	void AddBuffer(const char* filename)
-	{
-		FILE *fp = fopen(filename, "rb");
-		fseek(fp, 0, SEEK_END);
-		long size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-		size /= 2;
-
-		AudioBuffer_Deferred newBuffer;
-		newBuffer->resize((size_t)size);
-
-		fread(newBuffer->data(), sizeof(short), size, fp);
-		fclose(fp);
-
-		QFile file(filename);
-		file.remove();
-
-		m_queue.push(newBuffer);
-		m_totalBufferLenth += size;
-	}
-
-	short GetSample()
-	{
-		while (!m_queue.empty())
-		{
-			AudioBuffer_Deferred buf = m_queue.front();
-			if (m_curPos<(unsigned)buf->size())
-			{
-				short value = (*buf)[m_curPos];
-				m_curPos++;
-				return value;
-			}
-			m_curPos = 0;
-			m_queue.pop();
-			m_totalBufferLenth -= (unsigned)buf->size();
-		}
-		return 0;
-	}
-
-	unsigned GetRemainingSamples()
-	{
-		return m_totalBufferLenth - m_curPos;
-	}
-
-private:
-	std::queue<AudioBuffer_Deferred> m_queue;
-	unsigned m_curPos;
-	unsigned m_totalBufferLenth;
-
-};
 
 
 BufferFeeder::BufferFeeder(BufferQueue* queue, QObject *parent) :QIODevice(parent), m_BufferQueue(queue)
@@ -97,12 +29,14 @@ BufferFeeder::~BufferFeeder()
 
 qint64 BufferFeeder::readData(char *data, qint64 len)
 {
+	QTime time;
+	time.start();
+	emit feedingPos(time, m_BufferQueue->GetCursor());
 	short* sdata = (short*)data;
 	qint64 count = len / sizeof(short);
 	qint64 i;
 	for (i = 0; i<count; i++)
 		sdata[i] = m_BufferQueue->GetSample();
-	emit newbufferReady(sdata, (unsigned)count);
 	return count*sizeof(short);
 }
 
@@ -131,8 +65,8 @@ QtPCMPlayer::QtPCMPlayer(QLocalServer* server) : m_server(server)
 	m_audioOutput = nullptr;
 
 	connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
-	connect(m_Feeder, SIGNAL(newbufferReady(short*, unsigned)), this, SLOT(newbufferReady(short*, unsigned)));
 	connect(m_ui.btnPlayPause, SIGNAL(toggled(bool)), this, SLOT(btnPlayPauseToggled(bool)));
+	connect(m_Feeder, SIGNAL(feedingPos(QTime, unsigned)), this, SLOT(feedingPos(QTime, unsigned)));
 }
 
 QtPCMPlayer::~QtPCMPlayer()
@@ -161,8 +95,24 @@ void QtPCMPlayer::_playFile(const char* filename)
 
 		m_initialized = true;
 	}
-	m_BufferQueue->AddBuffer(filename);
 
+	FILE *fp = fopen(filename, "rb");
+	fseek(fp, 0, SEEK_END);
+	long size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	size /= 2;
+
+	AudioBuffer_Deferred newBuffer;
+	newBuffer->resize((size_t)size);
+
+	fread(newBuffer->data(), sizeof(short), size, fp);
+	fclose(fp);
+
+	QFile file(filename);
+	file.remove();
+
+	m_BufferQueue->AddBuffer(newBuffer);
+	m_ui.view->AddBuffer(newBuffer);
 }
 
 
@@ -230,26 +180,13 @@ void QtPCMPlayer::newConnection()
 	
 }
 
-void QtPCMPlayer::newbufferReady(short* data, unsigned count)
-{
-	if (count > 2)
-	{
-		m_ui.view->m_data.resize(count);
-		memcpy(m_ui.view->m_data.data(), data, sizeof(short)*count);
-		m_ui.view->update();
-	}
-}
 
 void QtPCMPlayer::playbackStateChanged(QAudio::State state)
 {
-	/*if (state == QAudio::State::ActiveState)
+	if (state != QAudio::State::ActiveState)
 	{
-		m_ui.btnPlayPause->setChecked(true);
+		m_ui.view->Freeze();
 	}
-	else
-	{
-		m_ui.btnPlayPause->setChecked(false);
-	}*/
 }
 
 void QtPCMPlayer::btnPlayPauseToggled(bool checked)
@@ -264,4 +201,9 @@ void QtPCMPlayer::btnPlayPauseToggled(bool checked)
 		m_audioOutput->suspend();
 	}
 
+}
+
+void QtPCMPlayer::feedingPos(QTime time, unsigned pos)
+{
+	m_ui.view->SetRefPos(time, pos);
 }

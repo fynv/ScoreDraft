@@ -16,12 +16,14 @@ set(SOURCES
 main.cpp
 QtPCMPlayer.cpp
 ViewWidget.cpp
+BufferQueue.cpp
 )
 
 
 set(HEADERS 
 QtPCMPlayer.h
 ViewWidget.h
+BufferQueue.h
 )
 
 set (INCLUDE_DIR

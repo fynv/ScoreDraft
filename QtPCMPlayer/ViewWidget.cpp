@@ -3,8 +3,8 @@
 
 ViewWidget::ViewWidget(QWidget* parent) : QOpenGLWidget(parent)
 {
-	m_data.push_back(0);
-	m_data.push_back(0);
+	m_refPos = 0;
+	m_samples_per_ms = 44.1f;
 }
 
 ViewWidget::~ViewWidget()
@@ -40,27 +40,33 @@ void ViewWidget::paintGL()
 
 	glDisable(GL_DEPTH_TEST);
 
-	if (m_data.size() >= 2)
+	m_renderedPos = m_refPos + (unsigned)((float)m_timer.elapsed()*m_samples_per_ms);
+	m_BufferQueue.SetCursor(m_renderedPos);
+
+	unsigned winSize = 1024;
+
+	glColor3f(1.0f, 1.0f, 0.0f);
+	glBegin(GL_LINE_STRIP);
+
+	for (unsigned i = 0; i < winSize; i++)
 	{
-		glColor3f(1.0f, 1.0f, 0.0f);
-		glBegin(GL_LINE_STRIP);
+		float x = (float)i / (float)(winSize - 1)*2.0f - 1.0f;
+		float y = (float)m_BufferQueue.GetSample()/ 40000.0f;
 
-		unsigned size = (unsigned)m_data.size();
-		if (size > 1024) size = 1024;
-
-		for (unsigned i = 0; i < size; i++)
-		{
-			float x = (float)i / (float)(size - 1)*2.0f - 1.0f;
-			float y = (float)m_data[i] / 40000.0f;
-
-			glVertex2f(x, y);		
-		}
-
-		glEnd();
+		glVertex2f(x, y);		
 	}
+
+	glEnd();	
 
 	painter.endNativePainting();
 	painter.end();
+
+	update();
 }
 
-
+void ViewWidget::Freeze()
+{
+	m_refPos = m_renderedPos;
+	m_timer = QTime();
+	
+}
