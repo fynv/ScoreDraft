@@ -93,24 +93,54 @@ void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned st
 		}
 	}
 
-	unsigned sampleBegin = (unsigned) (-1);
-	size_t sampleEnd = (unsigned)(-1);
 	for (size_t i = 0; i < frequencies.size(); i++)
 	{
 		if ((i<BestRange.begin || i>BestRange.end) && frequencies[i] > 0.0f)
 		{
 			frequencies[i] = 0.0f;
 		}
-		if (frequencies[i] >= 0.0f)
-		{
-			if (sampleBegin == (unsigned)(-1))
-				sampleBegin = (unsigned)i;
-			sampleEnd = (unsigned)i+1;
-		}		
 	}
 
-	for (unsigned i = sampleBegin; i < sampleEnd; i++)
-		if (frequencies[i] < 0.0f) frequencies[i] = 0.0f;
+	bool cut = false;
+	for (unsigned i = BestRange.begin - 1; i != (unsigned)(-1); i--)
+	{
+		if (frequencies[i] < 0)
+		{
+			cut = true;
+			continue;
+		}
+		if (cut &&  frequencies[i]>=0)
+		{
+			frequencies[i] = -1;
+			continue;
+		}
+
+		if (frequencies[i] > 0)
+		{
+			frequencies[i] = 0.0f;
+		}
+	}
+
+	cut = false;
+	for (unsigned i = BestRange.end + 1; i < (unsigned)frequencies.size(); i++)
+	{
+		if (frequencies[i] < 0)
+		{
+			cut = true;
+			continue;
+		}
+		if (cut &&  frequencies[i] >= 0)
+		{
+			frequencies[i] = -1;
+			continue;
+		}
+
+		if (frequencies[i] > 0)
+		{
+			frequencies[i] = 0.0f;
+		}
+	}
+
 
 }
 

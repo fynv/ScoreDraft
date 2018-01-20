@@ -87,15 +87,32 @@ bool ReadWav::ReadHeader(unsigned& sampleRate, unsigned& numSamples)
 	}
 
 	unsigned headerSize;
+	unsigned skipSize = 0;
+	unsigned skipBuffer;
+
 	fread(&headerSize, 4, 1, m_fp);
-	if (headerSize != sizeof(WavHeader))
+	if (headerSize < sizeof(WavHeader))
 	{
 		fclose(m_fp);
 		return false;
 	}
+	else if (headerSize > sizeof(WavHeader))
+	{
+		if (headerSize - sizeof(WavHeader) > 4)
+		{
+			fclose(m_fp);
+			return false;
+		}
+		skipSize = headerSize - sizeof(WavHeader);
+	}
 
 	WavHeader header;
 	fread(&header, sizeof(WavHeader), 1, m_fp);
+
+	if (skipSize > 0)
+	{
+		fread(&skipBuffer, 1, skipSize, m_fp);
+	}
 
 	if (header.wFormatTag != 1)
 	{
