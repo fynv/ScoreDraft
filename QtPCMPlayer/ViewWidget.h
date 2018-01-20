@@ -13,6 +13,12 @@ public:
 	ViewWidget(QWidget* parent);
 	~ViewWidget();
 
+	enum Mode
+	{
+		Spectrum,
+		WaveForm
+	};
+
 public slots:
 	void AddBuffer(AudioBuffer_Deferred buf)
 	{
@@ -24,6 +30,8 @@ public slots:
 		m_refPos = refPos;
 	}
 	void Freeze();
+
+	void SetMode(int index);
 	
 protected:
 	void initializeGL() override;
@@ -37,6 +45,8 @@ protected:
 	unsigned m_renderedPos;
 
 	float m_samples_per_ms;
+
+	Mode m_Mode;
 
 };
 

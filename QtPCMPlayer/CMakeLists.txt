@@ -28,9 +28,11 @@ BufferQueue.h
 
 set (INCLUDE_DIR
 .
+../DSPUtil
 )
 
 set (LINK_LIBS 
+DSPUtil
 Qt5::Widgets
 Qt5::Network
 Qt5::Multimedia

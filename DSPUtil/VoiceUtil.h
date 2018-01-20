@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <ReadWav.h>
+#include "fft.h"
 
 namespace VoiceUtil
 {

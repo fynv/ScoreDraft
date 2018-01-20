@@ -67,6 +67,13 @@ QtPCMPlayer::QtPCMPlayer(QLocalServer* server) : m_server(server)
 	connect(server, SIGNAL(newConnection()), this, SLOT(newConnection()));
 	connect(m_ui.btnPlayPause, SIGNAL(toggled(bool)), this, SLOT(btnPlayPauseToggled(bool)));
 	connect(m_Feeder, SIGNAL(feedingPos(QTime, unsigned)), this, SLOT(feedingPos(QTime, unsigned)));
+
+	m_ui.comboMode->addItem("Spectrum");
+	m_ui.comboMode->addItem("Wave Form");
+	m_ui.comboMode->setCurrentIndex(0);
+
+	connect(m_ui.comboMode, SIGNAL(currentIndexChanged(int)), m_ui.view, SLOT(SetMode(int)));
+
 }
 
 QtPCMPlayer::~QtPCMPlayer()
