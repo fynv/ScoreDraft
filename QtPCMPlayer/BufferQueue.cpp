@@ -28,7 +28,7 @@ short BufferQueue::GetSample()
 	{
 		AudioBuffer_Deferred buf = m_queue.front();
 		unsigned size = (unsigned)buf->size();
-		if (m_GetPos_rel < size)
+		if ((unsigned)m_GetPos_rel < size)
 		{
 			short value = (*buf)[m_GetPos_rel];
 			m_GetPos_rel++;
@@ -44,7 +44,7 @@ short BufferQueue::GetSample()
 
 unsigned BufferQueue::GetRemainingSamples()
 {
-	if (m_totalBufferLenth > m_GetPos_rel) return m_totalBufferLenth - m_GetPos_rel;
+	if ((int)m_totalBufferLenth > m_GetPos_rel) return m_totalBufferLenth - m_GetPos_rel;
 	else return 0;
 }
 

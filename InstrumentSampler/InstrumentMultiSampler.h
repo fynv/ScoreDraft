@@ -4,13 +4,22 @@
 #include "PyScoreDraft.h"
 #include <vector>
 
+#include "InstrumentSample.h"
+
+#include <Deferred.h>
+
+typedef Deferred<InstrumentSample> InstrumentSample_deferred;
+
 class InstrumentMultiSampler : public Instrument
 {
 public:
 	InstrumentMultiSampler();
 	~InstrumentMultiSampler();
 
-	bool LoadWav(const char* instrument_name, const char* filename);
+	void SetSampleList(std::vector<InstrumentSample_deferred>* sampleWavList)
+	{
+		m_SampleWavList = sampleWavList;
+	}
 
 private:
 	void _generateNoteWave(unsigned index, float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
@@ -19,28 +28,8 @@ private:
 
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
-	struct SampleWav
-	{
-		SampleWav()
-		{
-			m_wav_length = 0;
-			m_wav_samples = nullptr;
-		}
-		void _fetchOriginFreq(const char* instrument_name, const char* filename);
 
-		unsigned m_wav_length;
-		float *m_wav_samples;
-		float m_max_v;
-		float m_origin_freq;
-		unsigned m_origin_sample_rate;
-	};
-
-	std::vector<SampleWav> m_SampleWavList;
-
-	bool m_sorted;
-
-	static int compareSampleWav(const void* a, const void* b);
-	void _sort();
+	std::vector<InstrumentSample_deferred>* m_SampleWavList;
 
 };
 

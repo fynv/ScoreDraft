@@ -21,17 +21,22 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-
-class PercussionSampler : public Percussion
+class PercussionSample
 {
 public:
-	PercussionSampler()
+	unsigned m_wav_length;
+	float *m_wav_samples;
+	float m_max_v;
+
+	unsigned m_origin_sample_rate;
+
+	PercussionSample()
 	{
 		m_wav_length = 0;
 		m_wav_samples = nullptr;
 	}
 
-	~PercussionSampler()
+	~PercussionSample()
 	{
 		delete[] m_wav_samples;
 	}
@@ -58,16 +63,37 @@ public:
 
 		return true;
 	}
+};
+
+
+class PercussionSampler : public Percussion
+{
+public:
+	PercussionSampler()
+	{
+		m_sample = nullptr;
+	}
+
+	~PercussionSampler()
+	{
+	}
+
+	void SetSample(PercussionSample* sample)
+	{
+		m_sample = sample;
+	}
 
 	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
 	{
-		unsigned maxSample = (unsigned)((float)m_wav_length * BufferSampleRate / m_origin_sample_rate);
+		if (!m_sample) return;
+
+		unsigned maxSample = (unsigned)((float)m_sample->m_wav_length * BufferSampleRate / m_sample->m_origin_sample_rate);
 		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 		beatBuf->Allocate();
 
-		float mult = m_beatVolume / m_max_v;
+		float mult = m_beatVolume / m_sample->m_max_v;
 
-		if (BufferSampleRate == (float)m_origin_sample_rate)
+		if (BufferSampleRate == (float)m_sample->m_origin_sample_rate)
 		{
 
 			for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
@@ -75,12 +101,12 @@ public:
 				float x2 = (float)j / fNumOfSamples;
 				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-				beatBuf->m_data[j] = amplitude*m_wav_samples[j] * mult;
+				beatBuf->m_data[j] = amplitude*m_sample->m_wav_samples[j] * mult;
 			}
 		}
 		else
 		{
-			bool interpolation = BufferSampleRate >= (float)m_origin_sample_rate;
+			bool interpolation = BufferSampleRate >= (float)m_sample->m_origin_sample_rate;
 			for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
 			{
 				float x2 = (float)j / fNumOfSamples;
@@ -89,23 +115,23 @@ public:
 				float wave;
 				if (interpolation)
 				{
-					float pos = (float)j *(float)m_origin_sample_rate / BufferSampleRate;
+					float pos = (float)j *(float)m_sample->m_origin_sample_rate / BufferSampleRate;
 					int ipos1 = (int)pos;
 					float frac = pos - (float)ipos1;
 					int ipos2 = ipos1 + 1;
-					if (ipos2 >= (int)m_wav_length) ipos2 = (int)m_wav_length - 1;
+					if (ipos2 >= (int)m_sample->m_wav_length) ipos2 = (int)m_sample->m_wav_length - 1;
 
 					// cubic interpolation
 					int ipos0 = ipos1 - 1;
 					if (ipos0 < 0) ipos0 = 0;
 
 					int ipos3 = ipos1 + 2;
-					if (ipos3 >= (int)m_wav_length) ipos3 = (int)m_wav_length - 1;
+					if (ipos3 >= (int)m_sample->m_wav_length) ipos3 = (int)m_sample->m_wav_length - 1;
 
-					float p0 = m_wav_samples[ipos0];
-					float p1 = m_wav_samples[ipos1];
-					float p2 = m_wav_samples[ipos2];
-					float p3 = m_wav_samples[ipos3];
+					float p0 = m_sample->m_wav_samples[ipos0];
+					float p1 = m_sample->m_wav_samples[ipos1];
+					float p2 = m_sample->m_wav_samples[ipos2];
+					float p3 = m_sample->m_wav_samples[ipos3];
 
 					wave = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
 						(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
@@ -113,15 +139,15 @@ public:
 				}
 				else
 				{
-					int ipos1 = (int)ceilf(((float)j - 0.5f)*(float)m_origin_sample_rate / BufferSampleRate);
-					int ipos2 = (int)floorf(((float)j + 0.5f)*(float)m_origin_sample_rate / BufferSampleRate);
+					int ipos1 = (int)ceilf(((float)j - 0.5f)*(float)m_sample->m_origin_sample_rate / BufferSampleRate);
+					int ipos2 = (int)floorf(((float)j + 0.5f)*(float)m_sample->m_origin_sample_rate / BufferSampleRate);
 					if (ipos1 < 0) ipos1 = 0;
-					if (ipos2 >= (int)m_wav_length) ipos2 = (int)m_wav_length - 1;
+					if (ipos2 >= (int)m_sample->m_wav_length) ipos2 = (int)m_sample->m_wav_length - 1;
 					int count = ipos2 - ipos1 + 1;
 					float sum = 0.0f;
 					for (int ipos = ipos1; ipos <= ipos2; ipos++)
 					{
-						sum += m_wav_samples[ipos];
+						sum += m_sample->m_wav_samples[ipos];
 					}
 					wave = sum / (float)count;
 				}
@@ -132,11 +158,7 @@ public:
 	}
 	
 private:
-	unsigned m_wav_length;
-	float *m_wav_samples;
-	float m_max_v;
-
-	unsigned m_origin_sample_rate;
+	PercussionSample* m_sample;
 
 };
 
@@ -150,11 +172,14 @@ public:
 	}
 	virtual Percussion_deferred Init()
 	{
+		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_name.data());
+
 		Percussion_deferred perc = Percussion_deferred::Instance<PercussionSampler>();
-		perc.DownCast<PercussionSampler>()->LoadWav(m_name.data());
+		perc.DownCast<PercussionSampler>()->SetSample(&m_sample);
 		return perc;
 	}
-
+private:
+	PercussionSample m_sample;
 };
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)

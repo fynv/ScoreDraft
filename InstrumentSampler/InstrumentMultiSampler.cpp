@@ -22,74 +22,27 @@
 
 InstrumentMultiSampler::InstrumentMultiSampler()
 {
-	m_sorted = false;
+	m_SampleWavList = nullptr;
 }
 
 InstrumentMultiSampler::~InstrumentMultiSampler()
 {
-	for (size_t i = 0; i < m_SampleWavList.size();i++)
-		delete[] m_SampleWavList[i].m_wav_samples;
-}
 
-bool InstrumentMultiSampler::LoadWav(const char* instrument_name, const char* filename)
-{
-	char wavFilename[1024];
-	sprintf(wavFilename, "InstrumentSamples/%s/%s.wav", instrument_name, filename);
-
-	SampleWav wav;
-
-	ReadWav reader;
-	reader.OpenFile(wavFilename);
-	if (!reader.ReadHeader(wav.m_origin_sample_rate, wav.m_wav_length)) return false;
-
-	wav.m_wav_samples = new float[wav.m_wav_length];
-	if (!reader.ReadSamples(wav.m_wav_samples, wav.m_wav_length, wav.m_max_v))
-	{
-		delete[] wav.m_wav_samples;
-		return false;
-	}
-	wav._fetchOriginFreq(instrument_name, filename);
-
-	m_SampleWavList.push_back(wav);
-
-	m_sorted = false;
-
-	return true;
-}
-
-
-void InstrumentMultiSampler::SampleWav::_fetchOriginFreq(const char* instrument_name, const char* filename)
-{
-	char freqFilename[1024];
-	sprintf(freqFilename, "InstrumentSamples/%s/%s.freq", instrument_name, filename);
-
-	FILE *fp = fopen(freqFilename, "r");
-	if (fp)
-	{
-		fscanf(fp, "%f", &m_origin_freq);
-		fclose(fp);
-	}
-	else
-	{
-		m_origin_freq = fetchFrequency(m_wav_length, m_wav_samples, m_origin_sample_rate);
-		printf("Detected frequency of %s.wav = %fHz\n", filename, m_origin_freq);
-		fp = fopen(freqFilename, "w");
-		fprintf(fp, "%f\n", m_origin_freq);
-		fclose(fp);
-	}
 }
 
 void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 {
-	SampleWav& wav = m_SampleWavList[index];
+	if (m_SampleWavList == nullptr) return;
 
-	float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
-	unsigned maxSample = (unsigned)((float)wav.m_wav_length*origin_SampleFreq / sampleFreq);
+	InstrumentSample_deferred wav = (*m_SampleWavList)[index];
+
+	float origin_SampleFreq = wav->m_origin_freq / (float)wav->m_origin_sample_rate;
+	unsigned maxSample = (unsigned)((float)wav->m_wav_length*origin_SampleFreq / sampleFreq);
 
 	noteBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 	noteBuf->Allocate();
 
-	float mult = m_noteVolume / wav.m_max_v;
+	float mult = m_noteVolume / wav->m_max_v;
 
 	bool interpolation = sampleFreq <= origin_SampleFreq;
 
@@ -102,7 +55,7 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 			int ipos1 = (int)pos;
 			float frac = pos - (float)ipos1;
 			int ipos2 = ipos1 + 1;
-			if (ipos2 >= (int)wav.m_wav_length) ipos2 = (int)wav.m_wav_length - 1;
+			if (ipos2 >= (int)wav->m_wav_length) ipos2 = (int)wav->m_wav_length - 1;
 
 			// linear interpolation
 			//wave = m_wav_samples[ipos1] * (1.0f - frac) + m_wav_samples[ipos2] * frac;
@@ -112,12 +65,12 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 			if (ipos0 < 0) ipos0 = 0;
 
 			int ipos3 = ipos1 + 2;
-			if (ipos3 >= (int)wav.m_wav_length) ipos3 = (int)wav.m_wav_length - 1;
+			if (ipos3 >= (int)wav->m_wav_length) ipos3 = (int)wav->m_wav_length - 1;
 
-			float p0 = wav.m_wav_samples[ipos0];
-			float p1 = wav.m_wav_samples[ipos1];
-			float p2 = wav.m_wav_samples[ipos2];
-			float p3 = wav.m_wav_samples[ipos3];
+			float p0 = wav->m_wav_samples[ipos0];
+			float p1 = wav->m_wav_samples[ipos1];
+			float p2 = wav->m_wav_samples[ipos2];
+			float p3 = wav->m_wav_samples[ipos3];
 
 			wave = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
 				(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
@@ -128,12 +81,12 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 			int ipos1 = (int)ceilf(((float)j - 0.5f)*sampleFreq / origin_SampleFreq);
 			int ipos2 = (int)floorf(((float)j + 0.5f)*sampleFreq / origin_SampleFreq);
 			if (ipos1 < 0) ipos1 = 0;
-			if (ipos2 >= (int)wav.m_wav_length) ipos2 = (int)wav.m_wav_length - 1;
+			if (ipos2 >= (int)wav->m_wav_length) ipos2 = (int)wav->m_wav_length - 1;
 			int count = ipos2 - ipos1 + 1;
 			float sum = 0.0f;
 			for (int ipos = ipos1; ipos <= ipos2; ipos++)
 			{
-				sum += wav.m_wav_samples[ipos];
+				sum += wav->m_wav_samples[ipos];
 			}
 			wave = sum / (float)count;
 		}
@@ -153,36 +106,20 @@ void InstrumentMultiSampler::_interpolateBuffers(const float* src1, const float*
 	}	
 }
 
-int InstrumentMultiSampler::compareSampleWav(const void* a, const void* b)
-{
-	SampleWav& wavA = *((SampleWav*)a);
-	SampleWav& wavB = *((SampleWav*)b);
-
-	float origin_SampleFreqA = wavA.m_origin_freq / (float)wavA.m_origin_sample_rate;
-	float origin_SampleFreqB = wavB.m_origin_freq / (float)wavB.m_origin_sample_rate;
-
-	return origin_SampleFreqA > origin_SampleFreqB ? 1 : -1;
-}
-
-
-void InstrumentMultiSampler::_sort()
-{
-	std::qsort(m_SampleWavList.data(), m_SampleWavList.size(), sizeof(SampleWav), compareSampleWav);
-	m_sorted = true;
-}
-
 
 void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 {
-	if (m_SampleWavList.size() < 1) return;
-	if (!m_sorted) _sort();
+	if (m_SampleWavList == nullptr) return;
+
+	std::vector<InstrumentSample_deferred>& sampleList = *m_SampleWavList;
+	if (sampleList.size() < 1) return;
 
 	bool useSingle = false;
 	unsigned I;
 
 	{
-		SampleWav& wav = m_SampleWavList[0];
-		float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
+		InstrumentSample_deferred wav = sampleList[0];
+		float origin_SampleFreq = wav->m_origin_freq / (float)wav->m_origin_sample_rate;
 
 		if (sampleFreq <= origin_SampleFreq)
 		{
@@ -193,22 +130,22 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 
 	if (!useSingle)
 	{
-		SampleWav& wav = m_SampleWavList[m_SampleWavList.size()-1];
-		float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
+		InstrumentSample_deferred wav = sampleList[sampleList.size() - 1];
+		float origin_SampleFreq = wav->m_origin_freq / (float)wav->m_origin_sample_rate;
 
 		if (sampleFreq >= origin_SampleFreq)
 		{
-			I = (unsigned)(m_SampleWavList.size() - 1);
+			I = (unsigned)(sampleList.size() - 1);
 			useSingle = true;
 		}
 	}
 
 	if (!useSingle)
 	{
-		for (size_t i = 0; i < m_SampleWavList.size() - 1; i++)
+		for (size_t i = 0; i < sampleList.size() - 1; i++)
 		{
-			SampleWav& wav = m_SampleWavList[i+1];
-			float origin_SampleFreq = wav.m_origin_freq / (float)wav.m_origin_sample_rate;
+			InstrumentSample_deferred wav = sampleList[i + 1];
+			float origin_SampleFreq = wav->m_origin_freq / (float)wav->m_origin_sample_rate;
 
 			if (sampleFreq == origin_SampleFreq)
 			{
@@ -225,10 +162,10 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 	}
 
 	
-	SampleWav& wav1 = m_SampleWavList[I];
-	SampleWav& wav2 = m_SampleWavList[I+1];
-	float origin_SampleFreq1 = wav1.m_origin_freq / (float)wav1.m_origin_sample_rate;
-	float origin_SampleFreq2 = wav2.m_origin_freq / (float)wav2.m_origin_sample_rate;
+	InstrumentSample_deferred wav1 = sampleList[I];
+	InstrumentSample_deferred wav2 = sampleList[I + 1];
+	float origin_SampleFreq1 = wav1->m_origin_freq / (float)wav1->m_origin_sample_rate;
+	float origin_SampleFreq2 = wav2->m_origin_freq / (float)wav2->m_origin_sample_rate;
 
 	if (useSingle)
 	{
@@ -268,8 +205,7 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 
 			noteBuf->m_data[j] *= amplitude;
 		}
-
-
 	}
+
 }
 

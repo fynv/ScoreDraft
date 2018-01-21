@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 
 set(SOURCES
+InstrumentSample.cpp
 InstrumentSingleSampler.cpp
 InstrumentMultiSampler.cpp
 InstrumentSamplerFactory.cpp
@@ -8,6 +9,7 @@ FrequencyDetection.cpp
 )
 
 set(HEADERS 
+InstrumentSample.h
 InstrumentSingleSampler.h
 InstrumentMultiSampler.h
 FrequencyDetection.h

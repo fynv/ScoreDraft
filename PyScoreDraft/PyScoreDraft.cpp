@@ -226,8 +226,8 @@ static PyObject* GenerateCode(PyObject *self, PyObject *args)
 	summary += "\n";
 
 	PyObject* list = PyList_New(0);
-	PyList_Append(list, PyUnicode_FromString(generatedCode.data()));
-	PyList_Append(list, PyUnicode_FromString(summary.data()));
+	PyList_Append(list, _PyUnicode_FromASCII(generatedCode.data(), generatedCode.length()));
+	PyList_Append(list, _PyUnicode_FromASCII(summary.data(), summary.length()));
 
 	return list;
 
