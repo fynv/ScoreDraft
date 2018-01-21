@@ -51,18 +51,42 @@ void Singer::Silence(unsigned numOfSamples, VoiceBuffer* noteBuf)
 	memset(noteBuf->m_data, 0, sizeof(float)*numOfSamples);
 }
 
-void Singer::GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
+void Singer::GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
 {
 	float totalDuration = 0.0f;
-	for (size_t i = 0; i < notes.size(); i++)
-		totalDuration += notes[i].fNumOfSamples;
+	for (size_t i = 0; i < piece.notes.size(); i++)
+		totalDuration += piece.notes[i].fNumOfSamples;
 
 	Silence((unsigned)ceilf(totalDuration), noteBuf);
 }
 
-void Singer::GenerateWave_Rap(const char* lyric, float fNumOfSamples, float baseSampleFreq, int tone, VoiceBuffer* noteBuf)
+void Singer::GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
 {
-	Silence((unsigned)ceilf(fNumOfSamples), noteBuf);
+	Silence((unsigned)ceilf(piece.fNumOfSamples), noteBuf);
+}
+
+void Singer::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
+{
+	float totalDuration = 0.0f;
+	for (size_t j = 0; j < pieceList.size(); j++)
+	{
+		SingingPieceInternal& piece = *pieceList[j];
+		for (size_t i = 0; i < piece.notes.size(); i++)
+			totalDuration += piece.notes[i].fNumOfSamples;
+	}
+	Silence((unsigned)ceilf(totalDuration), noteBuf);
+
+}
+
+void Singer::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
+{
+	float totalDuration = 0.0f;
+	for (size_t j = 0; j < pieceList.size(); j++)
+	{
+		RapPieceInternal& piece = *pieceList[j];
+		totalDuration += piece.fNumOfSamples;
+	}
+	Silence((unsigned)ceilf(totalDuration), noteBuf);
 }
 
 void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo, float RefFreq)
@@ -82,7 +106,10 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 			{
 				std::string lyric = piece.m_lyric;
 				if (lyric == "") lyric = m_defaultLyric;
-				GenerateWave(lyric.data(), noteParams, &noteBuf);
+				SingingPieceInternal _piece;
+				_piece.lyric = lyric;
+				_piece.notes = noteParams;
+				GenerateWave(_piece, &noteBuf);
 				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
 				noteParams.clear();
 				totalDuration = 0.0f;
@@ -111,7 +138,10 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 	{
 		std::string lyric = piece.m_lyric;
 		if (lyric == "") lyric = m_defaultLyric;
-		GenerateWave(lyric.data(), noteParams, &noteBuf);
+		SingingPieceInternal _piece;
+		_piece.lyric = lyric;
+		_piece.notes = noteParams;
+		GenerateWave(_piece, &noteBuf);
 		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
 	}
 
@@ -159,7 +189,14 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 
 	float baseFreq = RefFreq*m_freq_rel_rap;
 	float baseSampleFreq = baseFreq / (float)buffer.Rate();
-	GenerateWave_Rap(piece.m_lyric.data(), fNumOfSamples, baseSampleFreq, piece.m_tone, &noteBuf);
+
+	RapPieceInternal _piece;
+	_piece.lyric = piece.m_lyric;
+	_piece.fNumOfSamples = fNumOfSamples;
+	_piece.baseSampleFreq = baseSampleFreq;
+	_piece.tone = piece.m_tone;
+
+	GenerateWave_Rap(_piece, &noteBuf);
 
 	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples);
 }
@@ -181,6 +218,133 @@ void Singer::RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned 
 	}
 	printf("\n");
 }
+
+void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo, float RefFreq)
+{
+	SingingPieceInternalList pieceList;
+	VoiceBuffer noteBuf;
+	float totalDuration = 0.0f;
+
+	for (size_t j = 0; j < pieces.size(); j++)
+	{
+		const SingingPiece& piece = pieces[j];
+		std::vector<SingerNoteParams> noteParams;
+
+		for (size_t i = 0; i < piece.m_notes.size(); i++)
+		{
+			const Note& aNote = piece.m_notes[i];
+			float fduration = fabsf((float)(aNote.m_duration * 60)) / (float)(tempo * 48);
+			float fNumOfSamples = buffer.Rate()*fduration;
+			if (aNote.m_freq_rel < 0.0f)
+			{
+				if (pieceList.size()>0 || noteParams.size()>0)
+				{
+					if (noteParams.size() > 0)
+					{
+						std::string lyric = piece.m_lyric;
+						if (lyric == "") lyric = m_defaultLyric;
+						SingingPieceInternal_Deferred _piece;
+						_piece->lyric = lyric;
+						_piece->notes = noteParams;
+						pieceList.push_back(_piece);
+					}
+					GenerateWave_SingConsecutive(pieceList, &noteBuf);
+					buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+					noteParams.clear();
+					pieceList.clear();
+					totalDuration = 0.0f;
+				}
+
+				if (aNote.m_duration>0)
+				{
+					buffer.MoveCursor(fNumOfSamples);
+				}
+				else if (aNote.m_duration<0)
+				{
+					buffer.MoveCursor(-fNumOfSamples);
+				}
+				continue;
+			}
+			SingerNoteParams param;
+			float freq = RefFreq*aNote.m_freq_rel;
+			param.sampleFreq = freq / (float)buffer.Rate();
+			param.fNumOfSamples = fNumOfSamples;
+			noteParams.push_back(param);
+			totalDuration += fNumOfSamples;
+		}
+		if (noteParams.size()>0)
+		{
+			std::string lyric = piece.m_lyric;
+			if (lyric == "") lyric = m_defaultLyric;
+			SingingPieceInternal_Deferred _piece;
+			_piece->lyric = lyric;
+			_piece->notes = noteParams;
+			pieceList.push_back(_piece);
+		}		
+	}
+
+	if (pieceList.size() > 0)
+	{
+		GenerateWave_SingConsecutive(pieceList, &noteBuf);
+		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+	}
+}
+
+void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo, float RefFreq)
+{
+	RapPieceInternalList pieceList;
+	VoiceBuffer noteBuf;
+	float totalDuration = 0.0f;
+
+	for (size_t j = 0; j < pieces.size(); j++)
+	{
+		const RapPiece& piece = pieces[j];
+		float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
+		float fNumOfSamples = buffer.Rate()*fduration;
+
+		if (piece.m_tone < 0)
+		{
+			if (pieceList.size()>0)
+			{
+				GenerateWave_RapConsecutive(pieceList, &noteBuf);
+				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+				pieceList.clear();
+				totalDuration = 0.0f;
+			}
+			if (piece.m_duration>0)
+			{
+				buffer.MoveCursor(fNumOfSamples);
+			}
+			else if (piece.m_duration<0)
+			{
+				buffer.MoveCursor(-fNumOfSamples);
+			}
+		}
+		else
+		{
+			float baseFreq = RefFreq*m_freq_rel_rap;
+			float baseSampleFreq = baseFreq / (float)buffer.Rate();
+
+			RapPieceInternal_Deferred _piece;
+			_piece->lyric = piece.m_lyric;
+			_piece->fNumOfSamples = fNumOfSamples;
+			_piece->baseSampleFreq = baseSampleFreq;
+			_piece->tone = piece.m_tone;
+
+			totalDuration += fNumOfSamples;
+
+			pieceList.push_back(_piece);
+
+		}
+		if (pieceList.size() > 0)
+		{
+			GenerateWave_RapConsecutive(pieceList, &noteBuf);
+			buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+		}
+	}
+
+}
+
 
 bool Singer::Tune(const char* cmd)
 {

@@ -237,13 +237,13 @@ public:
 		}
 		return false;
 	}
-	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf)
+	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
 	{
-		if (notes.size() < 1) return;
+		if (piece.notes.size() < 1) return;
 
 		float sumLen = 0.0f;
-		for (size_t i = 0; i < notes.size(); i++)
-			sumLen += notes[i].fNumOfSamples;
+		for (size_t i = 0; i < piece.notes.size(); i++)
+			sumLen += piece.notes[i].fNumOfSamples;
 		
 		unsigned uSumLen = (unsigned)ceilf(sumLen);		
 		float *freqMap = new float[uSumLen];
@@ -251,10 +251,10 @@ public:
 		unsigned pos = 0;
 		float targetPos = 0.0f;
 		float sampleFreq;
-		for (size_t i = 0; i < notes.size(); i++)
+		for (size_t i = 0; i < piece.notes.size(); i++)
 		{
-			sampleFreq = notes[i].sampleFreq;
-			targetPos += notes[i].fNumOfSamples;
+			sampleFreq = piece.notes[i].sampleFreq;
+			targetPos += piece.notes[i].fNumOfSamples;
 		
 			for (; (float)pos < targetPos; pos++)
 			{
@@ -272,13 +272,13 @@ public:
 		if (m_transition > 0.0f && m_transition<1.0f)
 		{
 			targetPos = 0.0f;
-			for (size_t i = 0; i < notes.size() - 1; i++)
+			for (size_t i = 0; i < piece.notes.size() - 1; i++)
 			{
-				float sampleFreq0 = notes[i].sampleFreq;
-				float sampleFreq1 = notes[i + 1].sampleFreq;
-				targetPos += notes[i].fNumOfSamples;
+				float sampleFreq0 = piece.notes[i].sampleFreq;
+				float sampleFreq1 = piece.notes[i + 1].sampleFreq;
+				targetPos += piece.notes[i].fNumOfSamples;
 
-				float transStart = targetPos - m_transition*notes[i].fNumOfSamples;
+				float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
 				for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
 				{
 					float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
@@ -295,56 +295,56 @@ public:
 			freqMap[pos] *= vib;
 		}*/
 
-		_generateWave(lyric, sumLen, freqMap, noteBuf);
+		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
 
 		delete[] freqMap;	
 
 	}
 
-	virtual void GenerateWave_Rap(const char* lyric, float fNumOfSamples, float baseSampleFreq, int tone, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
 	{
-		float sumLen = fNumOfSamples;
+		float sumLen = piece.fNumOfSamples;
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
 		float *freqMap = new float[uSumLen];
 
-		if (tone <=1)
+		if (piece.tone <= 1)
 		{
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
-				freqMap[i] = baseSampleFreq;
+				freqMap[i] = piece.baseSampleFreq;
 			}
 		}
-		else if (tone == 2)
+		else if (piece.tone == 2)
 		{
-			float lowFreq = baseSampleFreq*0.7f;
+			float lowFreq = piece.baseSampleFreq*0.7f;
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
 				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (baseSampleFreq - lowFreq)*x;
+				freqMap[i] = lowFreq + (piece.baseSampleFreq - lowFreq)*x;
 			}
 		}
-		else if (tone == 3)
+		else if (piece.tone == 3)
 		{
-			float highFreq = baseSampleFreq*0.75f;
-			float lowFreq = baseSampleFreq*0.5f;
+			float highFreq = piece.baseSampleFreq*0.75f;
+			float lowFreq = piece.baseSampleFreq*0.5f;
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
 				float x = (float)i / (float)(uSumLen - 1);
 				freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
 			}
 		}
-		else if (tone == 4)
+		else if (piece.tone == 4)
 		{
-			float lowFreq = baseSampleFreq*0.5f;
+			float lowFreq = piece.baseSampleFreq*0.5f;
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
 				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = baseSampleFreq + (lowFreq - baseSampleFreq)*x;
+				freqMap[i] = piece.baseSampleFreq + (lowFreq - piece.baseSampleFreq)*x;
 			}
 		}
 	
 
-		_generateWave(lyric, sumLen, freqMap, noteBuf);
+		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
 		delete[] freqMap;
 
 		/// Distortion 
@@ -570,19 +570,24 @@ private:
 		for (float fTmpWinCenter = 0.0f; fTmpWinCenter <= tempLen; fTmpWinCenter += tempHalfWinLen)
 		{
 			float fWinPos = fTmpWinCenter / tempLen;
-			while (winId0<windows.size() - 1 && windows[winId0].m_pos < fWinPos) winId0++;
 
 			unsigned winId1 = winId0 + 1;
+
+			while (winId1 < windows.size() && windows[winId1].m_pos < fWinPos)
+			{
+				winId0++;
+				winId1 = winId0 + 1;
+			}			
 
 			if (winId1 == windows.size()) winId1 = winId0;
 			SymmetricWindowWithPosition& win0 = windows[winId0];
 			SymmetricWindowWithPosition& win1 = windows[winId1];
 
 			float k;
-			if (fTmpWinCenter >= win1.m_pos) k = 1.0f;
+			if (fWinPos >= win1.m_pos) k = 1.0f;
 			else
 			{
-				k = (fTmpWinCenter - win0.m_pos) / (win1.m_pos - win0.m_pos);
+				k = (fWinPos - win0.m_pos) / (win1.m_pos - win0.m_pos);
 			}
 
 			while (fTmpWinCenter > stretchingMap[pos_final]) pos_final++;

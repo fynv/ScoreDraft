@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <Deferred.h>
 
 class VoiceBuffer
 {
@@ -27,6 +28,26 @@ struct SingerNoteParams
 	float sampleFreq; // periods/sample or 1/samplesPerPeriod
 };
 
+struct SingingPieceInternal
+{
+	std::string lyric;
+	std::vector<SingerNoteParams> notes;
+};
+
+typedef Deferred<SingingPieceInternal> SingingPieceInternal_Deferred;
+typedef std::vector<SingingPieceInternal_Deferred> SingingPieceInternalList;
+
+struct RapPieceInternal
+{
+	std::string lyric;
+	float fNumOfSamples;
+	float baseSampleFreq;
+	int tone;
+};
+
+typedef Deferred<RapPieceInternal> RapPieceInternal_Deferred;
+typedef std::vector<RapPieceInternal_Deferred> RapPieceInternalList;
+
 class Singer
 {
 public:
@@ -39,6 +60,9 @@ public:
 	void RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
 	void RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
 
+	void SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo = 80, float RefFreq = 261.626f);
+	void RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo = 80, float RefFreq = 261.626f);
+
 	std::string GetLyricCharset()
 	{
 		return m_lyric_charset;
@@ -48,8 +72,11 @@ public:
 
 protected:
 	void Silence(unsigned numOfSamples, VoiceBuffer* noteBuf);
-	virtual void GenerateWave(const char* lyric, std::vector<SingerNoteParams> notes, VoiceBuffer* noteBuf);
-	virtual void GenerateWave_Rap(const char* lyric, float fNumOfSamples, float baseSampleFreq, int tone, VoiceBuffer* noteBuf);
+	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf);
+	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf);
+
+	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf);
+	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf);
 
 	float m_noteVolume;
 	std::string m_defaultLyric;
