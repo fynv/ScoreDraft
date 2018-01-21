@@ -12,7 +12,6 @@
 #include <string.h>
 #include <cmath>
 #include <ReadWav.h>
-#include "FrequencyDetection.h"
 #include <float.h>
 
 #ifndef max
@@ -27,199 +26,60 @@
 #include "VoiceUtil.h"
 using namespace VoiceUtil;
 
+#include "OtoMap.h"
+#include "FrqData.h"
+
 struct SymmetricWindowWithPosition
 {
 	SymmetricWindow win;
 	float center;
 };
 
-
-void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned step)
+bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end)
 {
-	unsigned halfWinLen = 1024;
-	float* temp = new float[halfWinLen * 2];
+	Buffer whole;
+	float maxV;
+	if (!ReadWavToBuffer(loc.filename.data(), whole, maxV)) return false;
 
-	for (unsigned center = 0; center < buf.m_data.size(); center += step)
+	begin = loc.shift*(float)whole.m_sampleRate*0.001f;
+	if (loc.end > 0.0f)
+		end = (float)whole.m_data.size() - loc.end*(float)whole.m_sampleRate*0.001f;
+	else
+		end = begin - loc.end*(float)whole.m_sampleRate*0.001f;
+
+	unsigned uBegin = (unsigned)floorf(begin);
+	unsigned uEnd = (unsigned)floorf(end);
+	
+	buf.m_sampleRate = whole.m_sampleRate;
+	buf.m_data.resize(uEnd - uBegin);
+	for (unsigned i = uBegin; i < uEnd; i++)
 	{
-		Window win;
-		win.CreateFromBuffer(buf, (float)center, (float)halfWinLen);
-
-		for (int i = -(int)halfWinLen; i < (int)halfWinLen; i++)
-			temp[i + halfWinLen] = win.GetSample(i);
-
-		float freq = fetchFrequency(halfWinLen * 2, temp, buf.m_sampleRate);
-
-		frequencies.push_back(freq);
+		buf.m_data[i - uBegin] = whole.m_data[i];
 	}
-
-	delete[] temp;
-
-	struct Range
-	{
-		unsigned begin;
-		unsigned end;
-
-		Range()
-		{
-			begin = (unsigned)(-1);
-			end = (unsigned)(-1);
-		}
-		unsigned Length()
-		{
-			return end - begin;
-		}
-	};
-
-	Range BestRange;
-	Range CurRange;
-
-	for (size_t i = 0; i < frequencies.size(); i++)
-	{
-		if (frequencies[i] > 0)
-		{
-			if (CurRange.begin == (unsigned)(-1))
-			{
-				CurRange.begin = (unsigned)i;
-			}
-			else
-			{
-				CurRange.end = (unsigned)i;
-				if (CurRange.Length() > BestRange.Length()) BestRange = CurRange;
-			}
-		}
-		else
-		{
-			CurRange.begin = (unsigned)(-1);
-		}
-	}
-
-	for (size_t i = 0; i < frequencies.size(); i++)
-	{
-		if ((i<BestRange.begin || i>BestRange.end) && frequencies[i] > 0.0f)
-		{
-			frequencies[i] = 0.0f;
-		}
-	}
-
-	bool cut = false;
-	for (unsigned i = BestRange.begin - 1; i != (unsigned)(-1); i--)
-	{
-		if (frequencies[i] < 0)
-		{
-			cut = true;
-			continue;
-		}
-		if (cut &&  frequencies[i]>=0)
-		{
-			frequencies[i] = -1;
-			continue;
-		}
-
-		if (frequencies[i] > 0)
-		{
-			frequencies[i] = 0.0f;
-		}
-	}
-
-	cut = false;
-	for (unsigned i = BestRange.end + 1; i < (unsigned)frequencies.size(); i++)
-	{
-		if (frequencies[i] < 0)
-		{
-			cut = true;
-			continue;
-		}
-		if (cut &&  frequencies[i] >= 0)
-		{
-			frequencies[i] = -1;
-			continue;
-		}
-
-		if (frequencies[i] > 0)
-		{
-			frequencies[i] = 0.0f;
-		}
-	}
-
-
+	
+	return true;
 }
 
-class KeLa : public Singer
+class UtauDraft : public Singer
 {
 public:
-	KeLa()
+	UtauDraft()
 	{
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
 	}
-	void SetName(const char* name)
+
+	void SetOtoMap(OtoMap* otoMap)
 	{
-		m_name = name;
-
-#ifdef _WIN32
-
-		char charsetFn[1024];
-		sprintf(charsetFn, "KeLaSamples\\%s\\charset", m_name.data());
-		FILE* fp_charset = fopen(charsetFn, "r");
-		if (fp_charset)
-		{
-			char charsetName[100];
-			fscanf(fp_charset, "%s", charsetName);
-			m_lyric_charset = charsetName;
-			fclose(fp_charset);
-		}
-		
-		WIN32_FIND_DATAA ffd;
-		HANDLE hFind = INVALID_HANDLE_VALUE;
-
-		char searchPath[1024];
-		sprintf(searchPath, "KeLaSamples\\%s\\*.wav", m_name.data());
-
-		hFind = FindFirstFileA(searchPath, &ffd);
-		if (INVALID_HANDLE_VALUE != hFind)
-		{
-			do
-			{
-				if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-				char name[1024];
-				memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-				name[strlen(ffd.cFileName) - 4] = 0;
-				m_defaultLyric = name;
-				break;
-
-			} while (FindNextFile(hFind, &ffd) != 0);
-		}
-#else
-		DIR *dir;
-		struct dirent *entry;
-
-		char dirPath[1024];
-		sprintf(dirPath, "KeLaSamples/%s", m_name.data());
-
-		if (dir = opendir(dirPath))
-		{
-			while ((entry = readdir(dir)) != NULL)
-			{
-				if (entry->d_type != DT_DIR)
-				{
-					const char* ext = entry->d_name + strlen(entry->d_name) - 4;
-					if (strcmp(ext, ".wav") == 0)
-					{
-						char name[1024];
-						memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
-						name[strlen(entry->d_name) - 4] = 0;
-						m_defaultLyric = name;
-						break;
-					}
-				}
-
-			}
-
-		}
-#endif
-
+		m_OtoMap = otoMap;
+		m_defaultLyric = m_OtoMap->begin()->first;
 	}
+
+	void SetCharset(const char* charset)
+	{
+		m_lyric_charset = charset;
+	}
+
 	virtual bool Tune(const char* cmd)
 	{
 		if (!Singer::Tune(cmd))
@@ -230,13 +90,14 @@ public:
 			if (strcmp(command, "rap_distortion") == 0)
 			{
 				float value;
-				if (sscanf(cmd + strlen("rap_distortion")+1, "%f", &value))
+				if (sscanf(cmd + strlen("rap_distortion") + 1, "%f", &value))
 					m_rap_distortion = value;
 				return true;
 			}
 		}
 		return false;
 	}
+
 	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
 	{
 		if (piece.notes.size() < 1) return;
@@ -244,8 +105,8 @@ public:
 		float sumLen = 0.0f;
 		for (size_t i = 0; i < piece.notes.size(); i++)
 			sumLen += piece.notes[i].fNumOfSamples;
-		
-		unsigned uSumLen = (unsigned)ceilf(sumLen);		
+
+		unsigned uSumLen = (unsigned)ceilf(sumLen);
 		float *freqMap = new float[uSumLen];
 
 		unsigned pos = 0;
@@ -255,7 +116,7 @@ public:
 		{
 			sampleFreq = piece.notes[i].sampleFreq;
 			targetPos += piece.notes[i].fNumOfSamples;
-		
+
 			for (; (float)pos < targetPos; pos++)
 			{
 				freqMap[pos] = sampleFreq;
@@ -291,13 +152,13 @@ public:
 		/// Viberation
 		/*for (pos = 0; pos < uSumLen; pos++)
 		{
-			float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
-			freqMap[pos] *= vib;
+		float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
+		freqMap[pos] *= vib;
 		}*/
 
 		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
 
-		delete[] freqMap;	
+		delete[] freqMap;
 
 	}
 
@@ -342,7 +203,7 @@ public:
 				freqMap[i] = piece.baseSampleFreq + (lowFreq - piece.baseSampleFreq)*x;
 			}
 		}
-	
+
 
 		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
 		delete[] freqMap;
@@ -395,112 +256,43 @@ private:
 			stretchingMap[pos] = pos_tmpBuf;
 		}
 
-		char path[1024];
-		sprintf(path, "KeLaSamples/%s/%s.wav", m_name.data(), lyric);
+		VoiceLocation loc = (*m_OtoMap)[lyric];
+
+		char frq_path[2048];
+		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
+		memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+		FrqData frq;
+		frq.ReadFromFile(frq_path);
 
 		Buffer source;
-		float maxv;
-		if (!ReadWavToBuffer(path, source, maxv)) return;
+		float srcbegin, srcend;
+		if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return;
 
-		unsigned freq_step = 256;
-		std::vector<float> frequencies;
-		
-		sprintf(path, "KeLaSamples/%s/%s.freq", m_name.data(), lyric);
-		FILE* fp = fopen(path, "r");
-		if (fp)
-		{
-			while (!feof(fp))
-			{
-				float f;
-				if (fscanf(fp, "%f", &f))
-				{
-					frequencies.push_back(f);
-				}
-				else break;
-			}
-			fclose(fp);
-		}
-		else
-		{
-			DetectFreqs(source, frequencies, freq_step);
-			fp = fopen(path, "w");
-			for (size_t i = 0; i < frequencies.size(); i++)
-			{
-				fprintf(fp, "%f\n", frequencies[i]);
-			}
-			fclose(fp);
-		}
+		float unvoicedLen = loc.consonant* (float)source.m_sampleRate*0.001f;
+		float totalLen = srcend - srcbegin;
 
-		unsigned unvoicedBegin = (unsigned)(-1);
-		unsigned voicedBegin = (unsigned)(-1);
-		unsigned voicedEnd = (unsigned)(-1);
-		unsigned unvoicedEnd = (unsigned)(-1);
-
-		unsigned voicedBegin_id = (unsigned)(-1);
-		unsigned voicedEnd_id = (unsigned)(-1);
-
-		float firstFreq;
-		float lastFreq;
-
-		for (size_t i = 0; i < frequencies.size(); i++)
-		{
-			if (frequencies[i] >= 0.0f && unvoicedBegin == (unsigned)(-1))
-				unvoicedBegin = (unsigned)i*freq_step;
-			if (frequencies[i] > 0.0f && voicedBegin == (unsigned)(-1))
-			{
-				voicedBegin_id = (unsigned)i;
-				voicedBegin = (unsigned)i*freq_step;
-				firstFreq = frequencies[i];
-			}
-
-			if (frequencies[i] <= 0.0f && voicedBegin != (unsigned)(-1) && voicedEnd == (unsigned)(-1))
-			{
-				voicedEnd_id = (unsigned)i;
-				voicedEnd = (unsigned)(i-1)*freq_step;
-				lastFreq = frequencies[i - 1];
-			}
-
-			if (frequencies[i] < 0.0f && voicedEnd != (unsigned)(-1) && unvoicedEnd == (unsigned)(-1))
-			{
-				unvoicedEnd = (unsigned)(i-1)*freq_step;
-				break;
-			}
-		}
-		if (voicedEnd == (unsigned)(-1))
-		{
-			voicedEnd_id = (unsigned)frequencies.size();
-			voicedEnd = (unsigned)source.m_data.size();
-			lastFreq = frequencies[voicedEnd_id - 1];
-		}
-		if (unvoicedEnd == (unsigned)(-1))
-		{
-			unvoicedEnd = (unsigned)source.m_data.size();
-		}
-
-		unsigned voicedLen = voicedEnd - voicedBegin;
-		unsigned totalLen = unvoicedEnd - unvoicedBegin;
-		unsigned unvoicedLen = totalLen - voicedLen;
+		float voicedLen = totalLen - unvoicedLen;
 
 		float voicedWeight;
 		float unvoicedWeight;
 
 		float k = 1.0f;
 
-		float voiced_portion = (float)voicedLen / (float)totalLen;
+		/*float voiced_portion = voicedLen / totalLen;
 		if (voiced_portion < 0.8f)
 		{
-			k = ((float)voicedLen / (float)unvoicedLen)  * (0.2f / 0.8f);
-		}
+			k = (voicedLen / unvoicedLen)  * (0.2f / 0.8f);
+		}*/
 
 		if (sumLen > totalLen)
 		{
-			float k2 = (float)voicedLen / (sumLen - (float)unvoicedLen);
+			float k2 = voicedLen / (sumLen - unvoicedLen);
 			if (k2 < k) k = k2;
 		}
 
-		voicedWeight = 1.0f / (k* (float)unvoicedLen + (float)voicedLen);
+		voicedWeight = 1.0f / (k* unvoicedLen + voicedLen);
 		unvoicedWeight = k* voicedWeight;
-
 
 		class SymmetricWindowWithPosition : public SymmetricWindow
 		{
@@ -511,23 +303,22 @@ private:
 		std::vector<SymmetricWindowWithPosition> windows;
 		float fPeriodCount = 0.0f;
 		float logicalPos = 0.0f;
-		for (unsigned srcPos = unvoicedBegin; srcPos < unvoicedEnd; srcPos++)
+
+		for (unsigned srcPos = 0; srcPos < source.m_data.size(); srcPos++)
 		{
-			float srcFreqPos = (float)srcPos / (float)freq_step;
-			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
-			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
+			float srcSampleFreq;
+			if ((float)srcPos<unvoicedLen) srcSampleFreq = freqMap[(unsigned)(logicalPos*sumLen)];
+			else
+			{
+				float srcFreqPos = (srcbegin + (float)srcPos) / (float)frq.m_window_interval;
+				unsigned uSrcFreqPos = (unsigned)srcFreqPos;
+				float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-			float sampleFreq1;
-			if (uSrcFreqPos < voicedBegin_id) sampleFreq1 = freqMap[0];
-			else if (uSrcFreqPos >= voicedEnd_id) sampleFreq1 = freqMap[uSumLen - 1];
-			else sampleFreq1 = frequencies[uSrcFreqPos] / (float)source.m_sampleRate;
+				float sampleFreq1 = frq[uSrcFreqPos].freq / (float)source.m_sampleRate;
+				float sampleFreq2 = frq[uSrcFreqPos + 1].freq / (float)source.m_sampleRate;
 
-			float sampleFreq2;
-			if (uSrcFreqPos + 1 < voicedBegin_id) sampleFreq2 = freqMap[0];
-			else if (uSrcFreqPos + 1 >= voicedEnd_id) sampleFreq2 = freqMap[uSumLen - 1];
-			else sampleFreq2 = frequencies[uSrcFreqPos + 1] / (float)source.m_sampleRate;
-
-			float srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
+				srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
+			}
 
 			unsigned winId = (unsigned)fPeriodCount;
 			if (winId >= windows.size())
@@ -544,7 +335,8 @@ private:
 
 			}
 			fPeriodCount += srcSampleFreq;
-			if (srcPos < voicedBegin || srcPos >= voicedEnd)
+
+			if ((float)srcPos < unvoicedLen)
 			{
 				logicalPos += unvoicedWeight;
 			}
@@ -552,6 +344,7 @@ private:
 			{
 				logicalPos += voicedWeight;
 			}
+
 		}
 
 		float tempLen = stretchingMap[uSumLen - 1];
@@ -566,7 +359,7 @@ private:
 
 		unsigned winId0 = 0;
 		unsigned pos_final = 0;
-		
+
 		for (float fTmpWinCenter = 0.0f; fTmpWinCenter <= tempLen; fTmpWinCenter += tempHalfWinLen)
 		{
 			float fWinPos = fTmpWinCenter / tempLen;
@@ -577,7 +370,7 @@ private:
 			{
 				winId0++;
 				winId1 = winId0 + 1;
-			}			
+			}
 
 			if (winId1 == windows.size()) winId1 = winId0;
 			SymmetricWindowWithPosition& win0 = windows[winId0];
@@ -636,7 +429,7 @@ private:
 		noteBuf->m_sampleNum = uSumLen;
 		noteBuf->Allocate();
 
-		float multFac = m_noteVolume / maxv;
+		float multFac = m_noteVolume;
 
 		for (unsigned pos = 0; pos < uSumLen; pos++)
 		{
@@ -663,47 +456,159 @@ private:
 
 		delete[] stretchingMap;
 
+		
+
+
 	}
 
-	std::string m_name;
+	OtoMap* m_OtoMap;
 
 	float m_transition;
 	float m_rap_distortion;
 };
 
-class KeLaInitializer : public SingerInitializer
+
+
+class UtauDraftInitializer : public SingerInitializer
 {
 public:
-	std::string m_name;
+	void SetName(const char *name)
+	{
+		m_name = name;
+		char charFileName[1024];
+		sprintf(charFileName,"UTAUVoice/%s/character.txt", name);
+		FILE *fp = fopen(charFileName, "r");
+		if (fp)
+		{
+			char line[1024];
+			while (!feof(fp) && fgets(line, 1024, fp))
+			{
+				m_charecter_txt += std::string("\t# ") + line;
+			}
+			m_charecter_txt += "\n";
+			fclose(fp);
+		}
+	}
+	std::string GetDirName()
+	{
+		return m_name;
+	}
 	std::string GetComment()
 	{
-		return std::string("\t# A singer based on KeLa engine and samples in the directory ") + m_name + "\n";
+		std::string comment = std::string("\t# A singer based on UtauDraft engine and UTAU voice bank in the directory ") + m_name + "\n";
+		comment += m_charecter_txt;
+		return comment;
 	}
+
+	void BuildOtoMap(const char* path)
+	{
+		char otoIniPath[2048];
+		sprintf(otoIniPath, "%s/oto.ini", path);
+
+		FILE *fp = fopen(otoIniPath, "r");
+		if (fp)
+		{
+			fclose(fp);
+			m_OtoMap.AddOtoINIPath(path);
+		}
+
+
+#ifdef _WIN32
+		WIN32_FIND_DATAA ffd;
+		HANDLE hFind = INVALID_HANDLE_VALUE;
+
+		char searchStr[2048];
+		sprintf(searchStr, "%s\\*", path);
+
+		hFind = FindFirstFileA(searchStr, &ffd);
+		if (INVALID_HANDLE_VALUE == hFind) return;
+
+		do
+		{
+			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
+			{
+				char subPath[2048];
+				sprintf(subPath, "%s\\%s", path, ffd.cFileName);
+				BuildOtoMap(subPath);
+			}
+
+		} while (FindNextFile(hFind, &ffd) != 0);
+
+#else
+		DIR *dir;
+		struct dirent *entry;
+
+		if (dir = opendir(path))
+		{
+			while ((entry = readdir(dir)) != NULL)
+			{
+				if (entry->d_type == DT_DIR)
+				{
+					if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+					{
+						char subPath[2048];
+						sprintf(subPath, "%s/%s", path, entry->d_name);
+						BuildOtoMap(subPath);
+					}
+				}
+			}
+		}
+#endif
+	}
+
 	virtual Singer_deferred Init()
 	{
-		Singer_deferred singer = Singer_deferred::Instance<KeLa>();
-		singer.DownCast<KeLa>()->SetName(m_name.data());
+		if (m_OtoMap.size() == 0)
+		{
+			char rootPath[1024];
+			sprintf(rootPath, "UTAUVoice/%s", m_name.data());
+			BuildOtoMap(rootPath);
+
+			m_charset = "utf-8";
+			char charsetFn[1024];
+			sprintf(charsetFn, "%s/charset", m_name.data());
+
+			FILE* fp_charset = fopen(charsetFn, "r");
+			if (fp_charset)
+			{
+				char charsetName[100];
+				fscanf(fp_charset, "%s", charsetName);
+				m_charset = charsetName;
+				fclose(fp_charset);
+			}
+		}
+		Singer_deferred singer = Singer_deferred::Instance<UtauDraft>();
+		singer.DownCast<UtauDraft>()->SetOtoMap(&m_OtoMap);
+		singer.DownCast<UtauDraft>()->SetCharset(m_charset.data());
 		return singer;
 	}
+
+private:
+	OtoMap m_OtoMap;
+	std::string m_charset;
+	std::string m_name;
+	std::string m_charecter_txt;
 };
+
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
-	static std::vector<KeLaInitializer> s_initializers;
+	static std::vector<UtauDraftInitializer> s_initializers;
+
 
 #ifdef _WIN32
 	WIN32_FIND_DATAA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	hFind = FindFirstFileA("KeLaSamples\\*", &ffd);
+	hFind = FindFirstFileA("UTAUVoice\\*", &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) return;
 
 	do
 	{
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
 		{
-			KeLaInitializer initializer;
-			initializer.m_name = ffd.cFileName;
+			UtauDraftInitializer initializer;
+			initializer.SetName(ffd.cFileName);
 			s_initializers.push_back(initializer);
 		}
 
@@ -713,7 +618,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	DIR *dir;
 	struct dirent *entry;
 
-	if (dir = opendir("KeLaSamples"))
+	if (dir = opendir("UTAUVoice"))
 	{
 		while ((entry = readdir(dir)) != NULL)
 		{
@@ -721,15 +626,15 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 			{
 				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
 				{
-					KeLaInitializer initializer;
-					initializer.m_name = entry->d_name;
+					UtauDraftInitializer initializer;
+					initializer.SetName(entry->d_name);
 					s_initializers.push_back(initializer);
-				}	
+				}
 			}
 		}
 	}
 #endif
-	for (unsigned i = 0; i < s_initializers.size(); i++)
-		pyScoreDraft->RegisterSingerClass(s_initializers[i].m_name.data(), &s_initializers[i], s_initializers[i].GetComment().data());
-}
 
+	for (unsigned i = 0; i < s_initializers.size(); i++)
+		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName()+"_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
+}
