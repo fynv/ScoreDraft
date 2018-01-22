@@ -41,11 +41,11 @@ bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end
 	float maxV;
 	if (!ReadWavToBuffer(loc.filename.data(), whole, maxV)) return false;
 
-	begin = loc.shift*(float)whole.m_sampleRate*0.001f;
-	if (loc.end > 0.0f)
-		end = (float)whole.m_data.size() - loc.end*(float)whole.m_sampleRate*0.001f;
+	begin = loc.offset*(float)whole.m_sampleRate*0.001f;
+	if (loc.cutoff > 0.0f)
+		end = (float)whole.m_data.size() - loc.cutoff*(float)whole.m_sampleRate*0.001f;
 	else
-		end = begin - loc.end*(float)whole.m_sampleRate*0.001f;
+		end = begin - loc.cutoff*(float)whole.m_sampleRate*0.001f;
 
 	unsigned uBegin = (unsigned)floorf(begin);
 	unsigned uEnd = (unsigned)floorf(end);

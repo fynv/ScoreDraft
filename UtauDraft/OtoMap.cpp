@@ -55,7 +55,7 @@ bool OtoMap::AddOtoINIPath(const char* path)
 			seg[p2 - p] = 0;
 			p = p2 + 1;
 		}
-		loc.shift = (float)atof(seg);
+		loc.offset = (float)atof(seg);
 
 		// consonant
 		{
@@ -75,7 +75,7 @@ bool OtoMap::AddOtoINIPath(const char* path)
 			seg[p2 - p] = 0;
 			p = p2 + 1;
 		}
-		loc.end = (float)atof(seg);
+		loc.cutoff = (float)atof(seg);
 
 		// pre
 		{
@@ -85,7 +85,7 @@ bool OtoMap::AddOtoINIPath(const char* path)
 			seg[p2 - p] = 0;
 			p = p2 + 1;
 		}
-		loc.pre = (float)atof(seg);
+		loc.preutterance = (float)atof(seg);
 
 		// overlap
 		loc.overlap = (float)atof(p);

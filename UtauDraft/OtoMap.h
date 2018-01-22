@@ -7,10 +7,10 @@
 struct VoiceLocation
 {
 	std::string filename;
-	float shift;
+	float offset;
 	float consonant;
-	float end;
-	float pre;
+	float cutoff;
+	float preutterance;
 	float overlap;
 };
 
