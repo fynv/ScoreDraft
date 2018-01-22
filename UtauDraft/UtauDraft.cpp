@@ -310,10 +310,14 @@ private:
 			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-			float sampleFreq1 = frq[uSrcFreqPos].freq / (float)source.m_sampleRate;
-			if (sampleFreq1 <= 0.0f) sampleFreq1 = frq.m_key_freq / (float)source.m_sampleRate;
-			float sampleFreq2 = frq[uSrcFreqPos + 1].freq / (float)source.m_sampleRate;
-			if (sampleFreq2 <= 0.0f) sampleFreq2 = frq.m_key_freq / (float)source.m_sampleRate;
+			float freq1 = frq[uSrcFreqPos].freq;
+			if (freq1 <= 55.0f) freq1 = frq.m_key_freq;
+
+			float freq2 = frq[uSrcFreqPos + 1].freq;
+			if (freq2 <= 55.0f) freq2 = frq.m_key_freq;
+
+			float sampleFreq1 = freq1 / (float)source.m_sampleRate;
+			float sampleFreq2 = freq2 / (float)source.m_sampleRate;
 
 			srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
 
