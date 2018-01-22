@@ -245,6 +245,20 @@ private:
 			if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
 		}
 
+		float* stretchingMap = new float[uSumLen];
+
+		float pos_tmpBuf = 0.0f;
+		for (unsigned pos = 0; pos < uSumLen; pos++)
+		{
+			float sampleFreq;
+			sampleFreq = freqMap[pos];
+
+			float speed = sampleFreq / minSampleFreq;
+			pos_tmpBuf += speed;
+			stretchingMap[pos] = pos_tmpBuf;
+		}
+
+		if (m_OtoMap->find(lyric) == m_OtoMap->end()) lyric = m_defaultLyric.data();
 		VoiceLocation loc = (*m_OtoMap)[lyric];
 
 		char frq_path[2048];
@@ -258,24 +272,26 @@ private:
 		float srcbegin, srcend;
 		if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return;
 
-		float unvoicedLen = loc.consonant* (float)source.m_sampleRate*0.001f;
-		float totalLen = srcend - srcbegin;
+		float total_len = srcend - srcbegin;
 
-		float voicedLen = totalLen - unvoicedLen;
+		float overlap_pos = loc.overlap* (float)source.m_sampleRate*0.001f;
 
-		float voicedWeight;
-		float unvoicedWeight;
+		float note_len = total_len - overlap_pos;
+
+		float fixed_end = loc.consonant* (float)source.m_sampleRate*0.001f;
+		float fixed_len = fixed_end - overlap_pos;
+		float vowel_len = note_len - fixed_len;
 
 		float k = 1.0f;
 
-		if (sumLen > totalLen)
+		if (sumLen > note_len)
 		{
-			float k2 = voicedLen / (sumLen - unvoicedLen);
+			float k2 = vowel_len / (sumLen - fixed_len);
 			if (k2 < k) k = k2;
 		}
 
-		voicedWeight = 1.0f / (k* unvoicedLen + voicedLen);
-		unvoicedWeight = k* voicedWeight;
+		float vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
+		float fixed_Weight = k* vowel_Weight;
 
 		class SymmetricWindowWithPosition : public SymmetricWindow
 		{
@@ -285,7 +301,7 @@ private:
 
 		std::vector<SymmetricWindowWithPosition> windows;
 		float fPeriodCount = 0.0f;
-		float logicalPos = 0.0f;
+		float logicalPos = -overlap_pos* fixed_Weight;
 
 		for (unsigned srcPos = 0; srcPos < source.m_data.size(); srcPos++)
 		{
@@ -295,7 +311,9 @@ private:
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
 			float sampleFreq1 = frq[uSrcFreqPos].freq / (float)source.m_sampleRate;
+			if (sampleFreq1 <= 0.0f) sampleFreq1 = frq.m_key_freq / (float)source.m_sampleRate;
 			float sampleFreq2 = frq[uSrcFreqPos + 1].freq / (float)source.m_sampleRate;
+			if (sampleFreq2 <= 0.0f) sampleFreq2 = frq.m_key_freq / (float)source.m_sampleRate;
 
 			srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
 
@@ -315,53 +333,23 @@ private:
 			}
 			fPeriodCount += srcSampleFreq;
 
-			if ((float)srcPos < unvoicedLen)
+			if ((float)srcPos < fixed_end)
 			{
-				logicalPos += unvoicedWeight;
+				logicalPos += fixed_Weight;
 			}
 			else
 			{
-				logicalPos += voicedWeight;
+				logicalPos += vowel_Weight;
 			}
 
 		}
 
-		float overlap_logical_pos = loc.overlap>0.0f?loc.overlap* (float)source.m_sampleRate*0.001f *unvoicedWeight:0.0f;
-
-		float final_additional_samples = sumLen * overlap_logical_pos / (1.0f - overlap_logical_pos);
-		unsigned u_final_additional_samples = (unsigned)final_additional_samples;
-
-		float temp_additional_samples = freqMap[0] / minSampleFreq* final_additional_samples;
-		unsigned u_temp_additional_samples = (unsigned)temp_additional_samples;
-
-		float* stretchingMap = new float[uSumLen + u_final_additional_samples];
-
-		float pos_tmpBuf = 0.0f;
-		for (unsigned pos = 0; pos < uSumLen + u_final_additional_samples; pos++)
-		{
-			float sampleFreq;
-
-			if (pos < u_final_additional_samples)
-			{
-				sampleFreq = freqMap[0];
-			}
-			else
-			{
-				sampleFreq = freqMap[pos - u_final_additional_samples];
-			}
-			
-			float speed = sampleFreq / minSampleFreq;
-			pos_tmpBuf += speed;
-			stretchingMap[pos] = pos_tmpBuf;
-		}
-
-
-		float tempLen = stretchingMap[uSumLen + u_final_additional_samples - 1];
+		float tempLen = stretchingMap[uSumLen - 1];
 		unsigned uTempLen = (unsigned)ceilf(tempLen);
 
 		Buffer tempBuf;
 		tempBuf.m_sampleRate = source.m_sampleRate;
-		tempBuf.m_data.resize(uTempLen + u_temp_additional_samples);
+		tempBuf.m_data.resize(uTempLen);
 		tempBuf.SetZero();
 
 		float tempHalfWinLen = 1.0f / minSampleFreq;
@@ -373,7 +361,7 @@ private:
 		{
 			while (fTmpWinCenter > stretchingMap[pos_final]) pos_final++;
 
-			float fWinPos = (float)pos_final / (sumLen + final_additional_samples);
+			float fWinPos = (float)pos_final / (sumLen) ;
 
 			unsigned winId1 = winId0 + 1;
 
@@ -389,20 +377,14 @@ private:
 
 			float k;
 			if (fWinPos >= win1.m_pos) k = 1.0f;
+			else if (fWinPos <= win0.m_pos) k = 0.0f;
 			else
 			{
 				k = (fWinPos - win0.m_pos) / (win1.m_pos - win0.m_pos);
 			}
 
 			float destSampleFreq;
-			if (pos_final < u_final_additional_samples)
-			{
-				destSampleFreq = freqMap[0];
-			}
-			else
-			{
-				destSampleFreq = freqMap[pos_final - u_final_additional_samples];
-			}
+			destSampleFreq = freqMap[pos_final];
 			float destHalfWinLen = 1.0f / destSampleFreq;
 
 			SymmetricWindow shiftedWin0;
@@ -443,25 +425,17 @@ private:
 		}
 
 		// post processing
-		noteBuf->m_sampleNum = uSumLen + u_final_additional_samples;
-		noteBuf->m_alignPos = u_final_additional_samples;
+		noteBuf->m_sampleNum = uSumLen;
 		noteBuf->Allocate();
 
 		float multFac = m_noteVolume;
 
-		for (unsigned pos = 0; pos < uSumLen + u_final_additional_samples; pos++)
+		for (unsigned pos = 0; pos < uSumLen; pos++)
 		{
 			float pos_tmpBuf = stretchingMap[pos];
 			float sampleFreq;
 
-			if (pos < u_final_additional_samples)
-			{
-				sampleFreq = freqMap[0];
-			}
-			else
-			{
-				sampleFreq = freqMap[pos - u_final_additional_samples];
-			}
+			sampleFreq = freqMap[pos];
 			
 			float speed = sampleFreq / minSampleFreq;
 
@@ -477,7 +451,7 @@ private:
 
 			float amplitude;
 
-			float x2 = (float)pos / (sumLen + final_additional_samples);
+			float x2 = (float)pos / sumLen;
 			amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
 			noteBuf->m_data[pos] = amplitude*value*multFac;
