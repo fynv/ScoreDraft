@@ -19,6 +19,7 @@
 VoiceBuffer::VoiceBuffer()
 {
 	m_sampleNum = 0;
+	m_alignPos = 0;
 	m_data = 0;
 }
 
@@ -110,7 +111,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 				_piece.lyric = lyric;
 				_piece.notes = noteParams;
 				GenerateWave(_piece, &noteBuf);
-				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 				noteParams.clear();
 				totalDuration = 0.0f;
 			}
@@ -142,7 +143,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 		_piece.lyric = lyric;
 		_piece.notes = noteParams;
 		GenerateWave(_piece, &noteBuf);
-		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 	}
 
 }
@@ -198,7 +199,7 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 
 	GenerateWave_Rap(_piece, &noteBuf);
 
-	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples);
+	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples, noteBuf.m_alignPos);
 }
 
 void Singer::RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo, float RefFreq)
@@ -249,7 +250,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 						pieceList.push_back(_piece);
 					}
 					GenerateWave_SingConsecutive(pieceList, &noteBuf);
-					buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+					buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 					noteParams.clear();
 					pieceList.clear();
 					totalDuration = 0.0f;
@@ -286,7 +287,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 	if (pieceList.size() > 0)
 	{
 		GenerateWave_SingConsecutive(pieceList, &noteBuf);
-		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 	}
 }
 
@@ -307,7 +308,7 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 			if (pieceList.size()>0)
 			{
 				GenerateWave_RapConsecutive(pieceList, &noteBuf);
-				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 				pieceList.clear();
 				totalDuration = 0.0f;
 			}
@@ -339,7 +340,7 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 		if (pieceList.size() > 0)
 		{
 			GenerateWave_RapConsecutive(pieceList, &noteBuf);
-			buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration);
+			buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 		}
 	}
 
