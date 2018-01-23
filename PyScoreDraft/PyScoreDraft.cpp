@@ -375,21 +375,29 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 					for (size_t j = 1; j < tupleSize; j++)
 					{
 						_item = PyTuple_GetItem(item, j);
-						Note note;
-						note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
-						note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
-						instrument->PlayNote(*buffer, note, tempo, RefFreq);
+						if (PyObject_TypeCheck(_item, &PyTuple_Type))
+						{
+							Note note;
+							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
+							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+							instrument->PlayNote(*buffer, note, tempo, RefFreq);
+						}
 					}
 				}
 				else if(PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
 				{
-					for (size_t j = 2; j < tupleSize; j++)
+					for (size_t j = 1; j < tupleSize; j+=2)
 					{
-						int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
-						Note note;
-						note.m_freq_rel = 1.0f;
-						note.m_duration = duration;
-						instrument->PlayNote(*buffer, note, tempo, RefFreq);
+						_item = PyTuple_GetItem(item, j);
+						if (PyObject_TypeCheck(_item, &PyLong_Type))
+						{
+							//int tone = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+							int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j + 1));
+							Note note;
+							note.m_freq_rel = 1.0f;
+							note.m_duration = duration;
+							instrument->PlayNote(*buffer, note, tempo, RefFreq);
+						}
 					}
 				}
 			}
@@ -489,6 +497,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 	std::string lyric_charset = singer->GetLyricCharset();
 
 	size_t piece_count = PyList_Size(seq_py);
+
 	for (size_t i = 0; i < piece_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -496,38 +505,74 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 		{
 			PyObject *_item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
-			{	
-				PyObject *byteCode = PyUnicode_AsEncodedString(_item, lyric_charset.data(), 0);
-				std::string lyric = PyBytes_AS_STRING(byteCode);
+			{
+				SingingSequence singing_pieces;
+				RapSequence rap_pieces;
+
 				size_t tupleSize = PyTuple_Size(item);
-				_item = PyTuple_GetItem(item, 1);
-				if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
+
+				size_t j = 0;
+				while (j < tupleSize)
 				{
-					SingingPiece piece;
-					piece.m_lyric = lyric;
-					for (size_t j = 1; j < tupleSize; j++)
+					_item = PyTuple_GetItem(item, j);
+					PyObject *byteCode = PyUnicode_AsEncodedString(_item, lyric_charset.data(), 0);
+					std::string lyric = PyBytes_AS_STRING(byteCode);
+					j++;
+
+					_item = PyTuple_GetItem(item, j);
+					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
 					{
-						_item = PyTuple_GetItem(item, j);
-						Note note;
-						note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
-						note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
-						piece.m_notes.push_back(note);
+						SingingPiece piece;
+						piece.m_lyric = lyric;
+
+						for (; j<tupleSize; j++)
+						{
+							_item = PyTuple_GetItem(item, j);
+							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;					
+
+							Note note;
+							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
+							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+							piece.m_notes.push_back(note);
+							
+						}
+						singing_pieces.push_back(piece);
 					}
-					singer->SingPiece(*buffer, piece, tempo, RefFreq);
-				}
-				else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
-				{
-					int tone = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
-					for (size_t j = 2; j < tupleSize; j++)
+					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
 					{
-						int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
 						RapPiece piece;
 						piece.m_lyric = lyric;
-						piece.m_tone = tone;
-						piece.m_duration = duration;
-						singer->RapAPiece(*buffer, piece, tempo, RefFreq);
+						piece.m_tone = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						j++;
+						piece.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						j++;
+						rap_pieces.push_back(piece);
+					}
+
+				}
+				if (singing_pieces.size() > 0)
+				{
+					if (singing_pieces.size() < 2)
+					{
+						singer->SingPiece(*buffer, singing_pieces[0], tempo, RefFreq);
+					}
+					else
+					{
+						singer->SingConsecutivePieces(*buffer, singing_pieces, tempo, RefFreq);
 					}
 				}
+				if (rap_pieces.size() > 0)
+				{
+					if (rap_pieces.size() < 2)
+					{
+						singer->RapAPiece(*buffer, rap_pieces[0], tempo, RefFreq);
+					}
+					else
+					{
+						singer->RapConsecutivePieces(*buffer, rap_pieces, tempo, RefFreq);
+					}
+				}
+				
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{

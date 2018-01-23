@@ -337,11 +337,11 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 			pieceList.push_back(_piece);
 
 		}
-		if (pieceList.size() > 0)
-		{
-			GenerateWave_RapConsecutive(pieceList, &noteBuf);
-			buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
-		}
+	}
+	if (pieceList.size() > 0)
+	{
+		GenerateWave_RapConsecutive(pieceList, &noteBuf);
+		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
 	}
 
 }

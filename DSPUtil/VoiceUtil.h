@@ -102,7 +102,7 @@ namespace VoiceUtil
 
 		void MergeToBuffer(Buffer& buf, float pos)
 		{
-			int ipos = (int)pos;
+			int ipos = (int)floorf(pos);
 			unsigned u_halfWidth = GetHalfWidthOfData();
 
 			for (int i = max(-(int)u_halfWidth, -ipos); i < (int)u_halfWidth; i++)

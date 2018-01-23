@@ -52,9 +52,17 @@ bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end
 	
 	buf.m_sampleRate = whole.m_sampleRate;
 	buf.m_data.resize(uEnd - uBegin);
+
+	float acc = 0.0f;
 	for (unsigned i = uBegin; i < uEnd; i++)
 	{
-		buf.m_data[i - uBegin] = whole.m_data[i];
+		acc += whole.m_data[i] * whole.m_data[i];
+	}
+	acc = sqrtf((float)(uEnd - uBegin) / acc);
+
+	for (unsigned i = uBegin; i < uEnd; i++)
+	{
+		buf.m_data[i - uBegin] = whole.m_data[i] * acc;
 	}
 	
 	return true;
@@ -107,6 +115,10 @@ public:
 			sumLen += piece.notes[i].fNumOfSamples;
 
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
+
+		noteBuf->m_sampleNum = uSumLen;
+		noteBuf->Allocate();
+
 		float *freqMap = new float[uSumLen];
 
 		unsigned pos = 0;
@@ -156,7 +168,8 @@ public:
 		freqMap[pos] *= vib;
 		}*/
 
-		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
+		float phase = 0.0f;
+		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase);
 
 		delete[] freqMap;
 
@@ -166,6 +179,10 @@ public:
 	{
 		float sumLen = piece.fNumOfSamples;
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
+
+		noteBuf->m_sampleNum = uSumLen;
+		noteBuf->Allocate();
+
 		float *freqMap = new float[uSumLen];
 
 		if (piece.tone <= 1)
@@ -204,8 +221,9 @@ public:
 			}
 		}
 
+		float phase = 0.0f;
+		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase);
 
-		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
 		delete[] freqMap;
 
 		/// Distortion 
@@ -232,11 +250,237 @@ public:
 		}
 	}
 
-private:
-	void _generateWave(const char* lyric, float sumLen, float* freqMap, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
-		unsigned uSumLen = (unsigned)ceilf(sumLen);
+		unsigned *lens = new unsigned[pieceList.size()];
+		float sumAllLen=0.0f;
+		unsigned uSumAllLen;
 
+		for (unsigned j = 0; j < pieceList.size(); j++)
+		{
+			SingingPieceInternal& piece = *pieceList[j];
+
+			float sumLen = 0.0f;
+			for (size_t i = 0; i < piece.notes.size(); i++)
+				sumLen += piece.notes[i].fNumOfSamples;
+
+			float oldSumAllLen = sumAllLen;
+			sumAllLen += sumLen;
+			
+			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
+		}
+		uSumAllLen = ceilf(sumAllLen);
+
+		noteBuf->m_sampleNum = uSumAllLen;
+		noteBuf->Allocate();
+
+		unsigned noteBufPos = 0;
+		float phase = 0.0f;
+
+		for (unsigned j = 0; j < pieceList.size(); j++)
+		{
+			SingingPieceInternal& piece = *pieceList[j];
+			
+			unsigned uSumLen = lens[j];
+			float *freqMap = new float[uSumLen];
+
+			unsigned pos = 0;
+			float targetPos = 0.0f;
+			float sampleFreq;
+			for (size_t i = 0; i < piece.notes.size(); i++)
+			{
+				sampleFreq = piece.notes[i].sampleFreq;
+				targetPos += piece.notes[i].fNumOfSamples;
+
+				for (; (float)pos < targetPos && pos<uSumLen; pos++)
+				{
+					freqMap[pos] = sampleFreq;
+				}
+			}
+
+			for (; pos < uSumLen; pos++)
+			{
+				freqMap[pos] = sampleFreq;
+			}
+
+			/// Make frequency tweakings here
+
+			/// Transition
+			if (m_transition > 0.0f && m_transition < 1.0f)
+			{
+				targetPos = 0.0f;
+				for (size_t i = 0; i < piece.notes.size() - 1; i++)
+				{
+					float sampleFreq0 = piece.notes[i].sampleFreq;
+					float sampleFreq1 = piece.notes[i + 1].sampleFreq;
+					targetPos += piece.notes[i].fNumOfSamples;
+
+					float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
+					for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
+					{
+						float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
+						freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
+					}
+
+				}
+
+				if (j < pieceList.size() - 1)
+				{
+					size_t i = piece.notes.size() - 1;
+					float sampleFreq0 = piece.notes[i].sampleFreq;
+					float sampleFreq1 = pieceList[j + 1]->notes[0].sampleFreq;
+
+					targetPos += piece.notes[i].fNumOfSamples;
+					float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
+
+					for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
+					{
+						float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
+						freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
+					}
+				}
+
+			}
+
+			/// Viberation
+			/*for (pos = 0; pos < uSumLen; pos++)
+			{
+			float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
+			freqMap[pos] *= vib;
+			}*/
+
+			const char* lyric_next = nullptr;
+			if (j < pieceList.size() - 1)
+			{
+				lyric_next = pieceList[j + 1]->lyric.data();
+			}
+
+			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase);
+
+			delete[] freqMap;
+
+			noteBufPos += lens[j];
+			
+		}
+		delete[] lens;
+	}
+
+	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
+	{
+		unsigned *lens = new unsigned[pieceList.size()];
+		float sumAllLen = 0.0f;
+		unsigned uSumAllLen;
+
+		for (unsigned j = 0; j < pieceList.size(); j++)
+		{
+			RapPieceInternal& piece = *pieceList[j];
+			float sumLen = piece.fNumOfSamples;
+			float oldSumAllLen = sumAllLen;
+			sumAllLen += sumLen;
+			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
+		}
+		uSumAllLen = ceilf(sumAllLen);
+
+		noteBuf->m_sampleNum = uSumAllLen;
+		noteBuf->Allocate();
+
+		unsigned noteBufPos = 0;
+		float phase = 0.0f;
+
+		for (unsigned j = 0; j < pieceList.size(); j++)
+		{
+			RapPieceInternal& piece = *pieceList[j];
+
+			unsigned uSumLen = lens[j];
+			float *freqMap = new float[uSumLen];
+
+			if (piece.tone <= 1)
+			{
+				for (unsigned i = 0; i < uSumLen; i++)
+				{
+					freqMap[i] = piece.baseSampleFreq;
+				}
+			}
+			else if (piece.tone == 2)
+			{
+				float lowFreq = piece.baseSampleFreq*0.7f;
+				for (unsigned i = 0; i < uSumLen; i++)
+				{
+					float x = (float)i / (float)(uSumLen - 1);
+					freqMap[i] = lowFreq + (piece.baseSampleFreq - lowFreq)*x;
+				}
+			}
+			else if (piece.tone == 3)
+			{
+				float highFreq = piece.baseSampleFreq*0.75f;
+				float lowFreq = piece.baseSampleFreq*0.5f;
+				for (unsigned i = 0; i < uSumLen; i++)
+				{
+					float x = (float)i / (float)(uSumLen - 1);
+					freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
+				}
+			}
+			else if (piece.tone == 4)
+			{
+				float lowFreq = piece.baseSampleFreq*0.5f;
+				for (unsigned i = 0; i < uSumLen; i++)
+				{
+					float x = (float)i / (float)(uSumLen - 1);
+					freqMap[i] = piece.baseSampleFreq + (lowFreq - piece.baseSampleFreq)*x;
+				}
+			}
+
+			/// Transition
+			if (m_transition > 0.0f && m_transition < 1.0f)
+			{
+				if (j < pieceList.size() - 1)
+				{
+					RapPieceInternal& piece_next = *pieceList[j+1];
+
+					float sampleFreq_next;
+					if (piece_next.tone <= 2)
+					{
+						sampleFreq_next = piece_next.baseSampleFreq;
+					}
+					else if (piece_next.tone == 3)
+					{
+						sampleFreq_next = piece_next.baseSampleFreq*0.75f;
+					}
+					else if (piece_next.tone == 4)
+					{
+						sampleFreq_next = piece_next.baseSampleFreq*0.5f;
+					}
+
+					float transStart = (float)uSumLen - m_transition*(float)uSumLen;
+
+					for (unsigned pos = (unsigned)ceilf(transStart); pos <uSumLen; pos++)
+					{
+						float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
+						freqMap[pos] = (1.0f - k)* freqMap[pos] + k*sampleFreq_next;
+					}
+				}
+			}
+
+			const char* lyric_next = nullptr;
+			if (j < pieceList.size() - 1)
+			{
+				lyric_next = pieceList[j + 1]->lyric.data();
+			}
+
+			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase);
+
+			delete[] freqMap;
+
+			noteBufPos += lens[j];
+		}
+
+		delete[] lens;
+
+	}
+
+private:
+	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, VoiceBuffer* noteBuf, unsigned noteBufPos, float& phase)
+	{
 		/// calculate finalBuffer->tmpBuffer map
 		float minSampleFreq = FLT_MAX;
 		for (unsigned pos = 0; pos < uSumLen; pos++)
@@ -258,38 +502,62 @@ private:
 			stretchingMap[pos] = pos_tmpBuf;
 		}
 
+		bool hasNextSample = lyric_next != nullptr;
+
 		if (m_OtoMap->find(lyric) == m_OtoMap->end()) lyric = m_defaultLyric.data();
-		VoiceLocation loc = (*m_OtoMap)[lyric];
 
-		char frq_path[2048];
-		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
-		memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
-
+		// Current sample
+		VoiceLocation loc;
 		FrqData frq;
-		frq.ReadFromFile(frq_path);
-
 		Buffer source;
 		float srcbegin, srcend;
-		if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return;
+
+		{
+			loc = (*m_OtoMap)[lyric];
+
+			char frq_path[2048];
+			memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
+			memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+			frq.ReadFromFile(frq_path);
+
+			if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return;
+		}
+
+
+		//Next sample
+		VoiceLocation loc_next;
+		FrqData frq_next;
+		Buffer source_next;
+		float nextbegin, nextend;
+
+		if (hasNextSample)
+		{
+			loc_next = (*m_OtoMap)[lyric_next];
+
+			char frq_path_next[2048];
+			memcpy(frq_path_next, loc_next.filename.data(), loc_next.filename.length() - 4);
+			memcpy(frq_path_next + loc_next.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+			frq_next.ReadFromFile(frq_path_next);
+		
+			if (!ReadWavLocToBuffer(loc_next, source_next, nextbegin, nextend)) return;
+
+		}
 
 		float total_len = srcend - srcbegin;
-
 		float overlap_pos = loc.overlap* (float)source.m_sampleRate*0.001f;
-
 		float note_len = total_len - overlap_pos;
-
 		float fixed_end = loc.consonant* (float)source.m_sampleRate*0.001f;
 		float fixed_len = fixed_end - overlap_pos;
 		float vowel_len = note_len - fixed_len;
 
 		float k = 1.0f;
-
-		if (sumLen > note_len)
+		if ((float)uSumLen > note_len)
 		{
-			float k2 = vowel_len / (sumLen - fixed_len);
+			float k2 = vowel_len / ((float)uSumLen - fixed_len);
 			if (k2 < k) k = k2;
 		}
-
 		float vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
 		float fixed_Weight = k* vowel_Weight;
 
@@ -310,11 +578,11 @@ private:
 			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-			float freq1 = frq[uSrcFreqPos].freq;
-			if (freq1 <= 55.0f) freq1 = frq.m_key_freq;
+			float freq1 = (float)frq[uSrcFreqPos].freq;
+			if (freq1 <= 55.0f) freq1 = (float)frq.m_key_freq;
 
-			float freq2 = frq[uSrcFreqPos + 1].freq;
-			if (freq2 <= 55.0f) freq2 = frq.m_key_freq;
+			float freq2 = (float)frq[uSrcFreqPos + 1].freq;
+			if (freq2 <= 55.0f) freq2 = (float)frq.m_key_freq;
 
 			float sampleFreq1 = freq1 / (float)source.m_sampleRate;
 			float sampleFreq2 = freq2 / (float)source.m_sampleRate;
@@ -345,7 +613,51 @@ private:
 			{
 				logicalPos += vowel_Weight;
 			}
+		}
 
+		std::vector<SymmetricWindowWithPosition> windows_next;
+
+		if (hasNextSample)
+		{
+			float weight = 1.0f / (float)uSumLen;
+			float overlap_pos_next = loc_next.overlap* (float)source_next.m_sampleRate*0.001f;
+			float fPeriodCount = 0.0f;
+			float logicalPos = 1.0f-overlap_pos_next*weight;
+
+			for (unsigned srcPos = 0; (float)srcPos < overlap_pos_next; srcPos++)
+			{
+				float srcSampleFreq;
+				float srcFreqPos = (nextbegin + (float)srcPos) / (float)frq_next.m_window_interval;
+				unsigned uSrcFreqPos = (unsigned)srcFreqPos;
+				float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
+
+				float freq1 = (float)frq_next[uSrcFreqPos].freq;
+				if (freq1 <= 55.0f) freq1 = (float)frq_next.m_key_freq;
+
+				float freq2 = (float)frq_next[uSrcFreqPos + 1].freq;
+				if (freq2 <= 55.0f) freq2 = (float)frq_next.m_key_freq;
+
+				float sampleFreq1 = freq1 / (float)source_next.m_sampleRate;
+				float sampleFreq2 = freq2 / (float)source_next.m_sampleRate;
+
+				srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
+
+				unsigned winId = (unsigned)fPeriodCount;
+				if (winId >= windows_next.size())
+				{
+					float srcHalfWinWidth = 1.0f / srcSampleFreq;
+					Window srcWin;
+					srcWin.CreateFromBuffer(source_next, (float)srcPos, srcHalfWinWidth);
+
+					SymmetricWindowWithPosition symWin;
+					symWin.CreateFromAsymmetricWindow(srcWin);
+					symWin.m_pos = logicalPos;
+
+					windows_next.push_back(symWin);
+				}
+				fPeriodCount += srcSampleFreq;
+				logicalPos += weight;
+			}
 		}
 
 		float tempLen = stretchingMap[uSumLen - 1];
@@ -359,23 +671,39 @@ private:
 		float tempHalfWinLen = 1.0f / minSampleFreq;
 
 		unsigned winId0 = 0;
+		unsigned winId0_next = 0;
 		unsigned pos_final = 0;
 
-		for (float fTmpWinCenter = 0.0f; fTmpWinCenter <= tempLen; fTmpWinCenter += tempHalfWinLen)
-		{
-			while (fTmpWinCenter > stretchingMap[pos_final]) pos_final++;
+		while (phase > -1.0f) phase -= 1.0f;
 
-			float fWinPos = (float)pos_final / (sumLen) ;
+		float fTmpWinCenter;
+		for (fTmpWinCenter = phase*tempHalfWinLen; fTmpWinCenter - tempHalfWinLen <= tempLen; fTmpWinCenter += tempHalfWinLen)
+		{
+			while (fTmpWinCenter > stretchingMap[pos_final] && pos_final<uSumLen - 1) pos_final++;
+			float fWinPos = (float)pos_final / float(uSumLen);
+
+			bool in_transition = hasNextSample && m_transition > 0.0f && m_transition < 1.0f && fWinPos >= 1.0f - m_transition;
 
 			unsigned winId1 = winId0 + 1;
-
 			while (winId1 < windows.size() && windows[winId1].m_pos < fWinPos)
 			{
 				winId0++;
 				winId1 = winId0 + 1;
 			}
-
 			if (winId1 == windows.size()) winId1 = winId0;
+
+			unsigned winId1_next = winId0_next + 1;
+
+			if (in_transition)
+			{
+				while (winId1_next < windows_next.size() && windows_next[winId1_next].m_pos < fWinPos)
+				{
+					winId0_next++;
+					winId1_next = winId0_next + 1;
+				}
+				if (winId1_next == windows_next.size()) winId1_next = winId0_next;
+			}
+
 			SymmetricWindowWithPosition& win0 = windows[winId0];
 			SymmetricWindowWithPosition& win1 = windows[winId1];
 
@@ -386,10 +714,11 @@ private:
 			{
 				k = (fWinPos - win0.m_pos) / (win1.m_pos - win0.m_pos);
 			}
-
+			
 			float destSampleFreq;
 			destSampleFreq = freqMap[pos_final];
 			float destHalfWinLen = 1.0f / destSampleFreq;
+
 
 			SymmetricWindow shiftedWin0;
 			SymmetricWindow shiftedWin1;
@@ -414,33 +743,87 @@ private:
 					l_win.m_data[i] = (1.0f - k) *shiftedWin0.m_data[i] + k* shiftedWin1.m_data[i];
 			}
 
+			SymmetricWindow *win_final_dest = destWin;
+			SymmetricWindow l_win_transit;
+
+			if (in_transition)
+			{
+				SymmetricWindowWithPosition& win0_next = windows_next[winId0_next];
+				SymmetricWindowWithPosition& win1_next = windows_next[winId1_next];
+
+				float k;
+				if (fWinPos >= win1_next.m_pos) k = 1.0f;
+				else if (fWinPos <= win0_next.m_pos) k = 0.0f;
+				else
+				{
+					k = (fWinPos - win0_next.m_pos) / (win1_next.m_pos - win0_next.m_pos);
+				}
+
+				SymmetricWindow shiftedWin0_next;
+				SymmetricWindow shiftedWin1_next;
+				
+				SymmetricWindow l_win_next;
+				SymmetricWindow* destWin_next = &l_win_next;
+
+				shiftedWin0_next.Repitch_FormantPreserved(win0_next, destHalfWinLen);
+
+				if (winId0_next == winId1_next)
+				{
+					destWin_next = &shiftedWin0_next;
+				}
+				else
+				{
+					shiftedWin1_next.Repitch_FormantPreserved(win1_next, destHalfWinLen);
+					l_win_next.m_halfWidth = destHalfWinLen;
+					unsigned u_halfWidth = (unsigned)ceilf(destHalfWinLen);
+					l_win_next.m_data.resize(u_halfWidth);
+
+					for (unsigned i = 0; i < destHalfWinLen; i++)
+						l_win_next.m_data[i] = (1.0f - k) *shiftedWin0_next.m_data[i] + k* shiftedWin1_next.m_data[i];
+
+				}
+				
+				float x = (fWinPos - 1.0f) / m_transition;
+				float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+
+				win_final_dest = &l_win_transit;
+				l_win_transit.m_halfWidth = destHalfWinLen;
+				unsigned u_halfWidth = (unsigned)ceilf(destHalfWinLen);
+				l_win_transit.m_data.resize(u_halfWidth);
+
+				for (unsigned i = 0; i < destHalfWinLen; i++)
+				{
+					l_win_transit.m_data[i] = (1.0f - k2) * destWin->m_data[i] + k2* destWin_next->m_data[i];
+				}
+
+			}
+
 			SymmetricWindow l_win2;
 			SymmetricWindow *winToMerge = &l_win2;
+
 			if (destHalfWinLen == tempHalfWinLen)
 			{
-				winToMerge = destWin;
+				winToMerge = win_final_dest;
 			}
 			else
 			{
-				l_win2.Scale(*destWin, tempHalfWinLen);
+				l_win2.Scale(*win_final_dest, tempHalfWinLen);
 			}
 
 			winToMerge->MergeToBuffer(tempBuf, fTmpWinCenter);
 		}
 
+		phase = (fTmpWinCenter - tempLen) / tempHalfWinLen;
+
 		// post processing
-		noteBuf->m_sampleNum = uSumLen;
-		noteBuf->Allocate();
 
 		float multFac = m_noteVolume;
-
-		for (unsigned pos = 0; pos < uSumLen; pos++)
+		for (unsigned pos = 0; pos < uSumLen; pos++, noteBufPos++)
 		{
 			float pos_tmpBuf = stretchingMap[pos];
 			float sampleFreq;
-
 			sampleFreq = freqMap[pos];
-			
+
 			float speed = sampleFreq / minSampleFreq;
 
 			int ipos1 = (int)ceilf(pos_tmpBuf - speed*0.5f);
@@ -453,21 +836,15 @@ private:
 			}
 			float value = sum / (float)(ipos2 - ipos1 + 1);
 
-			float amplitude;
+			float x2 = (float)noteBufPos / (float)noteBuf->m_sampleNum;
+			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-			float x2 = (float)pos / sumLen;
-			amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
-			noteBuf->m_data[pos] = amplitude*value*multFac;
+			noteBuf->m_data[noteBufPos] = amplitude*value*multFac;
 		}
 
-
 		delete[] stretchingMap;
-
-		
-
-
 	}
+
 
 	OtoMap* m_OtoMap;
 
