@@ -176,7 +176,13 @@ public:
 		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase, true);
 
 		delete[] freqMap;
-
+		// Envolope
+		for (unsigned pos = 0; pos < uSumLen; pos++)
+		{
+			float x2 = (float)pos / sumLen;
+			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+			noteBuf->m_data[pos] *= amplitude;
+		}
 	}
 
 	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
@@ -235,6 +241,14 @@ public:
 
 		delete[] freqMap;
 
+		// Envolope
+		for (unsigned pos = 0; pos < uSumLen; pos++)
+		{
+			float x2 = (float)pos / sumLen;
+			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+			noteBuf->m_data[pos] *= amplitude;
+		}
+
 		/// Distortion 
 		if (m_rap_distortion > 1.0f)
 		{
@@ -247,9 +261,6 @@ public:
 
 			for (unsigned pos = 0; pos < uSumLen; pos++)
 			{
-				float x2 = (float)pos / sumLen;
-				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
 				float v = noteBuf->m_data[pos];
 				v *= 10.0f;
 				if (v > maxV) v = maxV;
@@ -375,6 +386,14 @@ public:
 			noteBufPos += uSumLen;
 			
 		}
+
+		// Envolope
+		for (unsigned pos = 0; pos < uSumAllLen; pos++)
+		{
+			float x2 = (float)(uSumAllLen-1 - pos) / (float)lens[pieceList.size()-1];
+			float amplitude = 1.0f - expf(-x2*10.0f);
+			noteBuf->m_data[pos] *= amplitude;
+		}
 		delete[] lens;
 	}
 
@@ -493,6 +512,14 @@ public:
 			noteBufPos += lens[j];
 		}
 
+		// Envolope
+		for (unsigned pos = 0; pos < uSumAllLen; pos++)
+		{
+			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[pieceList.size() - 1];
+			float amplitude = 1.0f - expf(-x2*10.0f);
+			noteBuf->m_data[pos] *= amplitude;
+		}
+
 		delete[] lens;
 
 		/// Distortion 
@@ -507,9 +534,6 @@ public:
 
 			for (unsigned pos = 0; pos < uSumAllLen; pos++)
 			{
-				float x2 = (float)pos / (float)uSumAllLen;
-				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
 				float v = noteBuf->m_data[pos];
 				v *= 10.0f;
 				if (v > maxV) v = maxV;
@@ -940,11 +964,7 @@ private:
 				sum += tempBuf.GetSample(ipos);
 			}
 			float value = sum / (float)(ipos2 - ipos1 + 1);
-
-			float x2 = (float)noteBufPos / (float)noteBuf->m_sampleNum;
-			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
-			noteBuf->m_data[noteBufPos] = amplitude*value*multFac;
+			noteBuf->m_data[noteBufPos] = value*multFac;
 		}
 
 		delete[] stretchingMap;
