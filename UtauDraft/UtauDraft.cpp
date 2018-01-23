@@ -574,7 +574,7 @@ public:
 
 			m_charset = "utf-8";
 			char charsetFn[1024];
-			sprintf(charsetFn, "%s/charset", m_name.data());
+			sprintf(charsetFn, "%s/charset", rootPath);
 
 			FILE* fp_charset = fopen(charsetFn, "r");
 			if (fp_charset)
