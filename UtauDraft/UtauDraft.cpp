@@ -282,7 +282,7 @@ public:
 			
 			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
 		}
-		uSumAllLen = ceilf(sumAllLen);
+		uSumAllLen = (unsigned)ceilf(sumAllLen);
 
 		noteBuf->m_sampleNum = uSumAllLen;
 		noteBuf->m_alignPos = (unsigned)firstNoteHead;
@@ -344,12 +344,11 @@ public:
 					float sampleFreq0 = piece.notes[i].sampleFreq;
 					float sampleFreq1 = pieceList[j + 1]->notes[0].sampleFreq;
 
-					targetPos += piece.notes[i].fNumOfSamples;
-					float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
+					float transStart = (float)uSumLen - m_transition*piece.notes[i].fNumOfSamples;
 
-					for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
+					for (unsigned pos = (unsigned)ceilf(transStart); pos<uSumLen; pos++)
 					{
-						float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
+						float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
 						freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
 					}
 				}
@@ -373,7 +372,7 @@ public:
 
 			delete[] freqMap;
 
-			noteBufPos += lens[j];
+			noteBufPos += uSumLen;
 			
 		}
 		delete[] lens;
@@ -398,7 +397,7 @@ public:
 			sumAllLen += sumLen;
 			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
 		}
-		uSumAllLen = ceilf(sumAllLen);
+		uSumAllLen = (unsigned)ceilf(sumAllLen);
 
 		noteBuf->m_sampleNum = uSumAllLen;
 		noteBuf->m_alignPos = (unsigned)firstNoteHead;
@@ -496,6 +495,29 @@ public:
 
 		delete[] lens;
 
+		/// Distortion 
+		if (m_rap_distortion > 1.0f)
+		{
+			float maxV = 0.0f;
+			for (unsigned pos = 0; pos < uSumAllLen; pos++)
+			{
+				float v = noteBuf->m_data[pos];
+				if (fabsf(v) > maxV) maxV = v;
+			}
+
+			for (unsigned pos = 0; pos < uSumAllLen; pos++)
+			{
+				float x2 = (float)pos / (float)uSumAllLen;
+				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
+
+				float v = noteBuf->m_data[pos];
+				v *= 10.0f;
+				if (v > maxV) v = maxV;
+				if (v < -maxV) v = -maxV;
+				noteBuf->m_data[pos] = v;
+			}
+		}
+
 	}
 
 private:
@@ -581,6 +603,7 @@ private:
 
 		if (hasNextSample)
 		{
+			if (m_OtoMap->find(lyric_next) == m_OtoMap->end()) lyric_next = m_defaultLyric.data();
 			loc_next = (*m_OtoMap)[lyric_next];
 
 			char frq_path_next[2048];
@@ -616,7 +639,7 @@ private:
 
 			fixed_len += preutter_pos_next - overlap_pos_next;
 			note_len = vowel_len + fixed_len;
-		}	
+		}
 
 
 		float k = 1.0f;
@@ -627,7 +650,7 @@ private:
 		}
 		float vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
 		float fixed_Weight = k* vowel_Weight;
-		float headerWeight = fixed_Weight;
+		float headerWeight;
 
 		if (firstNote)
 		{
