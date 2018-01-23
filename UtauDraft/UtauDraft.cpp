@@ -114,22 +114,26 @@ public:
 		for (size_t i = 0; i < piece.notes.size(); i++)
 			sumLen += piece.notes[i].fNumOfSamples;
 
+		float firstNoteHead = this->getFirstNoteHeadSamples(piece.lyric.data());
+		sumLen += firstNoteHead;
+
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
 
 		noteBuf->m_sampleNum = uSumLen;
+		noteBuf->m_alignPos = (unsigned)firstNoteHead;
 		noteBuf->Allocate();
 
 		float *freqMap = new float[uSumLen];
 
 		unsigned pos = 0;
-		float targetPos = 0.0f;
+		float targetPos = firstNoteHead;
 		float sampleFreq;
 		for (size_t i = 0; i < piece.notes.size(); i++)
 		{
 			sampleFreq = piece.notes[i].sampleFreq;
 			targetPos += piece.notes[i].fNumOfSamples;
 
-			for (; (float)pos < targetPos; pos++)
+			for (; (float)pos < targetPos && pos<uSumLen; pos++)
 			{
 				freqMap[pos] = sampleFreq;
 			}
@@ -144,14 +148,14 @@ public:
 		/// Transition
 		if (m_transition > 0.0f && m_transition<1.0f)
 		{
-			targetPos = 0.0f;
+			targetPos = firstNoteHead;
 			for (size_t i = 0; i < piece.notes.size() - 1; i++)
 			{
 				float sampleFreq0 = piece.notes[i].sampleFreq;
 				float sampleFreq1 = piece.notes[i + 1].sampleFreq;
 				targetPos += piece.notes[i].fNumOfSamples;
 
-				float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
+				float transStart =  targetPos - m_transition*piece.notes[i].fNumOfSamples;
 				for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
 				{
 					float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
@@ -169,7 +173,7 @@ public:
 		}*/
 
 		float phase = 0.0f;
-		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase);
+		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase, true);
 
 		delete[] freqMap;
 
@@ -178,9 +182,14 @@ public:
 	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
 	{
 		float sumLen = piece.fNumOfSamples;
+
+		float firstNoteHead = this->getFirstNoteHeadSamples(piece.lyric.data());
+		sumLen += firstNoteHead;
+
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
 
 		noteBuf->m_sampleNum = uSumLen;
+		noteBuf->m_alignPos = (unsigned)firstNoteHead;
 		noteBuf->Allocate();
 
 		float *freqMap = new float[uSumLen];
@@ -222,7 +231,7 @@ public:
 		}
 
 		float phase = 0.0f;
-		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase);
+		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase, true);
 
 		delete[] freqMap;
 
@@ -256,6 +265,8 @@ public:
 		float sumAllLen=0.0f;
 		unsigned uSumAllLen;
 
+		float firstNoteHead = this->getFirstNoteHeadSamples(pieceList[0]->lyric.data());
+		
 		for (unsigned j = 0; j < pieceList.size(); j++)
 		{
 			SingingPieceInternal& piece = *pieceList[j];
@@ -263,6 +274,8 @@ public:
 			float sumLen = 0.0f;
 			for (size_t i = 0; i < piece.notes.size(); i++)
 				sumLen += piece.notes[i].fNumOfSamples;
+
+			if (j == 0)	sumLen += firstNoteHead;
 
 			float oldSumAllLen = sumAllLen;
 			sumAllLen += sumLen;
@@ -272,6 +285,7 @@ public:
 		uSumAllLen = ceilf(sumAllLen);
 
 		noteBuf->m_sampleNum = uSumAllLen;
+		noteBuf->m_alignPos = (unsigned)firstNoteHead;
 		noteBuf->Allocate();
 
 		unsigned noteBufPos = 0;
@@ -285,7 +299,7 @@ public:
 			float *freqMap = new float[uSumLen];
 
 			unsigned pos = 0;
-			float targetPos = 0.0f;
+			float targetPos = j == 0 ? firstNoteHead : 0.0f;
 			float sampleFreq;
 			for (size_t i = 0; i < piece.notes.size(); i++)
 			{
@@ -308,7 +322,7 @@ public:
 			/// Transition
 			if (m_transition > 0.0f && m_transition < 1.0f)
 			{
-				targetPos = 0.0f;
+				targetPos = j == 0 ? firstNoteHead : 0.0f;
 				for (size_t i = 0; i < piece.notes.size() - 1; i++)
 				{
 					float sampleFreq0 = piece.notes[i].sampleFreq;
@@ -355,7 +369,7 @@ public:
 				lyric_next = pieceList[j + 1]->lyric.data();
 			}
 
-			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase);
+			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
 
 			delete[] freqMap;
 
@@ -371,10 +385,15 @@ public:
 		float sumAllLen = 0.0f;
 		unsigned uSumAllLen;
 
+		float firstNoteHead = this->getFirstNoteHeadSamples(pieceList[0]->lyric.data());
+
 		for (unsigned j = 0; j < pieceList.size(); j++)
 		{
 			RapPieceInternal& piece = *pieceList[j];
 			float sumLen = piece.fNumOfSamples;
+
+			if (j == 0)	sumLen += firstNoteHead;
+
 			float oldSumAllLen = sumAllLen;
 			sumAllLen += sumLen;
 			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
@@ -382,6 +401,7 @@ public:
 		uSumAllLen = ceilf(sumAllLen);
 
 		noteBuf->m_sampleNum = uSumAllLen;
+		noteBuf->m_alignPos = (unsigned)firstNoteHead;
 		noteBuf->Allocate();
 
 		unsigned noteBufPos = 0;
@@ -467,7 +487,7 @@ public:
 				lyric_next = pieceList[j + 1]->lyric.data();
 			}
 
-			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase);
+			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
 
 			delete[] freqMap;
 
@@ -479,7 +499,35 @@ public:
 	}
 
 private:
-	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, VoiceBuffer* noteBuf, unsigned noteBufPos, float& phase)
+	float getFirstNoteHeadSamples(const char* lyric)
+	{
+		if (m_OtoMap->find(lyric) == m_OtoMap->end()) lyric = m_defaultLyric.data();
+		VoiceLocation loc;
+		FrqData frq;
+		Buffer source;
+		float srcbegin, srcend;
+
+		{
+			loc = (*m_OtoMap)[lyric];
+
+			char frq_path[2048];
+			memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
+			memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+			frq.ReadFromFile(frq_path);
+
+			if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return 0.0f;
+		}
+
+		float overlap_pos = loc.overlap* (float)source.m_sampleRate*0.001f;
+		float preutter_pos = loc.preutterance * (float)source.m_sampleRate*0.001f;
+		if (preutter_pos < overlap_pos) preutter_pos = overlap_pos;
+
+		return preutter_pos - overlap_pos;
+
+	}
+
+	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, VoiceBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote)
 	{
 		/// calculate finalBuffer->tmpBuffer map
 		float minSampleFreq = FLT_MAX;
@@ -547,19 +595,47 @@ private:
 
 		float total_len = srcend - srcbegin;
 		float overlap_pos = loc.overlap* (float)source.m_sampleRate*0.001f;
-		float note_len = total_len - overlap_pos;
+		float preutter_pos = loc.preutterance * (float)source.m_sampleRate*0.001f;
+		if (preutter_pos < overlap_pos) preutter_pos = overlap_pos;		
+
+		float note_head = preutter_pos - overlap_pos;
+		float sumLenWithoutHead = firstNote ? (float)uSumLen - note_head : (float)uSumLen;
+
+		float note_len = total_len - preutter_pos;
 		float fixed_end = loc.consonant* (float)source.m_sampleRate*0.001f;
-		float fixed_len = fixed_end - overlap_pos;
+		float fixed_len = fixed_end - preutter_pos;
 		float vowel_len = note_len - fixed_len;
 
-		float k = 1.0f;
-		if ((float)uSumLen > note_len)
+		float overlap_pos_next;
+		float preutter_pos_next;
+		if (hasNextSample)
 		{
-			float k2 = vowel_len / ((float)uSumLen - fixed_len);
+			overlap_pos_next = loc_next.overlap* (float)source.m_sampleRate*0.001f;
+			preutter_pos_next = loc_next.preutterance * (float)source.m_sampleRate*0.001f;
+			if (preutter_pos_next < overlap_pos_next) preutter_pos_next = overlap_pos_next;
+
+			fixed_len += preutter_pos_next - overlap_pos_next;
+			note_len = vowel_len + fixed_len;
+		}	
+
+
+		float k = 1.0f;
+		if (sumLenWithoutHead > note_len)
+		{
+			float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
 			if (k2 < k) k = k2;
 		}
 		float vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
 		float fixed_Weight = k* vowel_Weight;
+		float headerWeight = fixed_Weight;
+
+		if (firstNote)
+		{
+			vowel_Weight *= sumLenWithoutHead / (float)uSumLen;
+			fixed_Weight *= sumLenWithoutHead / (float)uSumLen;
+
+			headerWeight = 1.0f / (float)uSumLen;
+		}
 
 		class SymmetricWindowWithPosition : public SymmetricWindow
 		{
@@ -569,7 +645,7 @@ private:
 
 		std::vector<SymmetricWindowWithPosition> windows;
 		float fPeriodCount = 0.0f;
-		float logicalPos = -overlap_pos* fixed_Weight;
+		float logicalPos = firstNote ? (-overlap_pos*headerWeight): ( - preutter_pos* fixed_Weight);		
 
 		for (unsigned srcPos = 0; srcPos < source.m_data.size(); srcPos++)
 		{
@@ -605,7 +681,11 @@ private:
 			}
 			fPeriodCount += srcSampleFreq;
 
-			if ((float)srcPos < fixed_end)
+			if (firstNote && (float)srcPos < preutter_pos)
+			{
+				logicalPos += headerWeight;
+			}
+			else if ((float)srcPos < fixed_end)
 			{
 				logicalPos += fixed_Weight;
 			}
@@ -619,12 +699,10 @@ private:
 
 		if (hasNextSample)
 		{
-			float weight = 1.0f / (float)uSumLen;
-			float overlap_pos_next = loc_next.overlap* (float)source_next.m_sampleRate*0.001f;
 			float fPeriodCount = 0.0f;
-			float logicalPos = 1.0f-overlap_pos_next*weight;
+			float logicalPos = 1.0f - preutter_pos_next*fixed_Weight;
 
-			for (unsigned srcPos = 0; (float)srcPos < overlap_pos_next; srcPos++)
+			for (unsigned srcPos = 0; (float)srcPos < preutter_pos_next; srcPos++)
 			{
 				float srcSampleFreq;
 				float srcFreqPos = (nextbegin + (float)srcPos) / (float)frq_next.m_window_interval;
@@ -656,7 +734,7 @@ private:
 					windows_next.push_back(symWin);
 				}
 				fPeriodCount += srcSampleFreq;
-				logicalPos += weight;
+				logicalPos += fixed_Weight;
 			}
 		}
 
@@ -677,12 +755,15 @@ private:
 		while (phase > -1.0f) phase -= 1.0f;
 
 		float fTmpWinCenter;
+		float transitionEnd = 1.0f - (preutter_pos_next - overlap_pos_next)*fixed_Weight;
+		float transitionStart = transitionEnd* (1.0f - m_transition);
+
 		for (fTmpWinCenter = phase*tempHalfWinLen; fTmpWinCenter - tempHalfWinLen <= tempLen; fTmpWinCenter += tempHalfWinLen)
 		{
 			while (fTmpWinCenter > stretchingMap[pos_final] && pos_final<uSumLen - 1) pos_final++;
 			float fWinPos = (float)pos_final / float(uSumLen);
 
-			bool in_transition = hasNextSample && m_transition > 0.0f && m_transition < 1.0f && fWinPos >= 1.0f - m_transition;
+			bool in_transition = hasNextSample && m_transition > 0.0f && m_transition < 1.0f && fWinPos >= transitionStart;
 
 			unsigned winId1 = winId0 + 1;
 			while (winId1 < windows.size() && windows[winId1].m_pos < fWinPos)
@@ -783,7 +864,8 @@ private:
 
 				}
 				
-				float x = (fWinPos - 1.0f) / m_transition;
+				float x = (fWinPos - transitionEnd) / (transitionEnd*m_transition);
+				if (x > 0.0f) x = 0.0f;
 				float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
 
 				win_final_dest = &l_win_transit;
