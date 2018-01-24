@@ -49,17 +49,74 @@ assert(divider==14)
 seq=[]
 
 for i in range(int(len(poem[1])/divider)):
+	line=()
 	for j in range(poem[0]):
-		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
-	seq+=[BL(48)]
+		line+=(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j]) 
+	seq+=[line, BL(48) ]
+	
+	line=()
 	for j in range(poem[0],divider):
-		seq+=[(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])]
-	seq+=[BL(48)]
-
+		line+=(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])
+	seq+=[line,BL(48)]
 
 buf=ScoreDraft.TrackBuffer()
-GePing= ScoreDraft.GePing()
-GePing.sing(buf, seq, 120)
 
-ScoreDraft.QPlayTrackBuffer(buf)
+#GePing= ScoreDraft.GePing_UTAU()
+#GePing.sing(buf, seq, 120)
 
+WanEr=  ScoreDraft.WanEr_UTAU()
+WanEr.tune ("rap_freq 1.5")
+
+def pinyinCVParser(CVLyric):
+	vowels= ["a","e","i","o","u","v"]
+	min_i=len(CVLyric)
+	for c in vowels:
+		i=CVLyric.find(c)
+		if i>-1 and i<min_i:
+			min_i=i
+	consonant= CVLyric[0:min_i]
+	vowel=CVLyric[min_i:len(CVLyric)]
+	if vowel=="i" and (consonant=="zh" or consonant=="ch" or consonant=="sh"):
+		vowel="ir"
+	if vowel=="i" and (consonant=="z" or consonant=="c" or consonant=="s"):
+		vowel="iz"
+	if vowel=="u" and (consonant=="j" or consonant=="q" or consonant=="x"):
+		vowel="v"
+	if vowel=="ia":
+		vowel="a"
+	if vowel=="iao":
+		vowel="ao"
+	if vowel=="ian":
+		vowel="an"
+	if vowel=="iang":
+		vowel="ang"
+	if vowel=="iong":
+		vowel="ong"
+	if vowel=="iu":
+		vowel="ou"
+	if vowel=="ua":
+		vowel="a"
+	if vowel=="uai":
+		vowel="ai"
+	if vowel=="uan":
+		vowel="an"
+	if vowel=="uai":
+		vowel="ai"
+	if vowel=="ui":
+		vowel="ei"
+	if vowel=="uang":
+		vowel="ang"
+	if vowel=="un":
+		vowel="en"
+	if vowel=="uo":
+		vowel="o"
+	return (consonant,vowel,CVLyric,"")
+
+ScoreDraft.UtauDraftSetCVParser(WanEr, pinyinCVParser)
+WanEr.tune("cv2vcv")
+
+WanEr.sing(buf, seq, 120)
+
+#ScoreDraft.QPlayTrackBuffer(buf)
+
+ScoreDraft.WriteTrackBufferToWav(buf, "rap.wav")

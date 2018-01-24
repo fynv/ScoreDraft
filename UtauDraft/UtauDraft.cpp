@@ -77,6 +77,8 @@ public:
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
 		m_CVParser = nullptr;
+
+		m_lyric_mode = 0;
 	}
 	~UtauDraft()
 	{
@@ -114,6 +116,24 @@ public:
 				if (sscanf(cmd + strlen("rap_distortion") + 1, "%f", &value))
 					m_rap_distortion = value;
 				return true;
+			}
+			else if (strcmp(command, "transition") == 0)
+			{
+				float value;
+				if (sscanf(cmd + strlen("transition") + 1, "%f", &value))
+					m_transition = value;
+			}
+			else if (strcmp(command, "cv") == 0)
+			{
+				m_lyric_mode = 0;
+			}
+			else if (strcmp(command, "cv2vcv") == 0)
+			{
+				m_lyric_mode = 1;
+			}
+			else if (strcmp(command, "cv2cvvc") == 0)
+			{
+				m_lyric_mode = 2;
 			}
 		}
 		return false;
@@ -285,6 +305,19 @@ public:
 
 	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
+		if (m_lyric_mode > 0)
+		{
+			if (m_CVParser == nullptr)
+			{
+				printf("CV-Parser not set. Unable to convert lyric. Using lyric as-is.\n");
+			}
+			else
+			{
+				if (m_lyric_mode == 1)
+					pieceList = _cv2vcv_singing(pieceList);
+			}
+		}
+
 		unsigned *lens = new unsigned[pieceList.size()];
 		float sumAllLen=0.0f;
 		unsigned uSumAllLen;
@@ -412,6 +445,19 @@ public:
 
 	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
+		if (m_lyric_mode > 0)
+		{
+			if (m_CVParser == nullptr)
+			{
+				printf("CV-Parser not set. Unable to convert lyric. Using lyric as-is.\n");
+			}
+			else
+			{
+				if (m_lyric_mode == 1)
+					pieceList = _cv2vcv_rap(pieceList);
+			}
+		}
+
 		unsigned *lens = new unsigned[pieceList.size()];
 		float sumAllLen = 0.0f;
 		unsigned uSumAllLen;
@@ -558,6 +604,106 @@ public:
 	}
 
 private:
+	SingingPieceInternalList _cv2vcv_singing(SingingPieceInternalList pieceList)
+	{
+		std::vector<std::string> lyric_converted_c;
+		std::vector<std::string> lyric_converted_v;
+		std::vector<std::string> lyric_converted_cv;
+
+		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		{
+			PyObject *byteCode = PyBytes_FromString(pieceList[i]->lyric.data());
+			PyObject* args = PyTuple_Pack(1, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
+			PyObject* rets = PyObject_CallObject(m_CVParser, args);
+
+			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 0), m_lyric_charset.data(), 0);
+			std::string c = PyBytes_AS_STRING(byteCode);
+
+			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 1), m_lyric_charset.data(), 0);
+			std::string v = PyBytes_AS_STRING(byteCode);
+
+			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 2), m_lyric_charset.data(), 0);
+			std::string cv = PyBytes_AS_STRING(byteCode);
+
+			lyric_converted_c.push_back(c);
+			lyric_converted_v.push_back(v);
+			lyric_converted_cv.push_back(cv);
+		}
+
+		SingingPieceInternalList list_converted;
+		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		{
+			std::string v;
+			if (i == 0)
+				v = "-";
+			else
+				v = lyric_converted_v[i - 1];
+
+			std::string cv = lyric_converted_cv[i];
+			if (cv == "") cv = lyric_converted_c[i] + lyric_converted_v[i];
+
+			std::string lyric_converted = v + " " + cv;
+
+			SingingPieceInternal_Deferred piece_converted;
+			*piece_converted = *pieceList[i];
+			piece_converted->lyric = lyric_converted;
+
+			list_converted.push_back(piece_converted);
+		}
+
+		return list_converted;
+	}
+
+	RapPieceInternalList _cv2vcv_rap(RapPieceInternalList pieceList)
+	{
+		std::vector<std::string> lyric_converted_c;
+		std::vector<std::string> lyric_converted_v;
+		std::vector<std::string> lyric_converted_cv;
+
+		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		{
+			PyObject *byteCode = PyBytes_FromString(pieceList[i]->lyric.data());
+			PyObject* args = PyTuple_Pack(1, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
+			PyObject* rets = PyObject_CallObject(m_CVParser, args);
+
+			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 0), m_lyric_charset.data(), 0);
+			std::string c = PyBytes_AS_STRING(byteCode);
+
+			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 1), m_lyric_charset.data(), 0);
+			std::string v = PyBytes_AS_STRING(byteCode);
+
+			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 2), m_lyric_charset.data(), 0);
+			std::string cv = PyBytes_AS_STRING(byteCode);
+
+			lyric_converted_c.push_back(c);
+			lyric_converted_v.push_back(v);
+			lyric_converted_cv.push_back(cv);
+		}
+
+		RapPieceInternalList list_converted;
+		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		{
+			std::string v;
+			if (i == 0)
+				v = "-";
+			else
+				v = lyric_converted_v[i - 1];
+
+			std::string cv = lyric_converted_cv[i];
+			if (cv == "") cv = lyric_converted_c[i] + lyric_converted_v[i];
+
+			std::string lyric_converted = v + " " + cv;
+
+			RapPieceInternal_Deferred piece_converted;
+			*piece_converted = *pieceList[i];
+			piece_converted->lyric = lyric_converted;
+
+			list_converted.push_back(piece_converted);
+		}
+
+		return list_converted;
+	}
+
 	float getFirstNoteHeadSamples(const char* lyric)
 	{
 		if (m_OtoMap->find(lyric) == m_OtoMap->end()) lyric = m_defaultLyric.data();
@@ -611,7 +757,11 @@ private:
 
 		bool hasNextSample = lyric_next != nullptr;
 
-		if (m_OtoMap->find(lyric) == m_OtoMap->end()) lyric = m_defaultLyric.data();
+		if (m_OtoMap->find(lyric) == m_OtoMap->end())
+		{
+			printf("%s\n", lyric);
+			lyric = m_defaultLyric.data();
+		}
 
 		// Current sample
 		VoiceLocation loc;
@@ -990,6 +1140,8 @@ private:
 	float m_rap_distortion;
 
 	PyObject* m_CVParser;
+
+	unsigned m_lyric_mode;
 };
 
 
@@ -1121,7 +1273,7 @@ static PyScoreDraft* s_PyScoreDraft;
 PyObject* UtauDraftSetCVParser(PyObject *args)
 {
 	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	PyObject* CVParser = PyTuple_GetItem(args, 0);
+	PyObject* CVParser = PyTuple_GetItem(args, 1);
 
 	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
 	singer.DownCast<UtauDraft>()->SetCVParser(CVParser);
@@ -1181,13 +1333,15 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 
 	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetCVParser", UtauDraftSetCVParser, "singer, CVParserFunc", "singer.id, CVParserFunc", 
 		"\t'''\n"
-		"\tSet a CVParser function for a UtauDraft singer. After this is done, it will be possible to generate VCV and CV-VC notes automatically"
+		"\tSet a CVParser function for a UtauDraft singer. After this is done, it will be possible to generate V-CV and CV-VC notes automatically"
 		"\tfrom CV lyrics set for each syllable. "
 		"\t"
 		"\tThe 'CVParserFunc' has the following form:"
 		"\tdef CVParserFunc(CVlyric):"
 		"\t\t..."
-		"\t\treturn (C,V,CV)"
-		"\tThe CV string will be used when generating CV or VCV notes instead of concatenating C and V"
+		"\t\treturn (C,V,CV,VC)"
+		"\tThe CV string will be used when generating CV or V-CV notes instead of concatenating C and V"
+		"\tThe VC string should be kept empty unless the syllable contains a C tail, in which case the C tail"
+		"\tshould be used to generate the VC note instead using the C head of the next note"
 		"\t'''\n");
 }
