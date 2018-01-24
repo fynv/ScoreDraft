@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 
+find_package(PythonLibs 3 REQUIRED)
+
 set(SOURCES
 UtauDraft.cpp
 OtoMap.cpp
@@ -12,6 +14,7 @@ FrqData.h
 )
 
 set (INCLUDE_DIR
+${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
 ../WavUtil
@@ -20,6 +23,7 @@ set (INCLUDE_DIR
 )
 
 set (LINK_LIBS 
+${PYTHON_LIBRARIES}
 ScoreDraftCore
 WavUtil
 DSPUtil)

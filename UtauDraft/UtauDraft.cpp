@@ -1,4 +1,5 @@
 #include "PyScoreDraft.h"
+#include <Python.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -75,6 +76,11 @@ public:
 	{
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
+		m_CVParser = nullptr;
+	}
+	~UtauDraft()
+	{
+		if (m_CVParser)	Py_DECREF(m_CVParser);
 	}
 
 	void SetOtoMap(OtoMap* otoMap)
@@ -86,6 +92,13 @@ public:
 	void SetCharset(const char* charset)
 	{
 		m_lyric_charset = charset;
+	}
+
+	void SetCVParser(PyObject* CVParser)
+	{
+		if (m_CVParser)	Py_DECREF(m_CVParser);
+		m_CVParser = CVParser;
+		if (m_CVParser!=nullptr) Py_INCREF(m_CVParser);
 	}
 
 	virtual bool Tune(const char* cmd)
@@ -975,6 +988,8 @@ private:
 
 	float m_transition;
 	float m_rap_distortion;
+
+	PyObject* m_CVParser;
 };
 
 
@@ -1100,9 +1115,25 @@ private:
 	std::string m_charecter_txt;
 };
 
+static PyScoreDraft* s_PyScoreDraft;
+
+
+PyObject* UtauDraftSetCVParser(PyObject *args)
+{
+	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	PyObject* CVParser = PyTuple_GetItem(args, 0);
+
+	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
+	singer.DownCast<UtauDraft>()->SetCVParser(CVParser);
+
+	return PyLong_FromUnsignedLong(0);
+}
+
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
+	s_PyScoreDraft = pyScoreDraft;
+
 	static std::vector<UtauDraftInitializer> s_initializers;
 
 
@@ -1147,4 +1178,16 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 
 	for (unsigned i = 0; i < s_initializers.size(); i++)
 		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName()+"_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
+
+	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetCVParser", UtauDraftSetCVParser, "singer, CVParserFunc", "singer.id, CVParserFunc", 
+		"\t'''\n"
+		"\tSet a CVParser function for a UtauDraft singer. After this is done, it will be possible to generate VCV and CV-VC notes automatically"
+		"\tfrom CV lyrics set for each syllable. "
+		"\t"
+		"\tThe 'CVParserFunc' has the following form:"
+		"\tdef CVParserFunc(CVlyric):"
+		"\t\t..."
+		"\t\treturn (C,V,CV)"
+		"\tThe CV string will be used when generating CV or VCV notes instead of concatenating C and V"
+		"\t'''\n");
 }
