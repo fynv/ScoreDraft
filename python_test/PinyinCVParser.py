@@ -43,4 +43,8 @@ def pinyinCVParser(CVLyric):
 		vowel="o"
 	if CVLyric=="yi" or CVLyric=="wu" or CVLyric=="yu":
 		consonant=""
-	return (consonant,vowel,CVLyric,"")
+
+	if consonant == "":
+		return ( [('v', vowel)], [(0, CVLyric)])
+	else:
+		return ( [('c', consonant), ('v', vowel)], [(0, CVLyric)] )

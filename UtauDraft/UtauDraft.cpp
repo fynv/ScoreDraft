@@ -141,166 +141,20 @@ public:
 
 	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
 	{
-		if (piece.notes.size() < 1) return;
-
-		float sumLen = 0.0f;
-		for (size_t i = 0; i < piece.notes.size(); i++)
-			sumLen += piece.notes[i].fNumOfSamples;
-
-		float firstNoteHead = this->getFirstNoteHeadSamples(piece.lyric.data());
-		sumLen += firstNoteHead;
-
-		unsigned uSumLen = (unsigned)ceilf(sumLen);
-
-		noteBuf->m_sampleNum = uSumLen;
-		noteBuf->m_alignPos = (unsigned)firstNoteHead;
-		noteBuf->Allocate();
-
-		float *freqMap = new float[uSumLen];
-
-		unsigned pos = 0;
-		float targetPos = firstNoteHead;
-		float sampleFreq;
-		for (size_t i = 0; i < piece.notes.size(); i++)
-		{
-			sampleFreq = piece.notes[i].sampleFreq;
-			targetPos += piece.notes[i].fNumOfSamples;
-
-			for (; (float)pos < targetPos && pos<uSumLen; pos++)
-			{
-				freqMap[pos] = sampleFreq;
-			}
-		}
-		for (; pos < uSumLen; pos++)
-		{
-			freqMap[pos] = sampleFreq;
-		}
-
-		/// Make frequency tweakings here
-
-		/// Transition
-		if (m_transition > 0.0f && m_transition<1.0f)
-		{
-			targetPos = firstNoteHead;
-			for (size_t i = 0; i < piece.notes.size() - 1; i++)
-			{
-				float sampleFreq0 = piece.notes[i].sampleFreq;
-				float sampleFreq1 = piece.notes[i + 1].sampleFreq;
-				targetPos += piece.notes[i].fNumOfSamples;
-
-				float transStart =  targetPos - m_transition*piece.notes[i].fNumOfSamples;
-				for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
-				{
-					float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
-					freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
-				}
-
-			}
-		}
-
-		/// Viberation
-		/*for (pos = 0; pos < uSumLen; pos++)
-		{
-		float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
-		freqMap[pos] *= vib;
-		}*/
-
-		float phase = 0.0f;
-		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase, true);
-
-		delete[] freqMap;
-		// Envolope
-		for (unsigned pos = 0; pos < uSumLen; pos++)
-		{
-			float x2 = (float)pos / sumLen;
-			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-			noteBuf->m_data[pos] *= amplitude;
-		}
+		SingingPieceInternal_Deferred dPiece;
+		*dPiece = piece;
+		SingingPieceInternalList pieceList;
+		pieceList.push_back(dPiece);
+		GenerateWave_SingConsecutive(pieceList, noteBuf);
 	}
 
 	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
 	{
-		float sumLen = piece.fNumOfSamples;
-
-		float firstNoteHead = this->getFirstNoteHeadSamples(piece.lyric.data());
-		sumLen += firstNoteHead;
-
-		unsigned uSumLen = (unsigned)ceilf(sumLen);
-
-		noteBuf->m_sampleNum = uSumLen;
-		noteBuf->m_alignPos = (unsigned)firstNoteHead;
-		noteBuf->Allocate();
-
-		float *freqMap = new float[uSumLen];
-
-		if (piece.tone <= 1)
-		{
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				freqMap[i] = piece.baseSampleFreq;
-			}
-		}
-		else if (piece.tone == 2)
-		{
-			float lowFreq = piece.baseSampleFreq*0.7f;
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (piece.baseSampleFreq - lowFreq)*x;
-			}
-		}
-		else if (piece.tone == 3)
-		{
-			float highFreq = piece.baseSampleFreq*0.75f;
-			float lowFreq = piece.baseSampleFreq*0.5f;
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
-			}
-		}
-		else if (piece.tone == 4)
-		{
-			float lowFreq = piece.baseSampleFreq*0.5f;
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = piece.baseSampleFreq + (lowFreq - piece.baseSampleFreq)*x;
-			}
-		}
-
-		float phase = 0.0f;
-		_generateWave(piece.lyric.data(), nullptr, uSumLen, freqMap, noteBuf, 0, phase, true);
-
-		delete[] freqMap;
-
-		// Envolope
-		for (unsigned pos = 0; pos < uSumLen; pos++)
-		{
-			float x2 = (float)pos / sumLen;
-			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-			noteBuf->m_data[pos] *= amplitude;
-		}
-
-		/// Distortion 
-		if (m_rap_distortion > 1.0f)
-		{
-			float maxV = 0.0f;
-			for (unsigned pos = 0; pos < uSumLen; pos++)
-			{
-				float v = noteBuf->m_data[pos];
-				if (fabsf(v) > maxV) maxV = v;
-			}
-
-			for (unsigned pos = 0; pos < uSumLen; pos++)
-			{
-				float v = noteBuf->m_data[pos];
-				v *= 10.0f;
-				if (v > maxV) v = maxV;
-				if (v < -maxV) v = -maxV;
-				noteBuf->m_data[pos] = v;
-			}
-		}
+		RapPieceInternal_Deferred dPiece;
+		*dPiece = piece;
+		RapPieceInternalList pieceList;
+		pieceList.push_back(dPiece);
+		GenerateWave_RapConsecutive(pieceList, noteBuf);
 	}
 
 	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
@@ -616,18 +470,57 @@ private:
 			PyObject* args = PyTuple_Pack(1, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 			PyObject* rets = PyObject_CallObject(m_CVParser, args);
 
-			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 0), m_lyric_charset.data(), 0);
-			std::string c = PyBytes_AS_STRING(byteCode);
+			PyObject* list1 = PyTuple_GetItem(rets, 0);
+			PyObject* list2 = PyTuple_GetItem(rets, 1);
 
-			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 1), m_lyric_charset.data(), 0);
-			std::string v = PyBytes_AS_STRING(byteCode);
+			size_t count1 = PyList_Size(list1);
+			if (count1 < 1) continue;
 
-			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 2), m_lyric_charset.data(), 0);
-			std::string cv = PyBytes_AS_STRING(byteCode);
+			std::string c;
+			std::string v;
+			std::string cv;
+
+			PyObject* tuple1 = PyList_GetItem(list1, 0);
+			const char* marker1 = _PyUnicode_AsString(PyTuple_GetItem(tuple1, 0));
+			if (strcmp(marker1, "c")==0)
+			{
+				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
+				c = PyBytes_AS_STRING(byteCode);
+
+				if (count1 > 1)
+				{
+					PyObject* tuple2 = PyList_GetItem(list1, 1);
+					const char* marker2 = _PyUnicode_AsString(PyTuple_GetItem(tuple2, 0));
+					if (strcmp(marker2, "v") == 0)
+					{
+						byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple2, 1), m_lyric_charset.data(), 0);
+						v = PyBytes_AS_STRING(byteCode);						
+					}
+				}
+			}
+			else if (strcmp(marker1, "v") == 0)
+			{
+				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
+				v = PyBytes_AS_STRING(byteCode);
+			}
+
+			size_t count2 = PyList_Size(list2);
+			if (count2 > 0)
+			{
+				PyObject* cv_tuple = PyList_GetItem(list2, 0);
+				unsigned index = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(cv_tuple, 0));
+				if (index == 0)
+				{
+					byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(cv_tuple, 1), m_lyric_charset.data(), 0);
+					cv = PyBytes_AS_STRING(byteCode);
+				}
+			}
 
 			lyric_converted_c.push_back(c);
 			lyric_converted_v.push_back(v);
 			lyric_converted_cv.push_back(cv);
+
+			//printf("%s %s %s\n", c.data(), v.data(), cv.data());
 		}
 
 		SingingPieceInternalList list_converted;
@@ -666,14 +559,51 @@ private:
 			PyObject* args = PyTuple_Pack(1, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 			PyObject* rets = PyObject_CallObject(m_CVParser, args);
 
-			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 0), m_lyric_charset.data(), 0);
-			std::string c = PyBytes_AS_STRING(byteCode);
+			PyObject* list1 = PyTuple_GetItem(rets, 0);
+			PyObject* list2 = PyTuple_GetItem(rets, 1);
 
-			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 1), m_lyric_charset.data(), 0);
-			std::string v = PyBytes_AS_STRING(byteCode);
+			size_t count1 = PyList_Size(list1);
+			if (count1 < 1) continue;
 
-			byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(rets, 2), m_lyric_charset.data(), 0);
-			std::string cv = PyBytes_AS_STRING(byteCode);
+			std::string c;
+			std::string v;
+			std::string cv;
+
+			PyObject* tuple1 = PyList_GetItem(list1, 0);
+			const char* marker1 = _PyUnicode_AsString(PyTuple_GetItem(tuple1, 0));
+			if (strcmp(marker1, "c") == 0)
+			{
+				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
+				c = PyBytes_AS_STRING(byteCode);
+
+				if (count1 > 1)
+				{
+					PyObject* tuple2 = PyList_GetItem(list1, 1);
+					const char* marker2 = _PyUnicode_AsString(PyTuple_GetItem(tuple2, 0));
+					if (strcmp(marker2, "v") == 0)
+					{
+						byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple2, 1), m_lyric_charset.data(), 0);
+						v = PyBytes_AS_STRING(byteCode);
+					}
+				}
+			}
+			else if (strcmp(marker1, "v") == 0)
+			{
+				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
+				v = PyBytes_AS_STRING(byteCode);
+			}
+
+			size_t count2 = PyList_Size(list2);
+			if (count2 > 0)
+			{
+				PyObject* cv_tuple = PyList_GetItem(list2, 0);
+				unsigned index = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(cv_tuple, 0));
+				if (index == 0)
+				{
+					byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(cv_tuple, 1), m_lyric_charset.data(), 0);
+					cv = PyBytes_AS_STRING(byteCode);
+				}
+			}
 
 			lyric_converted_c.push_back(c);
 			lyric_converted_v.push_back(v);
@@ -702,6 +632,11 @@ private:
 		}
 
 		return list_converted;
+	}
+
+	SingingPieceInternalList _cv2cvvc_singing(SingingPieceInternalList pieceList)
+	{
+
 	}
 
 	float getFirstNoteHeadSamples(const char* lyric)
@@ -1339,9 +1274,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		"\tThe 'CVParserFunc' has the following form:"
 		"\tdef CVParserFunc(CVlyric):"
 		"\t\t..."
-		"\t\treturn (C,V,CV,VC)"
-		"\tThe CV string will be used when generating CV or V-CV notes instead of concatenating C and V"
-		"\tThe VC string should be kept empty unless the syllable contains a C tail, in which case the C tail"
-		"\tshould be used to generate the VC note instead using the C head of the next note"
+		"\t\treturn ([('c',consonant), ('v', vowel)... ], [ (index1, cv1), (index2, cv2)... ])"
+		"\tThe return value consists of 2 lists."
+		"\tThe first list consists of decomposed consonant/vowel strings"
+		"\tThe second list consists of cv replacements for consecutive c-v, which are used for cv and vcv lyric generation."
+		"\tIf there's not replacement set, c and v strings will be concatenated to generate the cv and vcv lyric"
 		"\t'''\n");
 }
