@@ -3,7 +3,7 @@
 import ScoreDraft
 from ScoreDraftNotes import *
 from tang300 import poems
-import PinyinLyricConverter
+import TsuroVCVConverter
 
 #seq = [ ("kan", 4, 48), ("jian", 4, 24), ("de", 4,24), ("kan", 4, 24), ("bu", 2, 24), ("jian", 4, 24), ("de", 4,24) ]
 #seq += [ ("shun", 4, 48), ("jian", 1,24), ("de", 4,24), ("yong",3,48), ("heng",2,24), ("de", 4,24)]
@@ -68,7 +68,7 @@ buf=ScoreDraft.TrackBuffer()
 
 WanEr=  ScoreDraft.WanEr_UTAU()
 WanEr.tune ("rap_freq 1.5")
-ScoreDraft.UtauDraftSetLyricConverter(WanEr, PinyinLyricConverter.pinyinLyricConverter)
+ScoreDraft.UtauDraftSetLyricConverter(WanEr, TsuroVCVConverter.TsuroVCVConverter)
 WanEr.sing(buf, seq, 120)
 
 

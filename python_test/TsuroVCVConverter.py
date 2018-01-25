@@ -1,4 +1,4 @@
-def pinyinGetVowel(CVLyric):
+def getVowel(CVLyric):
 	vowels= ["a","e","i","o","u","v"]
 	min_i=len(CVLyric)
 	for c in vowels:
@@ -44,8 +44,8 @@ def pinyinGetVowel(CVLyric):
 		vowel="o"
 	return vowel
 
-def pinyinLyricConverter(LyricForEachSyllable):
-	vowels= [pinyinGetVowel(lyric) for lyric in  LyricForEachSyllable]
+def TsuroVCVConverter(LyricForEachSyllable):
+	vowels= [getVowel(lyric) for lyric in  LyricForEachSyllable]
 	ret=[]
 	for i in range(len(LyricForEachSyllable)):
 		v='-'
