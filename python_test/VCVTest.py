@@ -2,7 +2,7 @@
 
 import ScoreDraft
 from ScoreDraftNotes import *
-import PinyinCVParser
+import PinyinLyricConverter
 
 doc=ScoreDraft.Document()
 
@@ -36,8 +36,7 @@ doc.setReferenceFreqeuncy(440.0)
 WanEr=  ScoreDraft.WanEr_UTAU()
 WanEr.tune ("rap_freq 2.0")
 
-ScoreDraft.UtauDraftSetCVParser(WanEr, PinyinCVParser.pinyinCVParser)
-WanEr.tune("cv2vcv")
+ScoreDraft.UtauDraftSetLyricConverter(WanEr, PinyinLyricConverter.pinyinLyricConverter)
 
 doc.sing(seq, WanEr)
 doc.mixDown('vcv.wav')

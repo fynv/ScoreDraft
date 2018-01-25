@@ -76,13 +76,12 @@ public:
 	{
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
-		m_CVParser = nullptr;
+		m_LyricConverter = nullptr;
 
-		m_lyric_mode = 0;
 	}
 	~UtauDraft()
 	{
-		if (m_CVParser)	Py_DECREF(m_CVParser);
+		if (m_LyricConverter) Py_DECREF(m_LyricConverter);
 	}
 
 	void SetOtoMap(OtoMap* otoMap)
@@ -96,11 +95,11 @@ public:
 		m_lyric_charset = charset;
 	}
 
-	void SetCVParser(PyObject* CVParser)
+	void SetLyricConverter(PyObject* lyricConverter)
 	{
-		if (m_CVParser)	Py_DECREF(m_CVParser);
-		m_CVParser = CVParser;
-		if (m_CVParser!=nullptr) Py_INCREF(m_CVParser);
+		if (m_LyricConverter != nullptr) Py_DECREF(m_LyricConverter);
+		m_LyricConverter = lyricConverter;
+		if (m_LyricConverter != nullptr) Py_INCREF(m_LyricConverter);
 	}
 
 	virtual bool Tune(const char* cmd)
@@ -122,18 +121,6 @@ public:
 				float value;
 				if (sscanf(cmd + strlen("transition") + 1, "%f", &value))
 					m_transition = value;
-			}
-			else if (strcmp(command, "cv") == 0)
-			{
-				m_lyric_mode = 0;
-			}
-			else if (strcmp(command, "cv2vcv") == 0)
-			{
-				m_lyric_mode = 1;
-			}
-			else if (strcmp(command, "cv2cvvc") == 0)
-			{
-				m_lyric_mode = 2;
 			}
 		}
 		return false;
@@ -159,18 +146,10 @@ public:
 
 	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
-		if (m_lyric_mode > 0)
+		if (m_LyricConverter != nullptr)
 		{
-			if (m_CVParser == nullptr)
-			{
-				printf("CV-Parser not set. Unable to convert lyric. Using lyric as-is.\n");
-			}
-			else
-			{
-				if (m_lyric_mode == 1)
-					pieceList = _cv2vcv_singing(pieceList);
-			}
-		}
+			pieceList = _convertLyric_singing(pieceList);
+		}			
 
 		unsigned *lens = new unsigned[pieceList.size()];
 		float sumAllLen=0.0f;
@@ -297,37 +276,73 @@ public:
 		delete[] lens;
 	}
 
+	struct LyricSeg
+	{
+		std::string lyric;
+		float fNumOfSamples;
+	};
+
+	struct ConvertedRapPiece
+	{
+		float baseSampleFreq;
+		int tone;
+		std::vector<LyricSeg> lyricSegs;
+	};
+
+	typedef Deferred<ConvertedRapPiece> ConvertedRapPiece_Deferred;
+
 	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
-		if (m_lyric_mode > 0)
+		std::vector< ConvertedRapPiece_Deferred> convertedPieces;
+
+		if (m_LyricConverter != nullptr)
 		{
-			if (m_CVParser == nullptr)
+			convertedPieces = _convertLyric_rap(pieceList);
+		}
+		else
+		{
+			for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 			{
-				printf("CV-Parser not set. Unable to convert lyric. Using lyric as-is.\n");
+				RapPieceInternal_Deferred piece = pieceList[i];
+
+				ConvertedRapPiece_Deferred converted_piece;
+				converted_piece->baseSampleFreq = piece->baseSampleFreq;
+				converted_piece->tone = piece->tone;
+
+				LyricSeg lseg;
+				lseg.lyric = piece->lyric; 
+				lseg.fNumOfSamples = piece->fNumOfSamples;
+
+				converted_piece->lyricSegs.push_back(lseg);
+				convertedPieces.push_back(converted_piece);
 			}
-			else
-			{
-				if (m_lyric_mode == 1)
-					pieceList = _cv2vcv_rap(pieceList);
-			}
+
 		}
 
-		unsigned *lens = new unsigned[pieceList.size()];
+		unsigned segCount = 0;
+		for (unsigned i = 0; i < convertedPieces.size(); i++)
+			segCount += (unsigned)convertedPieces[i]->lyricSegs.size();
+		
+
+		unsigned *lens = new unsigned[segCount];
 		float sumAllLen = 0.0f;
 		unsigned uSumAllLen;
 
-		float firstNoteHead = this->getFirstNoteHeadSamples(pieceList[0]->lyric.data());
+		float firstNoteHead = this->getFirstNoteHeadSamples(convertedPieces[0]->lyricSegs[0].lyric.data());
 
-		for (unsigned j = 0; j < pieceList.size(); j++)
+		unsigned i_seg = 0;
+		for (unsigned j = 0; j < convertedPieces.size(); j++)
 		{
-			RapPieceInternal& piece = *pieceList[j];
-			float sumLen = piece.fNumOfSamples;
-
-			if (j == 0)	sumLen += firstNoteHead;
-
-			float oldSumAllLen = sumAllLen;
-			sumAllLen += sumLen;
-			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
+			ConvertedRapPiece_Deferred converted_piece = convertedPieces[j];
+			for (unsigned k = 0; k < (unsigned)converted_piece->lyricSegs.size(); k++, i_seg++)
+			{
+				LyricSeg lseg = converted_piece->lyricSegs[k];			
+				float sumLen = lseg.fNumOfSamples;
+				if (j == 0 && k==0)	sumLen += firstNoteHead;
+				float oldSumAllLen = sumAllLen;
+				sumAllLen += sumLen;
+				lens[i_seg] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
+			}
 		}
 		uSumAllLen = (unsigned)ceilf(sumAllLen);
 
@@ -338,97 +353,120 @@ public:
 		unsigned noteBufPos = 0;
 		float phase = 0.0f;
 
-		for (unsigned j = 0; j < pieceList.size(); j++)
+		unsigned i_seg_start = 0;
+		for (unsigned j = 0; j < convertedPieces.size(); j++)
 		{
-			RapPieceInternal& piece = *pieceList[j];
+			ConvertedRapPiece_Deferred converted_piece = convertedPieces[j];
 
-			unsigned uSumLen = lens[j];
-			float *freqMap = new float[uSumLen];
-
-			if (piece.tone <= 1)
+			unsigned uPieceSumLen = 0;
+			unsigned i_seg = i_seg_start;
+			for (unsigned k = 0; k < (unsigned)converted_piece->lyricSegs.size(); k++, i_seg++)
 			{
-				for (unsigned i = 0; i < uSumLen; i++)
-				{
-					freqMap[i] = piece.baseSampleFreq;
-				}
-			}
-			else if (piece.tone == 2)
-			{
-				float lowFreq = piece.baseSampleFreq*0.7f;
-				for (unsigned i = 0; i < uSumLen; i++)
-				{
-					float x = (float)i / (float)(uSumLen - 1);
-					freqMap[i] = lowFreq + (piece.baseSampleFreq - lowFreq)*x;
-				}
-			}
-			else if (piece.tone == 3)
-			{
-				float highFreq = piece.baseSampleFreq*0.75f;
-				float lowFreq = piece.baseSampleFreq*0.5f;
-				for (unsigned i = 0; i < uSumLen; i++)
-				{
-					float x = (float)i / (float)(uSumLen - 1);
-					freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
-				}
-			}
-			else if (piece.tone == 4)
-			{
-				float lowFreq = piece.baseSampleFreq*0.5f;
-				for (unsigned i = 0; i < uSumLen; i++)
-				{
-					float x = (float)i / (float)(uSumLen - 1);
-					freqMap[i] = piece.baseSampleFreq + (lowFreq - piece.baseSampleFreq)*x;
-				}
+				unsigned uSumLen = lens[i_seg];
+				uPieceSumLen += uSumLen;
 			}
 
-			/// Transition
-			if (m_transition > 0.0f && m_transition < 1.0f)
+			unsigned i_sample_start = 0;
+			i_seg = i_seg_start;
+			for (unsigned k = 0; k < (unsigned)converted_piece->lyricSegs.size(); k++, i_seg++)
 			{
-				if (j < pieceList.size() - 1)
+
+				unsigned uSumLen = lens[i_seg];
+				float *freqMap = new float[uSumLen];
+
+				if (converted_piece->tone <= 1)
 				{
-					RapPieceInternal& piece_next = *pieceList[j+1];
-
-					float sampleFreq_next;
-					if (piece_next.tone <= 2)
+					for (unsigned i = 0; i < uSumLen; i++)
 					{
-						sampleFreq_next = piece_next.baseSampleFreq;
-					}
-					else if (piece_next.tone == 3)
-					{
-						sampleFreq_next = piece_next.baseSampleFreq*0.75f;
-					}
-					else if (piece_next.tone == 4)
-					{
-						sampleFreq_next = piece_next.baseSampleFreq*0.5f;
-					}
-
-					float transStart = (float)uSumLen - m_transition*(float)uSumLen;
-
-					for (unsigned pos = (unsigned)ceilf(transStart); pos <uSumLen; pos++)
-					{
-						float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
-						freqMap[pos] = (1.0f - k)* freqMap[pos] + k*sampleFreq_next;
+						freqMap[i] = converted_piece->baseSampleFreq;
 					}
 				}
+				else if (converted_piece->tone == 2)
+				{
+					float lowFreq = converted_piece->baseSampleFreq*0.7f;
+					for (unsigned i = 0; i < uSumLen; i++)
+					{
+						float x = (float)(i + i_sample_start) / (float)(uPieceSumLen - 1);
+						freqMap[i] = lowFreq + (converted_piece->baseSampleFreq - lowFreq)*x;
+					}
+				}
+				else if (converted_piece->tone == 3)
+				{
+					float highFreq = converted_piece->baseSampleFreq*0.75f;
+					float lowFreq = converted_piece->baseSampleFreq*0.5f;
+					for (unsigned i = 0; i < uSumLen; i++)
+					{
+						float x = (float)(i + i_sample_start) / (float)(uPieceSumLen - 1);
+						freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
+					}
+				}
+				else if (converted_piece->tone == 4)
+				{
+					float lowFreq = converted_piece->baseSampleFreq*0.5f;
+					for (unsigned i = 0; i < uSumLen; i++)
+					{
+						float x = (float)(i + i_sample_start) / (float)(uPieceSumLen - 1);
+						freqMap[i] = converted_piece->baseSampleFreq + (lowFreq - converted_piece->baseSampleFreq)*x;
+					}
+				}
+
+				/// Transition
+				if (m_transition > 0.0f && m_transition < 1.0f)
+				{
+					if (j < convertedPieces.size() - 1 && k == (unsigned)converted_piece->lyricSegs.size()-1)
+					{
+						ConvertedRapPiece& piece_next = *convertedPieces[j];
+
+						float sampleFreq_next;
+						if (piece_next.tone <= 2)
+						{
+							sampleFreq_next = piece_next.baseSampleFreq;
+						}
+						else if (piece_next.tone == 3)
+						{
+							sampleFreq_next = piece_next.baseSampleFreq*0.75f;
+						}
+						else if (piece_next.tone == 4)
+						{
+							sampleFreq_next = piece_next.baseSampleFreq*0.5f;
+						}
+
+						float transStart = (float)uSumLen - m_transition*(float)uSumLen;
+
+						for (unsigned pos = (unsigned)ceilf(transStart); pos <uSumLen; pos++)
+						{
+							float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
+							freqMap[pos] = (1.0f - k)* freqMap[pos] + k*sampleFreq_next;
+						}
+					}
+				}
+
+				const char* lyric_next = nullptr;
+				if (k < (unsigned)converted_piece->lyricSegs.size() - 1)
+				{
+					lyric_next = converted_piece->lyricSegs[k + 1].lyric.data();
+				}
+				else if (j < convertedPieces.size() - 1)
+				{
+					lyric_next = convertedPieces[j + 1]->lyricSegs[0].lyric.data();
+				}
+
+				_generateWave(converted_piece->lyricSegs[k].lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
+
+				delete[] freqMap;
+
+				noteBufPos += lens[i_seg];
+
+				i_sample_start += uSumLen;
 			}
 
-			const char* lyric_next = nullptr;
-			if (j < pieceList.size() - 1)
-			{
-				lyric_next = pieceList[j + 1]->lyric.data();
-			}
-
-			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
-
-			delete[] freqMap;
-
-			noteBufPos += lens[j];
+			i_seg_start += (unsigned)converted_piece->lyricSegs.size();
 		}
 
 		// Envolope
 		for (unsigned pos = 0; pos < uSumAllLen; pos++)
 		{
-			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[pieceList.size() - 1];
+			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[segCount - 1];
 			float amplitude = 1.0f - expf(-x2*10.0f);
 			noteBuf->m_data[pos] *= amplitude;
 		}
@@ -458,185 +496,138 @@ public:
 	}
 
 private:
-	SingingPieceInternalList _cv2vcv_singing(SingingPieceInternalList pieceList)
+	SingingPieceInternalList _convertLyric_singing(SingingPieceInternalList pieceList)
 	{
-		std::vector<std::string> lyric_converted_c;
-		std::vector<std::string> lyric_converted_v;
-		std::vector<std::string> lyric_converted_cv;
-
+		PyObject* lyricList=PyList_New(0);
 		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 		{
 			PyObject *byteCode = PyBytes_FromString(pieceList[i]->lyric.data());
-			PyObject* args = PyTuple_Pack(1, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
-			PyObject* rets = PyObject_CallObject(m_CVParser, args);
-
-			PyObject* list1 = PyTuple_GetItem(rets, 0);
-			PyObject* list2 = PyTuple_GetItem(rets, 1);
-
-			size_t count1 = PyList_Size(list1);
-			if (count1 < 1) continue;
-
-			std::string c;
-			std::string v;
-			std::string cv;
-
-			PyObject* tuple1 = PyList_GetItem(list1, 0);
-			const char* marker1 = _PyUnicode_AsString(PyTuple_GetItem(tuple1, 0));
-			if (strcmp(marker1, "c")==0)
-			{
-				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
-				c = PyBytes_AS_STRING(byteCode);
-
-				if (count1 > 1)
-				{
-					PyObject* tuple2 = PyList_GetItem(list1, 1);
-					const char* marker2 = _PyUnicode_AsString(PyTuple_GetItem(tuple2, 0));
-					if (strcmp(marker2, "v") == 0)
-					{
-						byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple2, 1), m_lyric_charset.data(), 0);
-						v = PyBytes_AS_STRING(byteCode);						
-					}
-				}
-			}
-			else if (strcmp(marker1, "v") == 0)
-			{
-				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
-				v = PyBytes_AS_STRING(byteCode);
-			}
-
-			size_t count2 = PyList_Size(list2);
-			if (count2 > 0)
-			{
-				PyObject* cv_tuple = PyList_GetItem(list2, 0);
-				unsigned index = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(cv_tuple, 0));
-				if (index == 0)
-				{
-					byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(cv_tuple, 1), m_lyric_charset.data(), 0);
-					cv = PyBytes_AS_STRING(byteCode);
-				}
-			}
-
-			lyric_converted_c.push_back(c);
-			lyric_converted_v.push_back(v);
-			lyric_converted_cv.push_back(cv);
-
-			//printf("%s %s %s\n", c.data(), v.data(), cv.data());
+			PyList_Append(lyricList, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 		}
+		PyObject* args = PyTuple_Pack(1, lyricList);
+		PyObject* rets = PyObject_CallObject(m_LyricConverter, args);
 
 		SingingPieceInternalList list_converted;
 		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 		{
-			std::string v;
-			if (i == 0)
-				v = "-";
-			else
-				v = lyric_converted_v[i - 1];
+			PyObject* tuple = PyList_GetItem(rets, i);
+			unsigned count = (unsigned)PyTuple_Size(tuple);
 
-			std::string cv = lyric_converted_cv[i];
-			if (cv == "") cv = lyric_converted_c[i] + lyric_converted_v[i];
+			std::vector<std::string> lyrics;
+			std::vector<float> weights;
 
-			std::string lyric_converted = v + " " + cv;
+			float sum_weight = 0.0f;
+			for (unsigned j = 0; j < count; j+=2)
+			{
+				PyObject *byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple, j), m_lyric_charset.data(), 0);
+				std::string lyric = PyBytes_AS_STRING(byteCode);
+				lyrics.push_back(lyric);
 
-			SingingPieceInternal_Deferred piece_converted;
-			*piece_converted = *pieceList[i];
-			piece_converted->lyric = lyric_converted;
+				float weight=1.0f;
+				if (j + 1 < count)
+				{
+					weight = (float)PyFloat_AsDouble(PyTuple_GetItem(tuple, j + 1));
+				}
+				weights.push_back(weight);
+				
+				sum_weight += weight;
+			}	
 
-			list_converted.push_back(piece_converted);
+			SingingPieceInternal_Deferred piece = pieceList[i];
+
+			float totalNumSamples = 0.0f;
+			for (unsigned j = 0; j < (unsigned)piece->notes.size(); j++)
+			{
+				SingerNoteParams param = piece->notes[j];
+				totalNumSamples += param.fNumOfSamples;
+			}
+
+			float startPos = 0.0f;
+			unsigned i_note = 0;
+			float noteStartPos = 0.0f;
+
+			for (unsigned j = 0; j < count; j += 2)
+			{
+				float weight = weights[j] / sum_weight;
+				float endPos = startPos + weight* totalNumSamples;
+				
+				SingingPieceInternal_Deferred newPiece;
+				newPiece->lyric = lyrics[j];
+
+				while (endPos > noteStartPos)
+				{
+					SingerNoteParams newParam;
+					newParam.sampleFreq = piece->notes[i_note].sampleFreq;
+					newParam.fNumOfSamples = min(piece->notes[i_note].fNumOfSamples, endPos - noteStartPos);
+					newPiece->notes.push_back(newParam);				
+					
+					noteStartPos += piece->notes[i_note].fNumOfSamples;
+					i_note++;
+				}
+				startPos = endPos;				
+				list_converted.push_back(newPiece);
+			}		
 		}
 
 		return list_converted;
 	}
 
-	RapPieceInternalList _cv2vcv_rap(RapPieceInternalList pieceList)
+	std::vector< ConvertedRapPiece_Deferred> _convertLyric_rap(RapPieceInternalList pieceList)
 	{
-		std::vector<std::string> lyric_converted_c;
-		std::vector<std::string> lyric_converted_v;
-		std::vector<std::string> lyric_converted_cv;
-
+		PyObject* lyricList = PyList_New(0);
 		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 		{
 			PyObject *byteCode = PyBytes_FromString(pieceList[i]->lyric.data());
-			PyObject* args = PyTuple_Pack(1, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
-			PyObject* rets = PyObject_CallObject(m_CVParser, args);
-
-			PyObject* list1 = PyTuple_GetItem(rets, 0);
-			PyObject* list2 = PyTuple_GetItem(rets, 1);
-
-			size_t count1 = PyList_Size(list1);
-			if (count1 < 1) continue;
-
-			std::string c;
-			std::string v;
-			std::string cv;
-
-			PyObject* tuple1 = PyList_GetItem(list1, 0);
-			const char* marker1 = _PyUnicode_AsString(PyTuple_GetItem(tuple1, 0));
-			if (strcmp(marker1, "c") == 0)
-			{
-				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
-				c = PyBytes_AS_STRING(byteCode);
-
-				if (count1 > 1)
-				{
-					PyObject* tuple2 = PyList_GetItem(list1, 1);
-					const char* marker2 = _PyUnicode_AsString(PyTuple_GetItem(tuple2, 0));
-					if (strcmp(marker2, "v") == 0)
-					{
-						byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple2, 1), m_lyric_charset.data(), 0);
-						v = PyBytes_AS_STRING(byteCode);
-					}
-				}
-			}
-			else if (strcmp(marker1, "v") == 0)
-			{
-				byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple1, 1), m_lyric_charset.data(), 0);
-				v = PyBytes_AS_STRING(byteCode);
-			}
-
-			size_t count2 = PyList_Size(list2);
-			if (count2 > 0)
-			{
-				PyObject* cv_tuple = PyList_GetItem(list2, 0);
-				unsigned index = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(cv_tuple, 0));
-				if (index == 0)
-				{
-					byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(cv_tuple, 1), m_lyric_charset.data(), 0);
-					cv = PyBytes_AS_STRING(byteCode);
-				}
-			}
-
-			lyric_converted_c.push_back(c);
-			lyric_converted_v.push_back(v);
-			lyric_converted_cv.push_back(cv);
+			PyList_Append(lyricList, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 		}
+		PyObject* args = PyTuple_Pack(1, lyricList);
+		PyObject* rets = PyObject_CallObject(m_LyricConverter, args);
 
-		RapPieceInternalList list_converted;
+		std::vector<ConvertedRapPiece_Deferred> list_converted;
 		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 		{
-			std::string v;
-			if (i == 0)
-				v = "-";
-			else
-				v = lyric_converted_v[i - 1];
+			PyObject* tuple = PyList_GetItem(rets, i);
+			unsigned count = (unsigned)PyTuple_Size(tuple);
 
-			std::string cv = lyric_converted_cv[i];
-			if (cv == "") cv = lyric_converted_c[i] + lyric_converted_v[i];
+			std::vector<std::string> lyrics;
+			std::vector<float> weights;
 
-			std::string lyric_converted = v + " " + cv;
+			float sum_weight = 0.0f;
+			for (unsigned j = 0; j < count; j += 2)
+			{
+				PyObject *byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple, j), m_lyric_charset.data(), 0);
+				std::string lyric = PyBytes_AS_STRING(byteCode);
+				lyrics.push_back(lyric);
 
-			RapPieceInternal_Deferred piece_converted;
-			*piece_converted = *pieceList[i];
-			piece_converted->lyric = lyric_converted;
+				float weight = 1.0f;
+				if (j + 1 < count)
+				{
+					weight = (float)PyFloat_AsDouble(PyTuple_GetItem(tuple, j + 1));
+				}
+				weights.push_back(weight);
 
-			list_converted.push_back(piece_converted);
+				sum_weight += weight;
+			}
+
+			RapPieceInternal_Deferred piece = pieceList[i];
+			ConvertedRapPiece_Deferred converted_piece;
+			converted_piece->baseSampleFreq = piece->baseSampleFreq;
+			converted_piece->tone = piece->tone;
+
+			for (unsigned j = 0; j < count; j += 2)
+			{
+				LyricSeg seg;
+				float weight = weights[j] / sum_weight;
+				seg.fNumOfSamples=weight* piece->fNumOfSamples;
+				seg.lyric = lyrics[j];
+				converted_piece->lyricSegs.push_back(seg);
+			}
+
+			list_converted.push_back(converted_piece);	
+
 		}
 
 		return list_converted;
-	}
-
-	SingingPieceInternalList _cv2cvvc_singing(SingingPieceInternalList pieceList)
-	{
-
 	}
 
 	float getFirstNoteHeadSamples(const char* lyric)
@@ -1074,9 +1065,8 @@ private:
 	float m_transition;
 	float m_rap_distortion;
 
-	PyObject* m_CVParser;
+	PyObject* m_LyricConverter;
 
-	unsigned m_lyric_mode;
 };
 
 
@@ -1205,13 +1195,13 @@ private:
 static PyScoreDraft* s_PyScoreDraft;
 
 
-PyObject* UtauDraftSetCVParser(PyObject *args)
+PyObject* UtauDraftSetLyricConverter(PyObject *args)
 {
 	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	PyObject* CVParser = PyTuple_GetItem(args, 1);
+	PyObject* LyricConverter = PyTuple_GetItem(args, 1);
 
 	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
-	singer.DownCast<UtauDraft>()->SetCVParser(CVParser);
+	singer.DownCast<UtauDraft>()->SetLyricConverter(LyricConverter);
 
 	return PyLong_FromUnsignedLong(0);
 }
@@ -1266,18 +1256,12 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	for (unsigned i = 0; i < s_initializers.size(); i++)
 		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName()+"_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
 
-	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetCVParser", UtauDraftSetCVParser, "singer, CVParserFunc", "singer.id, CVParserFunc", 
+	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetLyricConverter", UtauDraftSetLyricConverter, "singer, LyricConverterFunc", "singer.id, LyricConverterFunc",
 		"\t'''\n"
-		"\tSet a CVParser function for a UtauDraft singer. After this is done, it will be possible to generate V-CV and CV-VC notes automatically"
-		"\tfrom CV lyrics set for each syllable. "
-		"\t"
-		"\tThe 'CVParserFunc' has the following form:"
-		"\tdef CVParserFunc(CVlyric):"
+		"\tSet a lyric-converter function for a UtauDraft singer used to generate VCV/CVVC lyrics"
+		"\tThe 'LyricConverterFunc' has the following form:"
+		"\tdef LyricConverterFunc(LyricForEachSyllable):"
 		"\t\t..."
-		"\t\treturn ([('c',consonant), ('v', vowel)... ], [ (index1, cv1), (index2, cv2)... ])"
-		"\tThe return value consists of 2 lists."
-		"\tThe first list consists of decomposed consonant/vowel strings"
-		"\tThe second list consists of cv replacements for consecutive c-v, which are used for cv and vcv lyric generation."
-		"\tIf there's not replacement set, c and v strings will be concatenated to generate the cv and vcv lyric"
+		"\t\treturn [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]"
 		"\t'''\n");
 }

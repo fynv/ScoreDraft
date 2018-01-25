@@ -1,18 +1,19 @@
-def pinyinCVParser(CVLyric):
+def pinyinGetVowel(CVLyric):
 	vowels= ["a","e","i","o","u","v"]
 	min_i=len(CVLyric)
 	for c in vowels:
 		i=CVLyric.find(c)
 		if i>-1 and i<min_i:
 			min_i=i
-	consonant= CVLyric[0:min_i]
 	vowel=CVLyric[min_i:len(CVLyric)]
-	if vowel=="i" and (consonant=="zh" or consonant=="ch" or consonant=="sh" or consonant=="r"):
+
+	if CVLyric=="zhi" or CVLyric=="chi" or CVLyric=="shi" or CVLyric=="ri":
 		vowel="ir"
-	if vowel=="i" and (consonant=="z" or consonant=="c" or consonant=="s"):
+	if CVLyric=="zi" or CVLyric=="ci" or CVLyric=="si":
 		vowel="iz"
-	if vowel=="u" and (consonant=="j" or consonant=="q" or consonant=="x" or consonant=="y"):
+	if CVLyric=="ju" or CVLyric=="qu" or CVLyric=="xu" or CVLyric=="yu":
 		vowel="v"
+
 	if vowel=="ia":
 		vowel="a"
 	if vowel=="iao":
@@ -41,10 +42,16 @@ def pinyinCVParser(CVLyric):
 		vowel="en"
 	if vowel=="uo":
 		vowel="o"
-	if CVLyric=="yi" or CVLyric=="wu" or CVLyric=="yu":
-		consonant=""
+	return vowel
 
-	if consonant == "":
-		return ( [('v', vowel)], [(0, CVLyric)])
-	else:
-		return ( [('c', consonant), ('v', vowel)], [(0, CVLyric)] )
+def pinyinLyricConverter(LyricForEachSyllable):
+	vowels= [pinyinGetVowel(lyric) for lyric in  LyricForEachSyllable]
+	ret=[]
+	for i in range(len(LyricForEachSyllable)):
+		v='-'
+		if i>0:
+			v= vowels[i-1]
+		ret+=[(v+' '+LyricForEachSyllable[i], 1.0)]
+	return ret
+
+
