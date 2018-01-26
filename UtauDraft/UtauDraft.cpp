@@ -493,7 +493,7 @@ private:
 			unsigned i_note = 0;
 			float noteStartPos = 0.0f;
 
-			for (unsigned j = 0; j < count; j += 2)
+			for (unsigned j = 0; j < lyrics.size(); j++)
 			{
 				float weight = weights[j] / sum_weight;
 				float endPos = startPos + weight* totalNumSamples;
@@ -503,15 +503,27 @@ private:
 
 				while (endPos > noteStartPos)
 				{
+					float noteEndPos = noteStartPos + piece->notes[i_note].fNumOfSamples;
+					while (noteEndPos <= startPos)
+					{
+						noteStartPos = noteEndPos;
+						i_note++;
+						noteEndPos = noteStartPos + piece->notes[i_note].fNumOfSamples;
+					}
+
 					SingerNoteParams newParam;
 					newParam.sampleFreq = piece->notes[i_note].sampleFreq;
-					newParam.fNumOfSamples = min(piece->notes[i_note].fNumOfSamples, endPos - noteStartPos);
-					newPiece->notes.push_back(newParam);				
+					newParam.fNumOfSamples = min(noteEndPos - startPos, endPos - startPos);
+					newPiece->notes.push_back(newParam);		
 					
-					noteStartPos += piece->notes[i_note].fNumOfSamples;
+					noteStartPos = noteEndPos;
 					i_note++;
+
+					startPos += newParam.fNumOfSamples;
 				}
-				startPos = endPos;				
+				i_note--;
+				noteStartPos -= piece->notes[i_note].fNumOfSamples;
+
 				list_converted.push_back(newPiece);
 			}		
 		}
@@ -689,7 +701,7 @@ private:
 
 		if (m_OtoMap->find(lyric) == m_OtoMap->end())
 		{
-			printf("%s\n", lyric);
+			printf("missied lyic: %s\n", lyric);
 			lyric = m_defaultLyric.data();
 		}
 
@@ -706,9 +718,17 @@ private:
 			memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
 			memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
 
-			frq.ReadFromFile(frq_path);
+			if (!frq.ReadFromFile(frq_path))
+			{
+				printf("%s not found.\n", frq_path);
+				return;
+			}
 
-			if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return;
+			if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend))
+			{
+				printf("%s not found.\n", loc.filename.data());
+				return;
+			}
 		}
 
 
@@ -1125,7 +1145,7 @@ public:
 		HANDLE hFind = INVALID_HANDLE_VALUE;
 
 		char searchStr[2048];
-		sprintf(searchStr, "%s\\*", path);
+		sprintf(searchStr, "%s/*", path);
 
 		hFind = FindFirstFileA(searchStr, &ffd);
 		if (INVALID_HANDLE_VALUE == hFind) return;
@@ -1135,7 +1155,7 @@ public:
 			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
 			{
 				char subPath[2048];
-				sprintf(subPath, "%s\\%s", path, ffd.cFileName);
+				sprintf(subPath, "%s/%s", path, ffd.cFileName);
 				BuildOtoMap(subPath);
 			}
 
