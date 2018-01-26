@@ -4,6 +4,7 @@ import ScoreDraft
 from ScoreDraftNotes import *
 from tang300 import poems
 import TsuroVCVConverter
+import CVVCChineseConverter
 
 #seq = [ ("kan", 4, 48), ("jian", 4, 24), ("de", 4,24), ("kan", 4, 24), ("bu", 2, 24), ("jian", 4, 24), ("de", 4,24) ]
 #seq += [ ("shun", 4, 48), ("jian", 1,24), ("de", 4,24), ("yong",3,48), ("heng",2,24), ("de", 4,24)]
@@ -62,6 +63,7 @@ for i in range(int(len(poem[1])/divider)):
 
 buf=ScoreDraft.TrackBuffer()
 
+'''
 GePing= ScoreDraft.GePing_UTAU()
 
 def HeNanToneGenerator(ToneInfoForEachSyllable):
@@ -80,11 +82,19 @@ def HeNanToneGenerator(ToneInfoForEachSyllable):
 ScoreDraft.UtauDraftSetRapToneGenerator(GePing, HeNanToneGenerator)
 
 GePing.sing(buf, seq, 120)
+'''
 
-#WanEr=  ScoreDraft.WanEr_UTAU()
-#WanEr.tune ("rap_freq 1.5")
-#ScoreDraft.UtauDraftSetLyricConverter(WanEr, TsuroVCVConverter.TsuroVCVConverter)
-#WanEr.sing(buf, seq, 120)
+'''
+WanEr=  ScoreDraft.WanEr_UTAU()
+WanEr.tune ("rap_freq 1.5")
+ScoreDraft.UtauDraftSetLyricConverter(WanEr, TsuroVCVConverter.TsuroVCVConverter)
+WanEr.sing(buf, seq, 120)
+'''
+
+Ayaka = ScoreDraft.Ayaka_UTAU()
+ScoreDraft.UtauDraftSetLyricConverter(Ayaka, CVVCChineseConverter.CVVCChineseConverter)
+Ayaka.tune ("rap_freq 1.5")
+Ayaka.sing(buf, seq, 120)
 
 
 #ScoreDraft.QPlayTrackBuffer(buf)
