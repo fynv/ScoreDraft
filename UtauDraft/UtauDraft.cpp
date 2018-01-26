@@ -29,6 +29,7 @@ using namespace VoiceUtil;
 
 #include "OtoMap.h"
 #include "FrqData.h"
+#include "PrefixMap.h"
 
 struct SymmetricWindowWithPosition
 {
@@ -79,6 +80,9 @@ public:
 		m_LyricConverter = nullptr;
 		m_ToneGenerator = nullptr;
 
+		m_use_prefix_map = true;
+		m_PrefixMap = nullptr;
+
 	}
 	~UtauDraft()
 	{
@@ -90,6 +94,11 @@ public:
 	{
 		m_OtoMap = otoMap;
 		m_defaultLyric = m_OtoMap->begin()->first;
+	}
+
+	void SetPrefixMap(PrefixMap* prefixMap)
+	{
+		m_PrefixMap = prefixMap;
 	}
 
 	void SetCharset(const char* charset)
@@ -131,6 +140,21 @@ public:
 				if (sscanf(cmd + strlen("transition") + 1, "%f", &value))
 					m_transition = value;
 			}
+			else if (strcmp(command, "prefix_map") == 0)
+			{
+				char value[100];
+				if (sscanf(cmd + strlen("prefix_map") + 1, "%s", value))
+				{
+					if (strcmp(value, "on") == 0)
+					{
+						m_use_prefix_map = true;
+					}
+					if (strcmp(value, "off") == 0)
+					{
+						m_use_prefix_map = false;
+					}
+				}
+			}
 		}
 		return false;
 	}
@@ -158,7 +182,13 @@ public:
 		if (m_LyricConverter != nullptr)
 		{
 			pieceList = _convertLyric_singing(pieceList);
-		}			
+		}	
+
+		if (m_PrefixMap != nullptr && m_use_prefix_map)
+		{
+
+
+		}
 
 		unsigned *lens = new unsigned[pieceList.size()];
 		float sumAllLen=0.0f;
@@ -336,6 +366,12 @@ public:
 		if (m_LyricConverter != nullptr)
 		{
 			toneConvertedPieceList = _convertLyric_rap(toneConvertedPieceList);
+		}
+
+		if (m_PrefixMap != nullptr && m_use_prefix_map)
+		{
+
+
 		}
 
 		unsigned *lens = new unsigned[toneConvertedPieceList.size()];
@@ -1092,6 +1128,8 @@ private:
 	PyObject* m_LyricConverter;
 	PyObject* m_ToneGenerator;
 
+	bool m_use_prefix_map;
+	PrefixMap* m_PrefixMap;
 };
 
 
@@ -1191,6 +1229,10 @@ public:
 			sprintf(rootPath, "UTAUVoice/%s", m_name.data());
 			BuildOtoMap(rootPath);
 
+			char prefixMapFn[1024];
+			sprintf(prefixMapFn, "UTAUVoice/%s/prefix.map", m_name.data());
+			m_PrefixMap.LoadFromFile(prefixMapFn);
+
 			m_charset = "utf-8";
 			char charsetFn[1024];
 			sprintf(charsetFn, "%s/charset", rootPath);
@@ -1207,11 +1249,14 @@ public:
 		Singer_deferred singer = Singer_deferred::Instance<UtauDraft>();
 		singer.DownCast<UtauDraft>()->SetOtoMap(&m_OtoMap);
 		singer.DownCast<UtauDraft>()->SetCharset(m_charset.data());
+		if (m_PrefixMap.size() > 0)
+			singer.DownCast<UtauDraft>()->SetPrefixMap(&m_PrefixMap);
 		return singer;
 	}
 
 private:
 	OtoMap m_OtoMap;
+	PrefixMap m_PrefixMap;
 	std::string m_charset;
 	std::string m_name;
 	std::string m_charecter_txt;

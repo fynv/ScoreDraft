@@ -6,11 +6,13 @@ set(SOURCES
 UtauDraft.cpp
 OtoMap.cpp
 FrqData.cpp
+PrefixMap.cpp
 )
 
 set(HEADERS 
 OtoMap.h
 FrqData.h
+PrefixMap.h
 )
 
 set (INCLUDE_DIR
