@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <memory.h>
+#include <cmath>
 
 bool PrefixMap::LoadFromFile(const char* filename)
 {
@@ -42,7 +43,6 @@ std::string PrefixMap::GetPrefixFromFreq(float freq)
 		octave++;
 	}
 	
-	std::string name = std::string(nameMap[octave]) + std::to_string(octave);
-	
+	std::string name = std::string(nameMap[pitchInOctave]) + std::to_string(octave);
 	return (*this)[name];
 }

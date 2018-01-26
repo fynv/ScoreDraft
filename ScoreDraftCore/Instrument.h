@@ -7,6 +7,7 @@ public:
 	NoteBuffer();
 	~NoteBuffer();
 	
+	float m_sampleRate;
 	unsigned m_sampleNum;
 	unsigned m_alignPos;
 	float* m_data;

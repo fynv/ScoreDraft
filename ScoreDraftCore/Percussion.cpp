@@ -53,7 +53,7 @@ void Percussion::Silence(unsigned numOfSamples, BeatBuffer* noteBuf)
 	memset(noteBuf->m_data, 0, sizeof(float)*numOfSamples);
 }
 
-void Percussion::GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
+void Percussion::GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf)
 {
 	Silence((unsigned)ceilf(fNumOfSamples), beatBuf);
 }
@@ -61,11 +61,12 @@ void Percussion::GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, floa
 void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 {
 	BeatBuffer beatBuf;
+	beatBuf.m_sampleRate = (float)buffer.Rate();
 
 	float fduration = (float)(duration * 60) / (float)(tempo * 48);
 	float fNumOfSamples = buffer.Rate()*fduration;
 
-	GenerateBeatWave(fNumOfSamples, &beatBuf, (float)buffer.Rate());
+	GenerateBeatWave(fNumOfSamples, &beatBuf);
 	buffer.WriteBlend(beatBuf.m_sampleNum, beatBuf.m_data, fNumOfSamples, beatBuf.m_alignPos);
 }
 

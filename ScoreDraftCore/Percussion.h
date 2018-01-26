@@ -10,6 +10,7 @@ public:
 	BeatBuffer();
 	~BeatBuffer();
 
+	float m_sampleRate;
 	unsigned m_sampleNum;
 	unsigned m_alignPos;
 	float* m_data;
@@ -37,7 +38,7 @@ public:
 
 protected:
 	static void Silence(unsigned numOfSamples, BeatBuffer* noteBuf);
-	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate);
+	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf);
 
 	float m_beatVolume;
 };

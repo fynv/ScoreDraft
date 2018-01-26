@@ -83,17 +83,17 @@ public:
 		m_sample = sample;
 	}
 
-	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf, float BufferSampleRate)
+	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf)
 	{
 		if (!m_sample) return;
 
-		unsigned maxSample = (unsigned)((float)m_sample->m_wav_length * BufferSampleRate / m_sample->m_origin_sample_rate);
+		unsigned maxSample = (unsigned)((float)m_sample->m_wav_length * beatBuf->m_sampleRate / m_sample->m_origin_sample_rate);
 		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 		beatBuf->Allocate();
 
 		float mult = m_beatVolume / m_sample->m_max_v;
 
-		if (BufferSampleRate == (float)m_sample->m_origin_sample_rate)
+		if (beatBuf->m_sampleRate == (float)m_sample->m_origin_sample_rate)
 		{
 
 			for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
@@ -106,7 +106,7 @@ public:
 		}
 		else
 		{
-			bool interpolation = BufferSampleRate >= (float)m_sample->m_origin_sample_rate;
+			bool interpolation = beatBuf->m_sampleRate >= (float)m_sample->m_origin_sample_rate;
 			for (unsigned j = 0; j < beatBuf->m_sampleNum; j++)
 			{
 				float x2 = (float)j / fNumOfSamples;
@@ -115,7 +115,7 @@ public:
 				float wave;
 				if (interpolation)
 				{
-					float pos = (float)j *(float)m_sample->m_origin_sample_rate / BufferSampleRate;
+					float pos = (float)j *(float)m_sample->m_origin_sample_rate / beatBuf->m_sampleRate;
 					int ipos1 = (int)pos;
 					float frac = pos - (float)ipos1;
 					int ipos2 = ipos1 + 1;
@@ -139,8 +139,8 @@ public:
 				}
 				else
 				{
-					int ipos1 = (int)ceilf(((float)j - 0.5f)*(float)m_sample->m_origin_sample_rate / BufferSampleRate);
-					int ipos2 = (int)floorf(((float)j + 0.5f)*(float)m_sample->m_origin_sample_rate / BufferSampleRate);
+					int ipos1 = (int)ceilf(((float)j - 0.5f)*(float)m_sample->m_origin_sample_rate / beatBuf->m_sampleRate);
+					int ipos2 = (int)floorf(((float)j + 0.5f)*(float)m_sample->m_origin_sample_rate / beatBuf->m_sampleRate);
 					if (ipos1 < 0) ipos1 = 0;
 					if (ipos2 >= (int)m_sample->m_wav_length) ipos2 = (int)m_sample->m_wav_length - 1;
 					int count = ipos2 - ipos1 + 1;

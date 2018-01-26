@@ -94,6 +94,8 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 {
 	std::vector<SingerNoteParams> noteParams;
 	VoiceBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
+
 	float totalDuration = 0.0f;
 
 	for (size_t i = 0; i < piece.m_notes.size(); i++)
@@ -169,6 +171,7 @@ void Singer::SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsig
 void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo, float RefFreq)
 {
 	VoiceBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
 	float fNumOfSamples = buffer.Rate()*fduration;
@@ -224,6 +227,8 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 {
 	SingingPieceInternalList pieceList;
 	VoiceBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
+
 	float totalDuration = 0.0f;
 
 	for (size_t j = 0; j < pieces.size(); j++)
@@ -295,6 +300,8 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 {
 	RapPieceInternalList pieceList;
 	VoiceBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
+
 	float totalDuration = 0.0f;
 
 	for (size_t j = 0; j < pieces.size(); j++)

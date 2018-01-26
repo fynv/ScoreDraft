@@ -186,7 +186,33 @@ public:
 
 		if (m_PrefixMap != nullptr && m_use_prefix_map)
 		{
+			for (unsigned j = 0; j < pieceList.size(); j++)
+			{
+				SingingPieceInternal& piece = *pieceList[j];
 
+				float aveFreq = 0.0f;
+				float sumLen = 0.0f;
+				for (size_t i = 0; i < piece.notes.size(); i++)
+				{
+					float sampleFreq = piece.notes[i].sampleFreq;
+					float len = piece.notes[i].fNumOfSamples;
+					aveFreq += sampleFreq*len;
+					sumLen += len;
+				}
+				if (sumLen > 0.0f)
+				{
+					aveFreq /= sumLen;
+					aveFreq *= noteBuf->m_sampleRate;
+				}
+				else
+				{
+					aveFreq = piece.notes[0].sampleFreq *noteBuf->m_sampleRate;
+				}
+				std::string prefix = m_PrefixMap->GetPrefixFromFreq(aveFreq);
+
+				piece.lyric += prefix;
+
+			}
 
 		}
 
@@ -225,6 +251,8 @@ public:
 			SingingPieceInternal& piece = *pieceList[j];
 			
 			unsigned uSumLen = lens[j];
+			if (uSumLen == 0) continue;
+
 			float *freqMap = new float[uSumLen];
 
 			unsigned pos = 0;
@@ -370,8 +398,14 @@ public:
 
 		if (m_PrefixMap != nullptr && m_use_prefix_map)
 		{
-
-
+			for (unsigned j = 0; j < pieceList.size(); j++)
+			{
+				ToneConvertedRapPiece& converted_piece = toneConvertedPieceList[j];
+				float aveFreq = (converted_piece.sampleFreq1 + converted_piece.sampleFreq2)*0.5f;
+				aveFreq *= noteBuf->m_sampleRate;
+				std::string prefix = m_PrefixMap->GetPrefixFromFreq(aveFreq);
+				converted_piece.lyric += prefix;
+			}
 		}
 
 		unsigned *lens = new unsigned[toneConvertedPieceList.size()];
@@ -404,8 +438,9 @@ public:
 		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
 		{
 			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
-
 			unsigned uSumLen = lens[j];
+			if (uSumLen == 0) continue;
+
 			float *freqMap = new float[uSumLen];
 
 			for (unsigned i = 0; i < uSumLen; i++)
@@ -537,7 +572,7 @@ private:
 				SingingPieceInternal_Deferred newPiece;
 				newPiece->lyric = lyrics[j];
 
-				while (endPos > noteStartPos)
+				while (endPos > noteStartPos || newPiece->notes.size()==0)
 				{
 					float noteEndPos = noteStartPos + piece->notes[i_note].fNumOfSamples;
 					while (noteEndPos <= startPos)
@@ -557,9 +592,9 @@ private:
 
 					startPos += newParam.fNumOfSamples;
 				}
+				
 				i_note--;
 				noteStartPos -= piece->notes[i_note].fNumOfSamples;
-
 				list_converted.push_back(newPiece);
 			}		
 		}
