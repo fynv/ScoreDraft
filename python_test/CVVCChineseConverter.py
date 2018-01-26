@@ -73,7 +73,7 @@ def CVVCChineseConverter(LyricForEachSyllable):
 		elif CV[i][0]=='':
 			lyric=CV[i-1][1]+" "+lyric
 		if i<len(LyricForEachSyllable)-1 and CV[i+1][0]!='':
-			ret+=[(lyric,0.7, CV[i][1]+" "+CV[i+1][0], 0.3)]
+			ret+=[(lyric,0.8, CV[i][1]+" "+CV[i+1][0], 0.2)]
 		else:
 			ret+=[(lyric,1.0)]
 	return ret
