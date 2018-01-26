@@ -14,6 +14,7 @@
 #include <cmath>
 #include <ReadWav.h>
 #include <float.h>
+#include <memory.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -177,6 +178,46 @@ public:
 		GenerateWave_RapConsecutive(pieceList, noteBuf);
 	}
 
+	static void _floatBufSmooth(float* buf, unsigned size)
+	{
+		static unsigned halfWinSize = 1024;
+		static unsigned winSize = halfWinSize * 2;
+		float *buf2 = new float[size];
+		memset(buf2, 0, sizeof(float)*size);
+
+		for (unsigned i = 0; i < size + halfWinSize; i += halfWinSize)
+		{
+			float sum = 0.0f;
+			for (int j = -(int)halfWinSize; j < (int)halfWinSize; j++)
+			{
+				float v;
+				int bufPos = (int)i + j;
+				if (bufPos < 0) v = buf[0];
+				else if (bufPos >= size) v = buf[size - 1];
+				else v = buf[bufPos];
+				
+				float x = (float)j / (float)halfWinSize*(float)PI;
+				float w = (cosf(x) + 1.0f)*0.5f;
+
+				sum += v*w;
+			}
+			float ave = sum / (float)halfWinSize;
+			for (int j = -(int)halfWinSize; j < (int)halfWinSize; j++)
+			{
+				int bufPos = (int)i + j;
+				if (bufPos < 0 || bufPos >= size) continue;
+
+				float x = (float)j / (float)halfWinSize*(float)PI;
+				float w = (cosf(x) + 1.0f)*0.5f;
+
+				buf2[bufPos]+= w*ave;
+			}
+		}		
+		
+		memcpy(buf, buf2, sizeof(float)*size);
+		delete[] buf2;
+	}
+
 	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
 		if (m_LyricConverter != nullptr)
@@ -243,18 +284,14 @@ public:
 		noteBuf->m_alignPos = (unsigned)firstNoteHead;
 		noteBuf->Allocate();
 
+		float *freqAllMap = new float[uSumAllLen];
 		unsigned noteBufPos = 0;
-		float phase = 0.0f;
-
 		for (unsigned j = 0; j < pieceList.size(); j++)
 		{
 			SingingPieceInternal& piece = *pieceList[j];
-			
 			unsigned uSumLen = lens[j];
 			if (uSumLen == 0) continue;
-
-			float *freqMap = new float[uSumLen];
-
+			float *freqMap = freqAllMap + noteBufPos;
 			unsigned pos = 0;
 			float targetPos = j == 0 ? firstNoteHead : 0.0f;
 			float sampleFreq;
@@ -273,51 +310,21 @@ public:
 			{
 				freqMap[pos] = sampleFreq;
 			}
+			noteBufPos += uSumLen;
+		}
 
-			/// Make frequency tweakings here
+		_floatBufSmooth(freqAllMap, uSumAllLen);
 
-			/// Transition
-			if (m_transition > 0.0f && m_transition < 1.0f)
-			{
-				targetPos = j == 0 ? firstNoteHead : 0.0f;
-				for (size_t i = 0; i < piece.notes.size() - 1; i++)
-				{
-					float sampleFreq0 = piece.notes[i].sampleFreq;
-					float sampleFreq1 = piece.notes[i + 1].sampleFreq;
-					targetPos += piece.notes[i].fNumOfSamples;
+		noteBufPos = 0;
+		float phase = 0.0f;
 
-					float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
-					for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
-					{
-						float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
-						freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
-					}
-
-				}
-
-				if (j < pieceList.size() - 1)
-				{
-					size_t i = piece.notes.size() - 1;
-					float sampleFreq0 = piece.notes[i].sampleFreq;
-					float sampleFreq1 = pieceList[j + 1]->notes[0].sampleFreq;
-
-					float transStart = (float)uSumLen - m_transition*piece.notes[i].fNumOfSamples;
-
-					for (unsigned pos = (unsigned)ceilf(transStart); pos<uSumLen; pos++)
-					{
-						float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
-						freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
-					}
-				}
-
-			}
-
-			/// Viberation
-			/*for (pos = 0; pos < uSumLen; pos++)
-			{
-			float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
-			freqMap[pos] *= vib;
-			}*/
+		for (unsigned j = 0; j < pieceList.size(); j++)
+		{
+			SingingPieceInternal& piece = *pieceList[j];
+			
+			unsigned uSumLen = lens[j];
+			if (uSumLen == 0) continue;
+			float *freqMap = freqAllMap + noteBufPos;
 
 			const char* lyric_next = nullptr;
 			if (j < pieceList.size() - 1)
@@ -327,11 +334,11 @@ public:
 
 			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
 
-			delete[] freqMap;
-
 			noteBufPos += uSumLen;
 			
 		}
+
+		delete[] freqAllMap;
 
 		// Envolope
 		for (unsigned pos = 0; pos < uSumAllLen; pos++)
@@ -432,7 +439,25 @@ public:
 		noteBuf->m_alignPos = (unsigned)firstNoteHead;
 		noteBuf->Allocate();
 
+		float *freqAllMap = new float[uSumAllLen];
 		unsigned noteBufPos = 0;
+		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
+		{
+			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
+			unsigned uSumLen = lens[j];
+			if (uSumLen == 0) continue;
+			float *freqMap = freqAllMap + noteBufPos;
+			for (unsigned i = 0; i < uSumLen; i++)
+			{
+				float x = (float)i / (float)(uSumLen - 1);
+				freqMap[i] = converted_piece.sampleFreq1 + (converted_piece.sampleFreq2 - converted_piece.sampleFreq1)*x;
+			}
+			noteBufPos += uSumLen;
+		}
+
+		_floatBufSmooth(freqAllMap, uSumAllLen);
+
+		noteBufPos = 0;
 		float phase = 0.0f;
 
 		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
@@ -441,32 +466,7 @@ public:
 			unsigned uSumLen = lens[j];
 			if (uSumLen == 0) continue;
 
-			float *freqMap = new float[uSumLen];
-
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = converted_piece.sampleFreq1 + (converted_piece.sampleFreq2 - converted_piece.sampleFreq1)*x;
-			}
-
-			/// Make frequency tweakings here
-
-			/// Transition
-			if (m_transition > 0.0f && m_transition < 1.0f)
-			{
-				if (j < toneConvertedPieceList.size() - 1)
-				{
-					ToneConvertedRapPiece piece_next = toneConvertedPieceList[j+1];
-					float sampleFreq_next = piece_next.sampleFreq1;
-					float transStart = (float)uSumLen - m_transition*(float)uSumLen;
-					float sampelFreq_this = freqMap[(unsigned)ceilf(transStart)];
-					for (unsigned pos = (unsigned)ceilf(transStart); pos < uSumLen; pos++)
-					{
-						float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
-						freqMap[pos] = (1.0f - k)* sampelFreq_this + k*sampleFreq_next;
-					}
-				}
-			}
+			float *freqMap = freqAllMap + noteBufPos;
 
 			const char* lyric_next = nullptr;
 			if (j < toneConvertedPieceList.size() - 1)
@@ -474,12 +474,12 @@ public:
 				lyric_next = toneConvertedPieceList[j + 1].lyric.data();
 			}
 
-			_generateWave(converted_piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0);
-			
-			delete[] freqMap;
+			_generateWave(converted_piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0);			
 
 			noteBufPos += uSumLen;
 		}
+
+		delete[] freqAllMap;
 
 		// Envolope
 		for (unsigned pos = 0; pos < uSumAllLen; pos++)
