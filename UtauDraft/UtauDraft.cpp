@@ -77,11 +77,13 @@ public:
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
 		m_LyricConverter = nullptr;
+		m_ToneGenerator = nullptr;
 
 	}
 	~UtauDraft()
 	{
 		if (m_LyricConverter) Py_DECREF(m_LyricConverter);
+		if (m_ToneGenerator) Py_DECREF(m_ToneGenerator);
 	}
 
 	void SetOtoMap(OtoMap* otoMap)
@@ -100,6 +102,13 @@ public:
 		if (m_LyricConverter != nullptr) Py_DECREF(m_LyricConverter);
 		m_LyricConverter = lyricConverter;
 		if (m_LyricConverter != nullptr) Py_INCREF(m_LyricConverter);
+	}
+
+	void SetToneGenerator(PyObject* toneGenerator)
+	{
+		if (m_ToneGenerator != nullptr) Py_DECREF(m_ToneGenerator);
+		m_ToneGenerator = toneGenerator;
+		if (m_ToneGenerator != nullptr) Py_INCREF(m_ToneGenerator);
 	}
 
 	virtual bool Tune(const char* cmd)
@@ -570,31 +579,56 @@ private:
 	std::vector<RapToneSegConverted> _convertRapTone(const std::vector<RapToneInput>& inputToneList)
 	{
 		std::vector<RapToneSegConverted> convertedList;
-		for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
+
+		if (m_ToneGenerator!=nullptr)
 		{
-			RapToneInput inputTone = inputToneList[i];
-			RapToneSegConverted convertedTone;
-			if (inputTone.tone <= 1)
+			PyObject* inputList = PyList_New(0);
+			for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
 			{
-				convertedTone.freq1 = 1.0f;
-				convertedTone.freq2 = 1.0f;
+				RapToneInput inputTone = inputToneList[i];
+				PyObject* inputTuple = PyTuple_Pack(2, PyLong_FromLong((long)inputTone.tone), PyFloat_FromDouble((double)inputTone.fNumOfSamples));
+				PyList_Append(inputList, inputTuple);
 			}
-			else if (inputTone.tone == 2)
+			PyObject* args = PyTuple_Pack(1, inputList);
+			PyObject* rets = PyObject_CallObject(m_ToneGenerator, args);
+
+			for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
 			{
-				convertedTone.freq1 = 0.7f;
-				convertedTone.freq2 = 1.0f;
+				PyObject* outputTuple = PyList_GetItem(rets, i);
+				RapToneSegConverted convertedTone;
+				convertedTone.freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(outputTuple, 0));
+				convertedTone.freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(outputTuple, 1));
+				convertedList.push_back(convertedTone);
 			}
-			else if (inputTone.tone == 3)
+		}
+		else
+		{
+			for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
 			{
-				convertedTone.freq1 = 0.5f;
-				convertedTone.freq2 = 0.75f;
+				RapToneInput inputTone = inputToneList[i];
+				RapToneSegConverted convertedTone;
+				if (inputTone.tone <= 1)
+				{
+					convertedTone.freq1 = 1.0f;
+					convertedTone.freq2 = 1.0f;
+				}
+				else if (inputTone.tone == 2)
+				{
+					convertedTone.freq1 = 0.7f;
+					convertedTone.freq2 = 1.0f;
+				}
+				else if (inputTone.tone == 3)
+				{
+					convertedTone.freq1 = 0.5f;
+					convertedTone.freq2 = 0.75f;
+				}
+				else if (inputTone.tone == 4)
+				{
+					convertedTone.freq1 = 1.0f;
+					convertedTone.freq2 = 0.5f;
+				}
+				convertedList.push_back(convertedTone);
 			}
-			else if (inputTone.tone == 4)
-			{
-				convertedTone.freq1 = 1.0f;
-				convertedTone.freq2 = 0.5f;
-			}
-			convertedList.push_back(convertedTone);
 		}
 
 		return convertedList;
@@ -1036,6 +1070,7 @@ private:
 	float m_rap_distortion;
 
 	PyObject* m_LyricConverter;
+	PyObject* m_ToneGenerator;
 
 };
 
@@ -1176,6 +1211,17 @@ PyObject* UtauDraftSetLyricConverter(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+PyObject* UtauDraftSetRapToneGenerator(PyObject *args)
+{
+	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	PyObject* ToneGenerator = PyTuple_GetItem(args, 1);
+
+	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
+	singer.DownCast<UtauDraft>()->SetToneGenerator(ToneGenerator);
+
+	return PyLong_FromUnsignedLong(0);
+}
+
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
@@ -1233,5 +1279,20 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		"\tdef LyricConverterFunc(LyricForEachSyllable):"
 		"\t\t..."
 		"\t\treturn [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]"
+		"\tThe argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string"
+		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable."
+		"\t'''\n");
+
+	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetRapToneGenerator", UtauDraftSetRapToneGenerator, "singer, RapToneGeneratorFunc", "singer.id, RapToneGeneratorFunc",
+		"\t'''\n"
+		"\tSet a tone-generator function for a UtauDraft singer used to decide the pitches of each syllable"
+		"\tWhen there is not a tone-generator set for the singer, the 4-tone system of mandarin Chinese will be used."
+		"\tThe 'RapToneGeneratorFunc' has the following form:"
+		"\tdef RapToneGeneratorFunc(ToneInfoForEachSyllable):"
+		"\t\t..."
+		"\t\treturn [(freq1ForSyllable1,freq2ForSyllable1),(freq1ForSyllable2,freq2ForSyllable2), ...]"
+		"\tThe argument 'ToneInfoForEachSyllable' has the form [(toneNumber1, length1),(toneNumber2, length2)...], where each toneNumber is a integer, and each length a float"
+		"\tIn the return value, each freq number is a float which is the frequency relative to the rap-base-line frequence of the singer"
+		"\tEach syllable can have 2 of the freq numbers to give the beginning pitch and the ending pitch"
 		"\t'''\n");
 }
