@@ -276,73 +276,76 @@ public:
 		delete[] lens;
 	}
 
-	struct LyricSeg
+	struct RapToneInput
+	{
+		float fNumOfSamples;
+		int tone;
+	};
+
+	struct RapToneSegConverted
+	{
+		float freq1;
+		float freq2;
+	};
+
+	struct ToneConvertedRapPiece
 	{
 		std::string lyric;
 		float fNumOfSamples;
+		float sampleFreq1;
+		float sampleFreq2;
 	};
-
-	struct ConvertedRapPiece
-	{
-		float baseSampleFreq;
-		int tone;
-		std::vector<LyricSeg> lyricSegs;
-	};
-
-	typedef Deferred<ConvertedRapPiece> ConvertedRapPiece_Deferred;
 
 	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
-		std::vector< ConvertedRapPiece_Deferred> convertedPieces;
+		std::vector<RapToneInput> inputToneList;
+		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		{
+			RapPieceInternal_Deferred piece = pieceList[i];
+			RapToneInput inputTone;
+			inputTone.fNumOfSamples = piece->fNumOfSamples;
+			inputTone.tone = piece->tone;
+			inputToneList.push_back(inputTone);
+		}
+
+		std::vector<RapToneSegConverted> convertedToneList;
+		convertedToneList = _convertRapTone(inputToneList);
+
+		std::vector<ToneConvertedRapPiece> toneConvertedPieceList;
+		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		{
+			RapPieceInternal_Deferred piece = pieceList[i];
+			RapToneSegConverted convertedTone = convertedToneList[i];
+			ToneConvertedRapPiece toneCovertedPiece;
+			toneCovertedPiece.lyric = piece->lyric;
+			toneCovertedPiece.fNumOfSamples = piece->fNumOfSamples;
+			toneCovertedPiece.sampleFreq1 = piece->baseSampleFreq* convertedTone.freq1;
+			toneCovertedPiece.sampleFreq2 = piece->baseSampleFreq* convertedTone.freq2;
+			toneConvertedPieceList.push_back(toneCovertedPiece);
+		}
 
 		if (m_LyricConverter != nullptr)
 		{
-			convertedPieces = _convertLyric_rap(pieceList);
-		}
-		else
-		{
-			for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
-			{
-				RapPieceInternal_Deferred piece = pieceList[i];
-
-				ConvertedRapPiece_Deferred converted_piece;
-				converted_piece->baseSampleFreq = piece->baseSampleFreq;
-				converted_piece->tone = piece->tone;
-
-				LyricSeg lseg;
-				lseg.lyric = piece->lyric; 
-				lseg.fNumOfSamples = piece->fNumOfSamples;
-
-				converted_piece->lyricSegs.push_back(lseg);
-				convertedPieces.push_back(converted_piece);
-			}
-
+			toneConvertedPieceList = _convertLyric_rap(toneConvertedPieceList);
 		}
 
-		unsigned segCount = 0;
-		for (unsigned i = 0; i < convertedPieces.size(); i++)
-			segCount += (unsigned)convertedPieces[i]->lyricSegs.size();
-		
-
-		unsigned *lens = new unsigned[segCount];
+		unsigned *lens = new unsigned[toneConvertedPieceList.size()];
 		float sumAllLen = 0.0f;
 		unsigned uSumAllLen;
 
-		float firstNoteHead = this->getFirstNoteHeadSamples(convertedPieces[0]->lyricSegs[0].lyric.data());
+		float firstNoteHead = this->getFirstNoteHeadSamples(toneConvertedPieceList[0].lyric.data());
 
-		unsigned i_seg = 0;
-		for (unsigned j = 0; j < convertedPieces.size(); j++)
+		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
 		{
-			ConvertedRapPiece_Deferred converted_piece = convertedPieces[j];
-			for (unsigned k = 0; k < (unsigned)converted_piece->lyricSegs.size(); k++, i_seg++)
-			{
-				LyricSeg lseg = converted_piece->lyricSegs[k];			
-				float sumLen = lseg.fNumOfSamples;
-				if (j == 0 && k==0)	sumLen += firstNoteHead;
-				float oldSumAllLen = sumAllLen;
-				sumAllLen += sumLen;
-				lens[i_seg] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
-			}
+			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
+
+			float sumLen = converted_piece.fNumOfSamples;
+			if (j == 0)	sumLen += firstNoteHead;
+
+			float oldSumAllLen = sumAllLen;
+			sumAllLen += sumLen;
+
+			lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
 		}
 		uSumAllLen = (unsigned)ceilf(sumAllLen);
 
@@ -353,120 +356,55 @@ public:
 		unsigned noteBufPos = 0;
 		float phase = 0.0f;
 
-		unsigned i_seg_start = 0;
-		for (unsigned j = 0; j < convertedPieces.size(); j++)
+		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
 		{
-			ConvertedRapPiece_Deferred converted_piece = convertedPieces[j];
+			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
 
-			unsigned uPieceSumLen = 0;
-			unsigned i_seg = i_seg_start;
-			for (unsigned k = 0; k < (unsigned)converted_piece->lyricSegs.size(); k++, i_seg++)
+			unsigned uSumLen = lens[j];
+			float *freqMap = new float[uSumLen];
+
+			for (unsigned i = 0; i < uSumLen; i++)
 			{
-				unsigned uSumLen = lens[i_seg];
-				uPieceSumLen += uSumLen;
+				float x = (float)i / (float)(uSumLen - 1);
+				freqMap[i] = converted_piece.sampleFreq1 + (converted_piece.sampleFreq2 - converted_piece.sampleFreq1)*x;
 			}
 
-			unsigned i_sample_start = 0;
-			i_seg = i_seg_start;
-			for (unsigned k = 0; k < (unsigned)converted_piece->lyricSegs.size(); k++, i_seg++)
+			/// Make frequency tweakings here
+
+			/// Transition
+			if (m_transition > 0.0f && m_transition < 1.0f)
 			{
-
-				unsigned uSumLen = lens[i_seg];
-				float *freqMap = new float[uSumLen];
-
-				if (converted_piece->tone <= 1)
+				if (j < toneConvertedPieceList.size() - 1)
 				{
-					for (unsigned i = 0; i < uSumLen; i++)
+					ToneConvertedRapPiece piece_next = toneConvertedPieceList[j+1];
+					float sampleFreq_next = piece_next.sampleFreq1;
+					float transStart = (float)uSumLen - m_transition*(float)uSumLen;
+					float sampelFreq_this = freqMap[(unsigned)ceilf(transStart)];
+					for (unsigned pos = (unsigned)ceilf(transStart); pos < uSumLen; pos++)
 					{
-						freqMap[i] = converted_piece->baseSampleFreq;
+						float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
+						freqMap[pos] = (1.0f - k)* sampelFreq_this + k*sampleFreq_next;
 					}
 				}
-				else if (converted_piece->tone == 2)
-				{
-					float lowFreq = converted_piece->baseSampleFreq*0.7f;
-					for (unsigned i = 0; i < uSumLen; i++)
-					{
-						float x = (float)(i + i_sample_start) / (float)(uPieceSumLen - 1);
-						freqMap[i] = lowFreq + (converted_piece->baseSampleFreq - lowFreq)*x;
-					}
-				}
-				else if (converted_piece->tone == 3)
-				{
-					float highFreq = converted_piece->baseSampleFreq*0.75f;
-					float lowFreq = converted_piece->baseSampleFreq*0.5f;
-					for (unsigned i = 0; i < uSumLen; i++)
-					{
-						float x = (float)(i + i_sample_start) / (float)(uPieceSumLen - 1);
-						freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
-					}
-				}
-				else if (converted_piece->tone == 4)
-				{
-					float lowFreq = converted_piece->baseSampleFreq*0.5f;
-					for (unsigned i = 0; i < uSumLen; i++)
-					{
-						float x = (float)(i + i_sample_start) / (float)(uPieceSumLen - 1);
-						freqMap[i] = converted_piece->baseSampleFreq + (lowFreq - converted_piece->baseSampleFreq)*x;
-					}
-				}
-
-				/// Transition
-				if (m_transition > 0.0f && m_transition < 1.0f)
-				{
-					if (j < convertedPieces.size() - 1 && k == (unsigned)converted_piece->lyricSegs.size()-1)
-					{
-						ConvertedRapPiece& piece_next = *convertedPieces[j];
-
-						float sampleFreq_next;
-						if (piece_next.tone <= 2)
-						{
-							sampleFreq_next = piece_next.baseSampleFreq;
-						}
-						else if (piece_next.tone == 3)
-						{
-							sampleFreq_next = piece_next.baseSampleFreq*0.75f;
-						}
-						else if (piece_next.tone == 4)
-						{
-							sampleFreq_next = piece_next.baseSampleFreq*0.5f;
-						}
-
-						float transStart = (float)uSumLen - m_transition*(float)uSumLen;
-
-						for (unsigned pos = (unsigned)ceilf(transStart); pos <uSumLen; pos++)
-						{
-							float k = (cosf(((float)pos - (float)uSumLen) / ((float)uSumLen - transStart)   * (float)PI) + 1.0f)*0.5f;
-							freqMap[pos] = (1.0f - k)* freqMap[pos] + k*sampleFreq_next;
-						}
-					}
-				}
-
-				const char* lyric_next = nullptr;
-				if (k < (unsigned)converted_piece->lyricSegs.size() - 1)
-				{
-					lyric_next = converted_piece->lyricSegs[k + 1].lyric.data();
-				}
-				else if (j < convertedPieces.size() - 1)
-				{
-					lyric_next = convertedPieces[j + 1]->lyricSegs[0].lyric.data();
-				}
-
-				_generateWave(converted_piece->lyricSegs[k].lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
-
-				delete[] freqMap;
-
-				noteBufPos += lens[i_seg];
-
-				i_sample_start += uSumLen;
 			}
 
-			i_seg_start += (unsigned)converted_piece->lyricSegs.size();
+			const char* lyric_next = nullptr;
+			if (j < toneConvertedPieceList.size() - 1)
+			{
+				lyric_next = toneConvertedPieceList[j + 1].lyric.data();
+			}
+
+			_generateWave(converted_piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0);
+			
+			delete[] freqMap;
+
+			noteBufPos += uSumLen;
 		}
 
 		// Envolope
 		for (unsigned pos = 0; pos < uSumAllLen; pos++)
 		{
-			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[segCount - 1];
+			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[toneConvertedPieceList.size() - 1];
 			float amplitude = 1.0f - expf(-x2*10.0f);
 			noteBuf->m_data[pos] *= amplitude;
 		}
@@ -572,19 +510,19 @@ private:
 		return list_converted;
 	}
 
-	std::vector< ConvertedRapPiece_Deferred> _convertLyric_rap(RapPieceInternalList pieceList)
+	std::vector<ToneConvertedRapPiece> _convertLyric_rap(const std::vector<ToneConvertedRapPiece>& inputList)
 	{
 		PyObject* lyricList = PyList_New(0);
-		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		for (unsigned i = 0; i < (unsigned)inputList.size(); i++)
 		{
-			PyObject *byteCode = PyBytes_FromString(pieceList[i]->lyric.data());
+			PyObject *byteCode = PyBytes_FromString(inputList[i].lyric.data());
 			PyList_Append(lyricList, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 		}
 		PyObject* args = PyTuple_Pack(1, lyricList);
 		PyObject* rets = PyObject_CallObject(m_LyricConverter, args);
 
-		std::vector<ConvertedRapPiece_Deferred> list_converted;
-		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		std::vector<ToneConvertedRapPiece> outputList;
+		for (unsigned i = 0; i < (unsigned)inputList.size(); i++)
 		{
 			PyObject* tuple = PyList_GetItem(rets, i);
 			unsigned count = (unsigned)PyTuple_Size(tuple);
@@ -609,25 +547,57 @@ private:
 				sum_weight += weight;
 			}
 
-			RapPieceInternal_Deferred piece = pieceList[i];
-			ConvertedRapPiece_Deferred converted_piece;
-			converted_piece->baseSampleFreq = piece->baseSampleFreq;
-			converted_piece->tone = piece->tone;
-
-			for (unsigned j = 0; j < count; j += 2)
+			ToneConvertedRapPiece inputPiece = inputList[i];
+			float k = 0.0f;
+			for (unsigned j = 0; j < lyrics.size(); j++)
 			{
-				LyricSeg seg;
 				float weight = weights[j] / sum_weight;
-				seg.fNumOfSamples=weight* piece->fNumOfSamples;
-				seg.lyric = lyrics[j];
-				converted_piece->lyricSegs.push_back(seg);
-			}
 
-			list_converted.push_back(converted_piece);	
+				ToneConvertedRapPiece outputPiece;
+				outputPiece.fNumOfSamples = weight* inputPiece.fNumOfSamples;
+				outputPiece.lyric = lyrics[j];
+				outputPiece.sampleFreq1 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
+				k += weight;
+				outputPiece.sampleFreq2 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
+				outputList.push_back(outputPiece);
+			}
 
 		}
 
-		return list_converted;
+		return outputList;
+	}
+
+	std::vector<RapToneSegConverted> _convertRapTone(const std::vector<RapToneInput>& inputToneList)
+	{
+		std::vector<RapToneSegConverted> convertedList;
+		for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
+		{
+			RapToneInput inputTone = inputToneList[i];
+			RapToneSegConverted convertedTone;
+			if (inputTone.tone <= 1)
+			{
+				convertedTone.freq1 = 1.0f;
+				convertedTone.freq2 = 1.0f;
+			}
+			else if (inputTone.tone == 2)
+			{
+				convertedTone.freq1 = 0.7f;
+				convertedTone.freq2 = 1.0f;
+			}
+			else if (inputTone.tone == 3)
+			{
+				convertedTone.freq1 = 0.5f;
+				convertedTone.freq2 = 0.75f;
+			}
+			else if (inputTone.tone == 4)
+			{
+				convertedTone.freq1 = 1.0f;
+				convertedTone.freq2 = 0.5f;
+			}
+			convertedList.push_back(convertedTone);
+		}
+
+		return convertedList;
 	}
 
 	float getFirstNoteHeadSamples(const char* lyric)
