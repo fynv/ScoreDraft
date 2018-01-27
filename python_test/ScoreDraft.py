@@ -154,17 +154,28 @@ class Singer:
 		       Another command common to all singers is "default_lyric", example: 
 		       singer.tune("default_lyric la")
 		       This will make the singer to sing "la" when an empty lyric "" is recieved
+		       One more command common to all singers is "rap_freq", example:
+		       singer.tune("rap_freq 1.5")
+		       The set frequency is relative to the refFreq used during singing, and is
+		       used as baseline for rapping. So the physical frequency of rapping is 
+		       actually refFreq*rap_freq*toneFreq
 		'''
 		PyScoreDraft.SingerTune(self.id, cmd)
 
 	def sing(self, buf, seq, tempo=80, refFreq=264.0):
 		'''
 		buf -- An instance of TrackBuffer, the result of play will be appended to the buffer.
-		seq -- A list of singing-segments [seg1, seg2, ... ]. Each of the seg is a tuple (lyric, note1, note2...)
-		       lyric: a string, telling the singer what lyric to sing
-		       notes: they are the same kind of notes used in instrument play. In many cases, it can be a single 
-		              note. Multiple notes allows the sound seamlessly transit between different pitch. When there 
-		              are silence notes/backapsaces, the singing-segment will be broken into multiple segments to sing.
+		seq -- A list of singing-segments [seg1, seg2, ... ]. Each of the seg is a tuple 
+					(lyric1, note1, note2, lyric2, note3, ...)
+		       lyrics: they are strings, telling the singer what lyric to sing
+		       notes: they are the same kind of notes used in instrument play. 
+
+		       In many cases, there is only 1 note following a lyric.
+		       When there are more than 1 notes follwoing a lyric, all these notes will split the duration of that lyric.
+		       All lyrics and notes in the same tuple are intended to be sung continuously.
+			   However, when there are silence notes/backapsaces, the singing-segment will be broken into multiple 
+			   segments to sing.
+		      
 		       Raw notes can be mixed with singing-segments in the list. They will be sung using the default lyric.
 		       Vice-versa, if you pass a singing-sequence to an instrument, the notes contained in the sequence will
 		       get played, and lyrics ignored. We aim to provide maximum compatibility between the two.
