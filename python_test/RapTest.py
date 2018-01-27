@@ -64,6 +64,10 @@ for i in range(int(len(poem[1])/divider)):
 buf=ScoreDraft.TrackBuffer()
 
 '''
+GePing= ScoreDraft.GePing()
+GePing.sing(buf, seq, 120)
+'''
+
 GePing= ScoreDraft.GePing_UTAU()
 
 def HeNanToneGenerator(ToneInfoForEachSyllable):
@@ -82,7 +86,6 @@ def HeNanToneGenerator(ToneInfoForEachSyllable):
 ScoreDraft.UtauDraftSetRapToneGenerator(GePing, HeNanToneGenerator)
 
 GePing.sing(buf, seq, 120)
-'''
 
 '''
 WanEr=  ScoreDraft.WanEr_UTAU()
@@ -91,11 +94,12 @@ ScoreDraft.UtauDraftSetLyricConverter(WanEr, TsuroVCVConverter.TsuroVCVConverter
 WanEr.sing(buf, seq, 120)
 '''
 
+'''
 Ayaka = ScoreDraft.Ayaka_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(Ayaka, CVVCChineseConverter.CVVCChineseConverter)
 Ayaka.tune ("rap_freq 1.5")
 Ayaka.sing(buf, seq, 120)
-
+'''
 
 #ScoreDraft.QPlayTrackBuffer(buf)
 

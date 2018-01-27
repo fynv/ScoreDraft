@@ -19,6 +19,7 @@ NoteBuffer::NoteBuffer()
 	m_sampleNum=0;
 	m_alignPos = 0;
 	m_data=0;
+	m_sampleRate = 44100.0f;
 }
 
 NoteBuffer::~NoteBuffer()

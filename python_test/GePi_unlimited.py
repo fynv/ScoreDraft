@@ -105,7 +105,7 @@ def chooseFreq(chord, lastFreq):
 
 # resources
 
-singer=ScoreDraft.GePing()
+singer=ScoreDraft.GePing_UTAU()
 guitar=ScoreDraft.CleanGuitar()
 
 BassDrum=ScoreDraft.BassDrum()
@@ -132,16 +132,20 @@ track_drum=ScoreDraft.TrackBuffer()
 pi_calc= calcPi()
 
 freq= freqCalc(5, 4)
-singingSeq = [ (lyric_map[next(pi_calc)], (freq, durations[0])), ('dian', (freq, durations[1]))]
+singingSeq = []
+
+line = (lyric_map[next(pi_calc)], (freq, durations[0]), 'dian', (freq, durations[1]))
 
 j0=2
 
 for i in range(8):
     for j in range(j0, len(durations)):
-        singingSeq += [(lyric_map[next(pi_calc)], (freq, durations[j]))]
+        line += (lyric_map[next(pi_calc)], (freq, durations[j]))
+    singingSeq+=[line]
     if i<7:
         j0=0
         freq=chooseFreq(chords[i+1], freq)
+        line=()
 
 singer.sing(track_sing,singingSeq, 120)
 guitar.play(track_guitar, guitar_notes, 120)
@@ -161,8 +165,10 @@ while 1:
     singingSeq = []
     for i in range(8):
         freq=chooseFreq(chords[i], freq)
+        line=()
         for j in range(len(durations) ):
-            singingSeq += [(lyric_map[next(pi_calc)], (freq, durations[j]))]
+            line += (lyric_map[next(pi_calc)], (freq, durations[j]))
+        singingSeq+=[line]
             
     singer.sing(track_sing,singingSeq, 120)
     ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
