@@ -13,3 +13,5 @@ if (WIN32)
 add_subdirectory(WinPCMPlayer)
 endif()
 add_subdirectory(QtPCMPlayer)
+
+add_subdirectory(UtauDraft)
