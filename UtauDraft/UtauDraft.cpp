@@ -1268,7 +1268,7 @@ public:
 			sprintf(prefixMapFn, "UTAUVoice/%s/prefix.map", m_name.data());
 			m_PrefixMap.LoadFromFile(prefixMapFn);
 
-			m_charset = "utf-8";
+			m_charset = "shiftjis";
 			char charsetFn[1024];
 			sprintf(charsetFn, "%s/charset", rootPath);
 
