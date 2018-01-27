@@ -15,6 +15,8 @@ def getCV(CVLyric):
 		vowel="i0"
 	if CVLyric=="ju" or CVLyric=="qu" or CVLyric=="xu" or CVLyric=="yu":
 		vowel="v"
+	if CVLyric=="ye":
+		vowel="e0"
 
 	if vowel=="ia":
 		vowel="a"
@@ -25,7 +27,7 @@ def getCV(CVLyric):
 	if vowel=="iang":
 		vowel="ang"
 	if vowel=="ie":
-		vowel="e"
+		vowel="e0"
 	if vowel=="iong":
 		vowel="ong"
 	if vowel=="iu":

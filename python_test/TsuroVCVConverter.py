@@ -13,6 +13,8 @@ def getVowel(CVLyric):
 		vowel="iz"
 	if CVLyric=="ju" or CVLyric=="qu" or CVLyric=="xu" or CVLyric=="yu":
 		vowel="v"
+	if CVLyric=="ye":
+		vowel="ie"
 
 	if vowel=="ia":
 		vowel="a"
