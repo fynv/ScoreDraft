@@ -4,7 +4,6 @@ import ScoreDraft
 from ScoreDraftNotes import *
 import CVVCChineseConverter
 
-#seq=[("ni",2, 48, "hao", 3, 48, "ya", 1,48)]
 
 line= ("zheng", re(5,24), "yue", do(5,48), "li", re(5,24), "cai", mi(5,36), so(5,12), "hua", mi(5,24), la(4,24))
 line+=("wu", re(5,24), "you", do(5,48), "hua", re(5,24), "cai", mi(5,24), do(5,12), re(5,12), mi(5,24), BL(24))

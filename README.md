@@ -87,6 +87,7 @@ Main Python interfaces:
 	/python_test/PyScoreDraft.pyd (or PyScoreDraft.so): C++ exported original interfaces
 	/python_test/ScoreDraft.py: core interfaces, a wrapper layer for PyScoreDraft.pyd
 	/python_test/ScoreDraftNotes.py: note definitions
+	/python_test/ScoreDraftRapChinese.py: define utilities to generate Mandarin Chinese 4 tone rap.
 	/python_test/ScoreDraftArranging.py: "arranging" interface, will be useful in the future
 	/python_test/print_generated_code.py: list Python code dynamically generated from C++ 
 	/python_test/print_generated_code_summary.py: list summary of the generated code 
@@ -363,11 +364,25 @@ The singing system now also support rapping. The singing sequence can include ra
 
 ```Python
 
-	seq= [ ("jin_f1", do(5,48)), ("ke_f1", 1, 48, "la_f1", 4, 48) ]
+	seq= [ ("jin_f1", do(5,48)), ("ke_f1", 48, 1.0, 1.0, "la_f1", 48, 1.0, 0.5) ]
 
 ```
 
-In the above rapping segment ("ke_f1", 1, 48, "la_f1", 4, 48), 1 and 4 are tone marker using the 4 tone system of Mandarin Chinese. 48 is duration.
+In the above rapping segment ("ke_f1", 48, 1.0, 1.0, "la_f1", 48, 1.0, 0.5), there are
+3 numbers following each lyric. The first one is the duration of the syllable, which is
+a integer. The 2 floats following are the starting and ending frequencies of syllable.
+
+There is an utility defined in ScoreDraftRapChinese.py to help to generate the tones of
+Mandarin Chinese (the 4 tones). With its help, the about sequence can be defined as:
+
+```Python
+
+	from ScoreDraftRapChinese import *
+
+	seq= [ ("jin_f1", do(5,48)), RapTone("ke_f1", 1, 48)+RapTone("la_f1", 4, 48)) ]
+
+```
+
 
 ### KeLa Engine
 

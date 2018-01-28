@@ -391,10 +391,9 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 						_item = PyTuple_GetItem(item, j);
 						if (PyObject_TypeCheck(_item, &PyLong_Type))
 						{
-							//int tone = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
-							int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j + 1));
+							int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
 							Note note;
-							note.m_freq_rel = 1.0f;
+							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j+1));
 							note.m_duration = duration;
 							instrument->PlayNote(*buffer, note, tempo, RefFreq);
 						}
@@ -542,9 +541,11 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 					{
 						RapPiece piece;
 						piece.m_lyric = lyric;
-						piece.m_tone = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
-						j++;
 						piece.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						j++;
+						piece.m_freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						j++;
+						piece.m_freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
 						rap_pieces.push_back(piece);
 					}

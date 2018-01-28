@@ -79,7 +79,6 @@ public:
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
 		m_LyricConverter = nullptr;
-		m_ToneGenerator = nullptr;
 
 		m_use_prefix_map = true;
 		m_PrefixMap = nullptr;
@@ -88,7 +87,6 @@ public:
 	~UtauDraft()
 	{
 		if (m_LyricConverter) Py_DECREF(m_LyricConverter);
-		if (m_ToneGenerator) Py_DECREF(m_ToneGenerator);
 	}
 
 	void SetOtoMap(OtoMap* otoMap)
@@ -112,13 +110,6 @@ public:
 		if (m_LyricConverter != nullptr) Py_DECREF(m_LyricConverter);
 		m_LyricConverter = lyricConverter;
 		if (m_LyricConverter != nullptr) Py_INCREF(m_LyricConverter);
-	}
-
-	void SetToneGenerator(PyObject* toneGenerator)
-	{
-		if (m_ToneGenerator != nullptr) Py_DECREF(m_ToneGenerator);
-		m_ToneGenerator = toneGenerator;
-		if (m_ToneGenerator != nullptr) Py_INCREF(m_ToneGenerator);
 	}
 
 	virtual bool Tune(const char* cmd)
@@ -193,7 +184,7 @@ public:
 				float v;
 				int bufPos = (int)i + j;
 				if (bufPos < 0) v = buf[0];
-				else if (bufPos >= size) v = buf[size - 1];
+				else if (bufPos >= (int)size) v = buf[size - 1];
 				else v = buf[bufPos];
 				
 				float x = (float)j / (float)halfWinSize*(float)PI;
@@ -205,7 +196,7 @@ public:
 			for (int j = -(int)halfWinSize; j < (int)halfWinSize; j++)
 			{
 				int bufPos = (int)i + j;
-				if (bufPos < 0 || bufPos >= size) continue;
+				if (bufPos < 0 || bufPos >= (int)size) continue;
 
 				float x = (float)j / (float)halfWinSize*(float)PI;
 				float w = (cosf(x) + 1.0f)*0.5f;
@@ -350,82 +341,36 @@ public:
 		delete[] lens;
 	}
 
-	struct RapToneInput
-	{
-		float fNumOfSamples;
-		int tone;
-	};
-
-	struct RapToneSegConverted
-	{
-		float freq1;
-		float freq2;
-	};
-
-	struct ToneConvertedRapPiece
-	{
-		std::string lyric;
-		float fNumOfSamples;
-		float sampleFreq1;
-		float sampleFreq2;
-	};
-
 	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
 	{
-		std::vector<RapToneInput> inputToneList;
-		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
-		{
-			RapPieceInternal_Deferred piece = pieceList[i];
-			RapToneInput inputTone;
-			inputTone.fNumOfSamples = piece->fNumOfSamples;
-			inputTone.tone = piece->tone;
-			inputToneList.push_back(inputTone);
-		}
-
-		std::vector<RapToneSegConverted> convertedToneList;
-		convertedToneList = _convertRapTone(inputToneList);
-
-		std::vector<ToneConvertedRapPiece> toneConvertedPieceList;
-		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
-		{
-			RapPieceInternal_Deferred piece = pieceList[i];
-			RapToneSegConverted convertedTone = convertedToneList[i];
-			ToneConvertedRapPiece toneCovertedPiece;
-			toneCovertedPiece.lyric = piece->lyric;
-			toneCovertedPiece.fNumOfSamples = piece->fNumOfSamples;
-			toneCovertedPiece.sampleFreq1 = piece->baseSampleFreq* convertedTone.freq1;
-			toneCovertedPiece.sampleFreq2 = piece->baseSampleFreq* convertedTone.freq2;
-			toneConvertedPieceList.push_back(toneCovertedPiece);
-		}
-
 		if (m_LyricConverter != nullptr)
 		{
-			toneConvertedPieceList = _convertLyric_rap(toneConvertedPieceList);
+			pieceList = _convertLyric_rap(pieceList);
 		}
 
 		if (m_PrefixMap != nullptr && m_use_prefix_map)
 		{
 			for (unsigned j = 0; j < pieceList.size(); j++)
 			{
-				ToneConvertedRapPiece& converted_piece = toneConvertedPieceList[j];
-				float aveFreq = (converted_piece.sampleFreq1 + converted_piece.sampleFreq2)*0.5f;
+				RapPieceInternal& piece = *pieceList[j];
+				float aveFreq = (piece.sampleFreq1 + piece.sampleFreq2)*0.5f;
 				aveFreq *= noteBuf->m_sampleRate;
 				std::string prefix = m_PrefixMap->GetPrefixFromFreq(aveFreq);
-				converted_piece.lyric += prefix;
+				piece.lyric += prefix;
 			}
 		}
 
-		unsigned *lens = new unsigned[toneConvertedPieceList.size()];
+		unsigned *lens = new unsigned[pieceList.size()];
 		float sumAllLen = 0.0f;
 		unsigned uSumAllLen;
 
-		float firstNoteHead = this->getFirstNoteHeadSamples(toneConvertedPieceList[0].lyric.data());
+		float firstNoteHead = this->getFirstNoteHeadSamples(pieceList[0]->lyric.data());
 
-		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
+		for (unsigned j = 0; j < pieceList.size(); j++)
 		{
-			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
+			RapPieceInternal& piece = *pieceList[j];
 
-			float sumLen = converted_piece.fNumOfSamples;
+			float sumLen = piece.fNumOfSamples;
 			if (j == 0)	sumLen += firstNoteHead;
 
 			float oldSumAllLen = sumAllLen;
@@ -441,16 +386,16 @@ public:
 
 		float *freqAllMap = new float[uSumAllLen];
 		unsigned noteBufPos = 0;
-		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
+		for (unsigned j = 0; j < pieceList.size(); j++)
 		{
-			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
+			RapPieceInternal& piece = *pieceList[j];
 			unsigned uSumLen = lens[j];
 			if (uSumLen == 0) continue;
 			float *freqMap = freqAllMap + noteBufPos;
 			for (unsigned i = 0; i < uSumLen; i++)
 			{
 				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = converted_piece.sampleFreq1 + (converted_piece.sampleFreq2 - converted_piece.sampleFreq1)*x;
+				freqMap[i] = piece.sampleFreq1 + (piece.sampleFreq2 - piece.sampleFreq1)*x;
 			}
 			noteBufPos += uSumLen;
 		}
@@ -460,21 +405,21 @@ public:
 		noteBufPos = 0;
 		float phase = 0.0f;
 
-		for (unsigned j = 0; j < toneConvertedPieceList.size(); j++)
+		for (unsigned j = 0; j < pieceList.size(); j++)
 		{
-			ToneConvertedRapPiece converted_piece = toneConvertedPieceList[j];
+			RapPieceInternal& piece = *pieceList[j];
 			unsigned uSumLen = lens[j];
 			if (uSumLen == 0) continue;
 
 			float *freqMap = freqAllMap + noteBufPos;
 
 			const char* lyric_next = nullptr;
-			if (j < toneConvertedPieceList.size() - 1)
+			if (j < pieceList.size() - 1)
 			{
-				lyric_next = toneConvertedPieceList[j + 1].lyric.data();
+				lyric_next = pieceList[j + 1]->lyric.data();
 			}
 
-			_generateWave(converted_piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0);			
+			_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0);
 
 			noteBufPos += uSumLen;
 		}
@@ -484,7 +429,7 @@ public:
 		// Envolope
 		for (unsigned pos = 0; pos < uSumAllLen; pos++)
 		{
-			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[toneConvertedPieceList.size() - 1];
+			float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[pieceList.size() - 1];
 			float amplitude = 1.0f - expf(-x2*10.0f);
 			noteBuf->m_data[pos] *= amplitude;
 		}
@@ -602,18 +547,18 @@ private:
 		return list_converted;
 	}
 
-	std::vector<ToneConvertedRapPiece> _convertLyric_rap(const std::vector<ToneConvertedRapPiece>& inputList)
+	RapPieceInternalList _convertLyric_rap(const RapPieceInternalList& inputList)
 	{
 		PyObject* lyricList = PyList_New(0);
 		for (unsigned i = 0; i < (unsigned)inputList.size(); i++)
 		{
-			PyObject *byteCode = PyBytes_FromString(inputList[i].lyric.data());
+			PyObject *byteCode = PyBytes_FromString(inputList[i]->lyric.data());
 			PyList_Append(lyricList, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 		}
 		PyObject* args = PyTuple_Pack(1, lyricList);
 		PyObject* rets = PyObject_CallObject(m_LyricConverter, args);
 
-		std::vector<ToneConvertedRapPiece> outputList;
+		RapPieceInternalList outputList;
 		for (unsigned i = 0; i < (unsigned)inputList.size(); i++)
 		{
 			PyObject* tuple = PyList_GetItem(rets, i);
@@ -639,82 +584,24 @@ private:
 				sum_weight += weight;
 			}
 
-			ToneConvertedRapPiece inputPiece = inputList[i];
+			const RapPieceInternal& inputPiece = *inputList[i];
 			float k = 0.0f;
 			for (unsigned j = 0; j < lyrics.size(); j++)
 			{
 				float weight = weights[j] / sum_weight;
 
-				ToneConvertedRapPiece outputPiece;
-				outputPiece.fNumOfSamples = weight* inputPiece.fNumOfSamples;
-				outputPiece.lyric = lyrics[j];
-				outputPiece.sampleFreq1 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
+				RapPieceInternal_Deferred outputPiece;
+				outputPiece->fNumOfSamples = weight* inputPiece.fNumOfSamples;
+				outputPiece->lyric = lyrics[j];
+				outputPiece->sampleFreq1 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
 				k += weight;
-				outputPiece.sampleFreq2 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
+				outputPiece->sampleFreq2 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
 				outputList.push_back(outputPiece);
 			}
 
 		}
 
 		return outputList;
-	}
-
-	std::vector<RapToneSegConverted> _convertRapTone(const std::vector<RapToneInput>& inputToneList)
-	{
-		std::vector<RapToneSegConverted> convertedList;
-
-		if (m_ToneGenerator!=nullptr)
-		{
-			PyObject* inputList = PyList_New(0);
-			for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
-			{
-				RapToneInput inputTone = inputToneList[i];
-				PyObject* inputTuple = PyTuple_Pack(2, PyLong_FromLong((long)inputTone.tone), PyFloat_FromDouble((double)inputTone.fNumOfSamples));
-				PyList_Append(inputList, inputTuple);
-			}
-			PyObject* args = PyTuple_Pack(1, inputList);
-			PyObject* rets = PyObject_CallObject(m_ToneGenerator, args);
-
-			for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
-			{
-				PyObject* outputTuple = PyList_GetItem(rets, i);
-				RapToneSegConverted convertedTone;
-				convertedTone.freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(outputTuple, 0));
-				convertedTone.freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(outputTuple, 1));
-				convertedList.push_back(convertedTone);
-			}
-		}
-		else
-		{
-			for (unsigned i = 0; i < (unsigned)inputToneList.size(); i++)
-			{
-				RapToneInput inputTone = inputToneList[i];
-				RapToneSegConverted convertedTone;
-				if (inputTone.tone <= 1)
-				{
-					convertedTone.freq1 = 1.0f;
-					convertedTone.freq2 = 1.0f;
-				}
-				else if (inputTone.tone == 2)
-				{
-					convertedTone.freq1 = 0.7f;
-					convertedTone.freq2 = 1.0f;
-				}
-				else if (inputTone.tone == 3)
-				{
-					convertedTone.freq1 = 0.5f;
-					convertedTone.freq2 = 0.75f;
-				}
-				else if (inputTone.tone == 4)
-				{
-					convertedTone.freq1 = 1.0f;
-					convertedTone.freq2 = 0.5f;
-				}
-				convertedList.push_back(convertedTone);
-			}
-		}
-
-		return convertedList;
 	}
 
 	float getFirstNoteHeadSamples(const char* lyric)
@@ -1161,7 +1048,6 @@ private:
 	float m_rap_distortion;
 
 	PyObject* m_LyricConverter;
-	PyObject* m_ToneGenerator;
 
 	bool m_use_prefix_map;
 	PrefixMap* m_PrefixMap;
@@ -1311,18 +1197,6 @@ PyObject* UtauDraftSetLyricConverter(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject* UtauDraftSetRapToneGenerator(PyObject *args)
-{
-	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	PyObject* ToneGenerator = PyTuple_GetItem(args, 1);
-
-	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
-	singer.DownCast<UtauDraft>()->SetToneGenerator(ToneGenerator);
-
-	return PyLong_FromUnsignedLong(0);
-}
-
-
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 {
 	s_PyScoreDraft = pyScoreDraft;
@@ -1381,18 +1255,5 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		"\t\treturn [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]"
 		"\tThe argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string"
 		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable."
-		"\t'''\n");
-
-	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetRapToneGenerator", UtauDraftSetRapToneGenerator, "singer, RapToneGeneratorFunc", "singer.id, RapToneGeneratorFunc",
-		"\t'''\n"
-		"\tSet a tone-generator function for a UtauDraft singer used to decide the pitches of each syllable"
-		"\tWhen there is not a tone-generator set for the singer, the 4-tone system of mandarin Chinese will be used."
-		"\tThe 'RapToneGeneratorFunc' has the following form:"
-		"\tdef RapToneGeneratorFunc(ToneInfoForEachSyllable):"
-		"\t\t..."
-		"\t\treturn [(freq1ForSyllable1,freq2ForSyllable1),(freq1ForSyllable2,freq2ForSyllable2), ...]"
-		"\tThe argument 'ToneInfoForEachSyllable' has the form [(toneNumber1, length1),(toneNumber2, length2)...], where each toneNumber is a integer, and each length a float"
-		"\tIn the return value, each freq number is a float which is the frequency relative to the rap-base-line frequence of the singer"
-		"\tEach syllable can have 2 of the freq numbers to give the beginning pitch and the ending pitch"
 		"\t'''\n");
 }

@@ -154,11 +154,6 @@ class Singer:
 		       Another command common to all singers is "default_lyric", example: 
 		       singer.tune("default_lyric la")
 		       This will make the singer to sing "la" when an empty lyric "" is recieved
-		       One more command common to all singers is "rap_freq", example:
-		       singer.tune("rap_freq 1.5")
-		       The set frequency is relative to the refFreq used during singing, and is
-		       used as baseline for rapping. So the physical frequency of rapping is 
-		       actually refFreq*rap_freq*toneFreq
 		'''
 		PyScoreDraft.SingerTune(self.id, cmd)
 
@@ -183,8 +178,9 @@ class Singer:
 		        [("ha",do(5,48),re(5,48)), ("la",mi(5,48)), "volume 2.0", "default_lyric ba", fa(5,48)... ]
 
 		       seq can also contain rapping segments like:
-		       (lyric1, tone1, duration1, lyric2, tone2, duration2...)
-		       The tone number is an integer. ScoreDraft uses Mandarin Chinese 4 tones system by default.
+		       (lyric1, duration1, freq_start1, freq_end1, lyric2, duration2, freq_start2, freq_end2...)
+		       freq_starts and freq_ends are used to define the tones syllables.
+		       They are relative frequencies. The physical frequencies will be freq_starts*refFreq and freq_ends*refFreq
 
 		tempo -- an integer defining the tempo of singing in beats/minute.
 		refFreq  --  a floating point defining the reference-frequency in Hz.

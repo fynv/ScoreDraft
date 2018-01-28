@@ -9,15 +9,9 @@ doc=ScoreDraft.Document()
 #seq= [ ("- xin", do(6,24), "in nian", do(6,24), "ian hao", do(6,48), "ao ya", so(5,48))]
 #seq+= [ ("- xin", mi(6,24), "in nian", mi(6,24), "ian hao", mi(6,48), "ao ya", do(6,48))]
 
-#seq = [ ("- xin", 1, 48, "in nian", 2, 48, "ian hao", 3, 48)]
-
-#seq= [ ("- xin", do(6,48), "in nian", re(6,48), "ian hao", so(5,48))]
-
-
 #seq= [ ("xin", do(6,24), "nian", do(6,24), "hao", do(6,48), "ya", so(5,48))]
 #seq+= [ ("xin", mi(6,24), "nian", mi(6,24), "hao", mi(6,48), "ya", do(6,48))]
 
-#seq = [ ("xin", 1, 48, "nian", 2, 48, "hao", 3, 48)]
 
 line= ("zheng", re(5,24), "yue", do(5,48), "li", re(5,24), "cai", mi(5,36), so(5,12), "hua", mi(5,24), la(4,24))
 line+=("wu", re(5,24), "you", do(5,48), "hua", re(5,24), "cai", mi(5,24), do(5,12), re(5,12), mi(5,24), BL(24))

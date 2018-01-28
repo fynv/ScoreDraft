@@ -73,6 +73,7 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 	/python_test/PyScoreDraft.pyd (or PyScoreDraft.so): 由C++部分导出的原始接口
 	/python_test/ScoreDraft.py: ScoreDraft核心Python接口， 是对PyScoreDraft的封装
 	/python_test/ScoreDraftNotes.py: 音符定义
+	/python_test/ScoreDraftRapChinese.py: 用于中文四声的Rap辅助函数
 	/python_test/ScoreDraftArranging.py: “编配” 接口，目前功能很少，将来会有用
 	/python_test/print_generated_code.py: 打印由C++部分动态生成的Python代码，包含扩展接口
 	/python_test/print_generated_code_summary.py: 打印动态Python代码的摘要
@@ -337,13 +338,27 @@ ScoreDraft 提供的唱歌界面与乐器/打击乐演奏界面比较类似。
 
 目前歌唱系统还支持Rap，歌唱序列可以包含Rap片段，像下面序列中第二个片段：
 
+
 ```Python
 
-	seq= [ ("jin_f1", do(5,48)), ("ke_f1", 1, 48, "la_f1", 4, 48) ]
+	seq= [ ("jin_f1", do(5,48)), ("ke_f1", 48, 1.0, 1.0, "la_f1", 48, 1.0, 0.5) ]
 
 ```
-这里的Rap片段 ("ke_f1", 1, 48, "la_f1", 4, 48) 中, 1 和 4 是声调标记，基于汉语的四声系统。
-48 是时值。
+
+这里的Rap片段 ("ke_f1", 48, 1.0, 1.0, "la_f1", 48, 1.0, 0.5) 中, 每个歌词后面跟着三个数字。
+第一个数字是该音节的时长，和音符一样用整数表示。后面两个浮点数代表一个音节的起始频率和结束频率。
+
+在ScoreDraftRapChinese.py中提供了一个工具函数，可以用来帮助生成中文四声的Rap。有了它的帮助，
+上面这段Rap可以如下这样写：
+
+
+```Python
+
+	from ScoreDraftRapChinese import *
+
+	seq= [ ("jin_f1", do(5,48)), RapTone("ke_f1", 1, 48)+RapTone("la_f1", 4, 48)) ]
+
+```
 
 
 ### KeLa 引擎

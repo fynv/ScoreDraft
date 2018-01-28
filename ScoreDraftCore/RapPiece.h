@@ -8,12 +8,14 @@ class RapPiece
 {
 public:
 	std::string m_lyric;
-	int m_tone;
+	float m_freq1;
+	float m_freq2;
 	int m_duration; // 1 beat = 48
 
 	RapPiece()
 	{
-		m_tone = 1;
+		m_freq1 = 1.0f;
+		m_freq2 = 1.0f;
 		m_duration = 48;
 	}
 	~RapPiece(){}

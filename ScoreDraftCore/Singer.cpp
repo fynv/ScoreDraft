@@ -35,7 +35,7 @@ void VoiceBuffer::Allocate()
 	m_data = new float[m_sampleNum];
 }
 
-Singer::Singer() : m_noteVolume(1.0f), m_freq_rel_rap(1.0f)
+Singer::Singer() : m_noteVolume(1.0f)
 {
 	m_lyric_charset = "utf-8";
 }
@@ -177,7 +177,7 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 	float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
 	float fNumOfSamples = buffer.Rate()*fduration;
 
-	if (piece.m_tone<0)
+	if (piece.m_freq1<0.0 || piece.m_freq2<0.0)
 	{
 		if (piece.m_duration>0)
 		{
@@ -192,14 +192,11 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 		else return;
 	}
 
-	float baseFreq = RefFreq*m_freq_rel_rap;
-	float baseSampleFreq = baseFreq / (float)buffer.Rate();
-
 	RapPieceInternal _piece;
 	_piece.lyric = piece.m_lyric;
 	_piece.fNumOfSamples = fNumOfSamples;
-	_piece.baseSampleFreq = baseSampleFreq;
-	_piece.tone = piece.m_tone;
+	_piece.sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
+	_piece.sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
 
 	GenerateWave_Rap(_piece, &noteBuf);
 
@@ -311,7 +308,7 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 		float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
 		float fNumOfSamples = buffer.Rate()*fduration;
 
-		if (piece.m_tone < 0)
+		if (piece.m_freq1 < 0.0f || piece.m_freq2 < 0.0f)
 		{
 			if (pieceList.size()>0)
 			{
@@ -331,14 +328,12 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 		}
 		else
 		{
-			float baseFreq = RefFreq*m_freq_rel_rap;
-			float baseSampleFreq = baseFreq / (float)buffer.Rate();
 
 			RapPieceInternal_Deferred _piece;
 			_piece->lyric = piece.m_lyric;
 			_piece->fNumOfSamples = fNumOfSamples;
-			_piece->baseSampleFreq = baseSampleFreq;
-			_piece->tone = piece.m_tone;
+			_piece->sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
+			_piece->sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
 
 			totalDuration += fNumOfSamples;
 
@@ -371,13 +366,6 @@ bool Singer::Tune(const char* cmd)
 		char lyric[1024];
 		if (sscanf(cmd + 14, "%s", lyric))
 			m_defaultLyric = lyric;
-		return true;
-	}
-	else if (strcmp(command, "rap_freq") == 0)
-	{
-		float value;
-		if (sscanf(cmd + 9, "%f", &value))
-			m_freq_rel_rap = value;
 		return true;
 	}
 	return false;

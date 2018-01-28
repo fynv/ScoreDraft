@@ -43,8 +43,8 @@ struct RapPieceInternal
 {
 	std::string lyric;
 	float fNumOfSamples;
-	float baseSampleFreq;
-	int tone;
+	float sampleFreq1;
+	float sampleFreq2;
 };
 
 typedef Deferred<RapPieceInternal> RapPieceInternal_Deferred;
@@ -84,7 +84,6 @@ protected:
 	std::string m_defaultLyric;
 	std::string m_lyric_charset;
 
-	float m_freq_rel_rap;
 };
 
 #endif

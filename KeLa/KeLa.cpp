@@ -307,42 +307,11 @@ public:
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
 		float *freqMap = new float[uSumLen];
 
-		if (piece.tone <= 1)
+		for (unsigned i = 0; i < uSumLen; i++)
 		{
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				freqMap[i] = piece.baseSampleFreq;
-			}
+			float x = (float)i / (float)(uSumLen - 1);
+			freqMap[i] = piece.sampleFreq1 + (piece.sampleFreq2 - piece.sampleFreq1)*x;
 		}
-		else if (piece.tone == 2)
-		{
-			float lowFreq = piece.baseSampleFreq*0.7f;
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (piece.baseSampleFreq - lowFreq)*x;
-			}
-		}
-		else if (piece.tone == 3)
-		{
-			float highFreq = piece.baseSampleFreq*0.75f;
-			float lowFreq = piece.baseSampleFreq*0.5f;
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = lowFreq + (highFreq - lowFreq)*x;
-			}
-		}
-		else if (piece.tone == 4)
-		{
-			float lowFreq = piece.baseSampleFreq*0.5f;
-			for (unsigned i = 0; i < uSumLen; i++)
-			{
-				float x = (float)i / (float)(uSumLen - 1);
-				freqMap[i] = piece.baseSampleFreq + (lowFreq - piece.baseSampleFreq)*x;
-			}
-		}
-	
 
 		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
 		delete[] freqMap;
