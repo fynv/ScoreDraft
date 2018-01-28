@@ -213,6 +213,15 @@ For instrument play, write your note sequence like:
 Each note has 2 parameters, octave and duration. The default octave is 5, which means the center octave.
 The default value of duration is 48, which means 1 beat.
 
+ScoreDraftNotes also includes 2 special notes BL() and BK(). BL means a blank period of 
+time without any sound. BK means moving the cursor backwards so the next notes will be possible to overlap with the previous notes. A major triad can be writen like:
+
+```Python
+
+	seq=[do(5,48), BK(48), mi(5,48), BK(48), so(5,48)]
+
+```
+
 Then create a document object:
 
 ```Python
@@ -252,7 +261,7 @@ instrument class, then put multiple .wav files into the new created folder. The 
 samples should span a range of different pitches. The sampler will generate notes by
 intepolating between the samplers according to the target pitch.
 
-The .wav file must have 1 or 2 channels in 16bit PCM format. 
+The .wav files must have 1 or 2 channels in 16bit PCM format. 
 
 The algorihm of the instrument sampler is by simply stretching the sample audio and
 adding a envolope. So be sure the samples have sufficient length.
@@ -310,7 +319,7 @@ The percussion sampler extension allows user to extend the the set of percussion
 into the "PercussionSamples" folder.
 The file name without extension will be used as the name of the percussion class.
 
-The .wav file must have 1 or 2 channels in 16bit PCM format. 
+The .wav files must have 1 or 2 channels in 16bit PCM format. 
 
 The algorihm of the percussion sampler is by simply adding a envolope.
 So be sure the samples have sufficient length.
@@ -324,7 +333,7 @@ A singing sequence is a little more complicated than a note-sequence. For exampl
 
 ```Python
 
-	seq= [ ("jin_f1", do(5,24), ti(4,24), do(5,24)), ("ke_f1", re(5,24)), ("la_f1", mi(5,24)) ]
+	seq= [ ("jin_f1", do(5,24), ti(4,24), do(5,24)), ("ke_f1", re(5,24), "la_f1", mi(5,24)) ]
 
 ```
 
@@ -348,6 +357,16 @@ You can also mix raw notes without lyric with the singing segments. In that case
 notes will be sung using a default lyric.
 Vice-versa, if you try playing a singing sequence with an instrument, the notes in the sequence will get played ignoring the lyrics.
 
+The singing system now also support rapping. The singing sequence can include rapping segments like the 2nd segment in the following sequence:
+
+```Python
+
+	seq= [ ("jin_f1", do(5,48)), ("ke_f1", 1, 48, "la_f1", 4, 48) ]
+
+```
+
+In the above rapping segment ("ke_f1", 1, 48, "la_f1", 4, 48), 1 and 4 are tone marker using the 4 tone system of Mandarin Chinese. 48 is duration.
+
 ### KeLa Engine
 
 The KeLa engine is a simple singing engine provided as an extension. It synthesizes by 
@@ -366,6 +385,10 @@ short pieces of audio samples, extract features and use the features to generate
  voice. So you don't need to use long audio samples, just try to sing a flat pitch 
 during recording.
 
+The .wav files must have 1 or 2 channels in 16bit PCM format. 
+Currently, conversion between different sample rates is not taken care of.
+So using non-44100 sampled .wav file will result in unexpected result.
+
 ### UtauDraft Engine
 
 The UtauDraft Enigine tries to be compatible with all kinds of UTAU voice-banks, including 単独音,連続音, VCV, CVVC as much as possible. oto.ini and .frq files will be used to understand the audio samples. prefix.map will also be used when one is present.
@@ -374,9 +397,13 @@ You can put a UTAU voice-bank directly into the "UTAUVoice" folder.  Each
 subfolder of "UTAUVoice" defines a singer class.
 
 The sub-folder names with "_UTAU" endings are used as the name of the singer classes. For 
-example, the sub-folder "GePing" will define a singer class named "GePing_UTAU". It
+example, the sub-folder "GePing" will define a singer class named "GePing_UTAU". If
 the original sub-foler name is unsuitable to be used as an Python variable name, then you
 should rename it to prevent a Python error.
+
+The .wav files must have 1 or 2 channels in 16bit PCM format. 
+Currently, conversion between different sample rates is not taken care of.
+So using non-44100 sampled .wav file will result in unexpected result.
 
 When using UtauDraft Engine, you should use the names defined in oto.ini as lyrics, just 
 like in UTAU. You can use 
@@ -409,4 +436,18 @@ The converter function should convert 1 input lyric into 1 or more lyrics to spl
 or duration of the converted note.
 
 Examples of converter functions can be found in CVVCChineseConverter.py, TsuroVCVConverter.py and JPVCVConverter.py.
+
+# About building
+
+To build ScoreDraft from source-code, you need to install:
+
+* CMake 3.0+
+* Python3
+* Qt5 (Needed for by "QtPCMPlayer“ extension. You can remove it from /CMakeLists.txt if you don't need it. Then you don't need Qt5)
+
+Run CMake to generate makefiles/project files for your system and build.
+You are recommanded to:
+
+* use the /build directory as you building directory
+* use /python_test as your CMAKE_INSTALL_PREFIX
 

@@ -181,6 +181,11 @@ class Singer:
 		       get played, and lyrics ignored. We aim to provide maximum compatibility between the two.
 		       Tuning commands can also be mixed in the list to tune the singer on the fly, example:
 		        [("ha",do(5,48),re(5,48)), ("la",mi(5,48)), "volume 2.0", "default_lyric ba", fa(5,48)... ]
+
+		       seq can also contain rapping segments like:
+		       (lyric1, tone1, duration1, lyric2, tone2, duration2...)
+		       The tone number is an integer. ScoreDraft uses Mandarin Chinese 4 tones system by default.
+
 		tempo -- an integer defining the tempo of singing in beats/minute.
 		refFreq  --  a floating point defining the reference-frequency in Hz.
 		'''
