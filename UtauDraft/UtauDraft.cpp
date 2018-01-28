@@ -856,6 +856,8 @@ private:
 			}
 		}
 
+		if (windows_next.size() == 0) hasNextSample = false;
+
 		float tempLen = stretchingMap[uSumLen - 1];
 		unsigned uTempLen = (unsigned)ceilf(tempLen);
 

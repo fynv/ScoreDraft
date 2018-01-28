@@ -3,7 +3,7 @@ baseFreq=1.0
 def SetRapBaseFreq(freq):
 	baseFreq=freq
 
-def RapTone(lyric, tone, duration):
+def RapTone(lyric, tone, duration=48):
 	if tone <= 1:
 		return (lyric, duration, baseFreq, baseFreq)
 	elif tone == 2:

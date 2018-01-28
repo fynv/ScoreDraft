@@ -4,9 +4,6 @@ import ScoreDraft
 from ScoreDraftNotes import *
 from ScoreDraftRapChinese import *
 from tang300 import poems
-import TsuroVCVConverter
-import CVVCChineseConverter
-
 
 #durations=[ [48,48,24,24,48, 24,24,24,24,48] ]
 
