@@ -1,3 +1,5 @@
+[-> 中文Readme](https://github.com/fynv/ScoreDraft/blob/master/README_cn.md)
+
 ScoreDraft
 ================
 ScoreDraft is a simple music/singing synthesizer that provides a Python based 
