@@ -38,6 +38,15 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
+
 class StdLogger : public Logger
 {
 public:
@@ -645,6 +654,24 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyObject* GetPCMDataFromTrackBuffer(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	if (!PyArg_ParseTuple(args, "I", &BufferId))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+
+	unsigned numSamples = buffer->NumberOfSamples();
+	float volume = buffer->AbsoluteVolume();
+
+	PyObject* list = PyList_New(0);
+	for (unsigned i = 0; i < buffer->NumberOfSamples(); i++)
+		PyList_Append(list, PyFloat_FromDouble((double)max(min(buffer->Sample(i) * volume, 1.0f), -1.0f)));
+
+	return list;
+}
+
 static PyObject* CallExtension(PyObject *self, PyObject *args)
 {
 	unsigned extId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
@@ -764,6 +791,12 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"WriteTrackBufferToWav",
 		WriteTrackBufferToWav,
+		METH_VARARGS,
+		""
+	},
+	{
+		"GetPCMDataFromTrackBuffer",
+		GetPCMDataFromTrackBuffer,
 		METH_VARARGS,
 		""
 	},

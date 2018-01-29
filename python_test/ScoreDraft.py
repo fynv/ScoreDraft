@@ -204,6 +204,9 @@ def WriteTrackBufferToWav(buf, filename):
 	'''
 	PyScoreDraft.WriteTrackBufferToWav(buf.id, filename)
 
+def GetPCMDataFromTrackBuffer(buf):
+	return PyScoreDraft.GetPCMDataFromTrackBuffer(buf.id)
+
 # generate dynamic code
 g_generated_code_and_summary=PyScoreDraft.GenerateCode()
 exec(g_generated_code_and_summary[0])
