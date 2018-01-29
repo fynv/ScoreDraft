@@ -1,6 +1,7 @@
 baseFreq=1.0
 
 def SetRapBaseFreq(freq):
+	global baseFreq   
 	baseFreq=freq
 
 def RapTone(lyric, tone, duration=48):

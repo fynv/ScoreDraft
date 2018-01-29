@@ -2,6 +2,16 @@
 
 import ScoreDraft
 from ScoreDraftRapChinese import *
+import CVVCChineseConverter
+
+GePing= ScoreDraft.GePing_UTAU()
+Ayaka = ScoreDraft.Ayaka_UTAU()
+ScoreDraft.UtauDraftSetLyricConverter(Ayaka, CVVCChineseConverter.CVVCChineseConverter)
+
+#singer= GePing
+
+singer=Ayaka
+SetRapBaseFreq(2.0)
 
 def read_txt(path):
     with open(path, 'r') as f:
@@ -21,6 +31,5 @@ for i in range(len(lines)):
 
 	buf=ScoreDraft.TrackBuffer()
 
-	GePing= ScoreDraft.GePing_UTAU()
-	GePing.sing(buf, [notes], 80)
+	singer.sing(buf, [notes], 80)
 	ScoreDraft.WriteTrackBufferToWav(buf, "tts_out/"+str(i)+".wav")
