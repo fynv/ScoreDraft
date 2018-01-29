@@ -5,6 +5,8 @@
 
 int main(int argc, char *argv[])
 {
+	QApplication::addLibraryPath("./QtPlugins");
+
 	QApplication app(argc, argv);
 
 	QLocalSocket socket;

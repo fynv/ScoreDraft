@@ -57,7 +57,6 @@ bool GetString(QLocalSocket& socket, QByteArray& str)
 
 PyObject * QPlayTrackBuffer(PyObject *args)
 {
-
 	static unsigned count = 0;
 
 	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(args);
@@ -157,5 +156,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		"\t'''\n"
 		"\tMonitoring how much time in seconds is remaining in current play-back.\n"
 		"\t'''\n");
+
+	QApplication::addLibraryPath("./QtPlugins");
 }
 
