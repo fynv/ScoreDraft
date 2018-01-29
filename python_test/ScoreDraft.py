@@ -205,6 +205,10 @@ def WriteTrackBufferToWav(buf, filename):
 	PyScoreDraft.WriteTrackBufferToWav(buf.id, filename)
 
 def GetPCMDataFromTrackBuffer(buf):
+	'''
+	Function used to get raw PCM data from the TrackBuffer
+	the return value is a list of floats
+	'''
 	return PyScoreDraft.GetPCMDataFromTrackBuffer(buf.id)
 
 # generate dynamic code
