@@ -1,5 +1,5 @@
 import os
-ScoreDraftPath= os.path.dirname(os.path.abspath(__file__))
+ScoreDraftPath= os.path.dirname(__file__)
 os.environ["PATH"]+=ScoreDraftPath
 
 import PyScoreDraft
