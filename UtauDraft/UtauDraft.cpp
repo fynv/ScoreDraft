@@ -1250,12 +1250,12 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 
 	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetLyricConverter", UtauDraftSetLyricConverter, "singer, LyricConverterFunc", "singer.id, LyricConverterFunc",
 		"\t'''\n"
-		"\tSet a lyric-converter function for a UtauDraft singer used to generate VCV/CVVC lyrics"
-		"\tThe 'LyricConverterFunc' has the following form:"
-		"\tdef LyricConverterFunc(LyricForEachSyllable):"
-		"\t\t..."
-		"\t\treturn [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]"
-		"\tThe argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string"
-		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable."
+		"\tSet a lyric-converter function for a UtauDraft singer used to generate VCV/CVVC lyrics\n"
+		"\tThe 'LyricConverterFunc' has the following form:\n"
+		"\tdef LyricConverterFunc(LyricForEachSyllable):\n"
+		"\t\t...\n"
+		"\t\treturn [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]\n"
+		"\tThe argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string\n"
+		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable.\n"
 		"\t'''\n");
 }

@@ -26,9 +26,14 @@ with open("tts.txt",'r') as f:
 		line=line.replace("\n","")
 		notes=()
 		for word in line.split(' '):
+			if len(word)==0:
+				continue
 			word_=word[0:len(word)-1]
 			_tone=word[len(word)-1]
 			notes+=RapTone(word_,int(_tone),24)
+
+		if len(notes)==0:
+			continue
 
 		buf=ScoreDraft.TrackBuffer()
 
