@@ -1,6 +1,7 @@
 #!/usr/bin/python3
+import sys
+sys.path+=['../']
 
-import time
 from random import random
 import ScoreDraft
 from ScoreDraftNotes import *
@@ -105,7 +106,7 @@ def chooseFreq(chord, lastFreq):
 
 # resources
 
-singer=ScoreDraft.GePing_UTAU()
+singer=ScoreDraft.GePing()
 guitar=ScoreDraft.CleanGuitar()
 
 BassDrum=ScoreDraft.BassDrum()
@@ -114,8 +115,9 @@ ClosedHitHat = ScoreDraft.ClosedHitHat()
 
 perc_list= [BassDrum, Snare, ClosedHitHat]
 
-# Mix0
 track_mix=ScoreDraft.TrackBuffer()
+
+# Mix0
 track_drum=ScoreDraft.TrackBuffer()
 ScoreDraft.Percussion.play(perc_list, track_drum, beats0, 120)
 
@@ -132,44 +134,46 @@ track_drum=ScoreDraft.TrackBuffer()
 pi_calc= calcPi()
 
 freq= freqCalc(5, 4)
-singingSeq = []
-
-line = (lyric_map[next(pi_calc)], (freq, durations[0]), 'dian', (freq, durations[1]))
+singingSeq = [ (lyric_map[next(pi_calc)], (freq, durations[0])), ('dian', (freq, durations[1]))]
 
 j0=2
 
 for i in range(8):
     for j in range(j0, len(durations)):
-        line += (lyric_map[next(pi_calc)], (freq, durations[j]))
-    singingSeq+=[line]
+        singingSeq += [(lyric_map[next(pi_calc)], (freq, durations[j]))]
     if i<7:
         j0=0
         freq=chooseFreq(chords[i+1], freq)
-        line=()
 
 singer.sing(track_sing,singingSeq, 120)
 guitar.play(track_guitar, guitar_notes, 120)
 ScoreDraft.Percussion.play(perc_list, track_drum, beats, 120)
 
 ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
-ScoreDraft.QPlayTrackBuffer(track_mix)
 
 # Mix 2~n
-while 1:
-    while (ScoreDraft.QPlayGetRemainingTime()>5.0):
-        time.sleep(2.0)
-    if (ScoreDraft.QPlayGetRemainingTime()<0.0):
-        break
-    track_mix=ScoreDraft.TrackBuffer()
+for n in range(38):
     track_sing=ScoreDraft.TrackBuffer()
     singingSeq = []
     for i in range(8):
         freq=chooseFreq(chords[i], freq)
-        line=()
         for j in range(len(durations) ):
-            line += (lyric_map[next(pi_calc)], (freq, durations[j]))
-        singingSeq+=[line]
+            singingSeq += [(lyric_map[next(pi_calc)], (freq, durations[j]))]
             
     singer.sing(track_sing,singingSeq, 120)
     ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
-    ScoreDraft.QPlayTrackBuffer(track_mix)
+
+# Mix n+1
+track_sing=ScoreDraft.TrackBuffer()
+track_guitar= ScoreDraft.TrackBuffer()
+track_drum=ScoreDraft.TrackBuffer()
+
+singer.sing(track_sing,[ (lyric_map[next(pi_calc)], do(5,96) ) ], 120)
+guitar.play(track_guitar, [do(4,192), BK(186), mi(4,186), BK(180), so(4,180), BK(174), do(5,174)], 120)
+ScoreDraft.Percussion.play(perc_list, track_drum, [dong(96)], 120) 
+
+ScoreDraft.MixTrackBufferList(track_mix,[track_sing, track_guitar, track_drum]);
+
+# WriteDown
+
+ScoreDraft.WriteTrackBufferToWav(track_mix, "GePi.wav")
