@@ -261,7 +261,7 @@ PyObject * WriteToMidi(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	pyScoreDraft->RegisterInterfaceExtension("WriteNoteSequencesToMidi", WriteToMidi,
 		"seqList, tempo, refFreq, fileName", "seqList, tempo, refFreq, fileName", 

@@ -13,13 +13,13 @@ InstrumentSample::~InstrumentSample()
 	delete[] m_wav_samples;
 }
 
-bool InstrumentSample::LoadWav(const char* name, const char* instrumentName)
+bool InstrumentSample::LoadWav(const char* root, const char* name, const char* instrumentName)
 {
 	char filename[1024];
 	if (instrumentName==nullptr)
-		sprintf(filename, "InstrumentSamples/%s.wav", name);
+		sprintf(filename, "%s/InstrumentSamples/%s.wav", root, name);
 	else
-		sprintf(filename, "InstrumentSamples/%s/%s.wav", instrumentName, name);
+		sprintf(filename, "%s/InstrumentSamples/%s/%s.wav", root, instrumentName, name);
 
 	delete[] m_wav_samples;
 	m_wav_length = 0;
@@ -36,18 +36,18 @@ bool InstrumentSample::LoadWav(const char* name, const char* instrumentName)
 		return false;
 	}
 
-	_fetchOriginFreq(name, instrumentName);
+	_fetchOriginFreq(root, name, instrumentName);
 
 	return true;
 }
 
-void InstrumentSample::_fetchOriginFreq(const char* name, const char* instrumentName)
+void InstrumentSample::_fetchOriginFreq(const char* root, const char* name, const char* instrumentName)
 {
 	char filename[1024];
 	if (instrumentName == nullptr)
-		sprintf(filename, "InstrumentSamples/%s.freq", name);
+		sprintf(filename, "%s/InstrumentSamples/%s.freq", root, name);
 	else
-		sprintf(filename, "InstrumentSamples/%s/%s.freq", instrumentName, name);
+		sprintf(filename, "%s/InstrumentSamples/%s/%s.freq", root, instrumentName, name);
 
 	FILE *fp = fopen(filename, "r");
 	if (fp)

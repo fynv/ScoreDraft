@@ -18,7 +18,7 @@ PyObject * PlayGetRemainingTime(PyObject *args)
 	return PyFloat_FromDouble( (double)s_Player.GetRemainingTime());
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	s_pPyScoreDraft = pyScoreDraft;
 	

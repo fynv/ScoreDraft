@@ -16,6 +16,7 @@
 #endif
 
 static PyScoreDraft* s_pPyScoreDraft;
+static QString s_root;
 
 void SendString(QLocalSocket& socket, const char* str)
 {
@@ -72,7 +73,7 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 		data[i] = (short)(max(min(buffer->Sample(i)*volume, 1.0f), -1.0f)*32767.0f);
 
 	char fn[100];
-	sprintf(fn, "_tmp%d", count);
+	sprintf(fn, "%s/_tmp%d", s_root.toLocal8Bit().data(), count);
 	count++;
 
 	FILE *fp = fopen(fn, "wb");
@@ -89,11 +90,15 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 
 	if (!socket.waitForConnected(500))
 	{
+		FILE *fp = fopen("rootpath", "w");
+		fprintf(fp, "\"%s\"\n", s_root.toLocal8Bit().data());
+		fclose(fp);
+
 		QString playerPath;
 #ifdef _WIN32
-		playerPath="QtPCMPlayer.exe";
+		playerPath = s_root+"/QtPCMPlayer.exe";
 #else
-		playerPath = "./QtPCMPlayer";
+		playerPath = s_root+"/QtPCMPlayer";
 #endif
 		if (!QProcess::startDetached(playerPath))
 			return PyLong_FromUnsignedLong(0);
@@ -142,9 +147,10 @@ PyObject * QPlayGetRemainingTime(PyObject *args)
 
 
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	s_pPyScoreDraft = pyScoreDraft;
+	s_root = root;
 
 	pyScoreDraft->RegisterInterfaceExtension("QPlayTrackBuffer", QPlayTrackBuffer, "buf", "buf.id",
 		"\t'''\n"
@@ -157,6 +163,9 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		"\tMonitoring how much time in seconds is remaining in current play-back.\n"
 		"\t'''\n");
 
-	QApplication::addLibraryPath("./QtPlugins");
+	char QtPluginPath[1024];
+	sprintf(QtPluginPath, "%s/QtPlugins", root);
+
+	QApplication::addLibraryPath(QtPluginPath);
 }
 

@@ -174,9 +174,8 @@ void QtPCMPlayer::newConnection()
 	sscanf(line, "%s", cmd);
 	if (strcmp(cmd, "NewBuffer") == 0)
 	{
-		char fn[100];
-		sscanf(line + strlen("NewBuffer") + 1, "%s", fn);
-		_playFile(fn);
+		const char* pFn= line + strlen("NewBuffer") + 1;
+		_playFile(pFn);
 	}
 	else if (strcmp(cmd, "GetRemainingSec") == 0)
 	{

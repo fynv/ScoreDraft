@@ -1,11 +1,32 @@
+#include <QFile>
 #include <qapplication.h>
 #include <QtNetwork/QLocalSocket>
 #include <QtNetwork/QLocalServer>
 #include "QtPCMPlayer.h"
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
-	QApplication::addLibraryPath("./QtPlugins");
+	FILE *fp = fopen("rootpath", "r");
+	if (fp)
+	{
+		char root[1024];
+		fscanf(fp, "%s", root);
+		root[strlen(root) - 1] = 0;
+
+		char QtPluginPath[1024];
+		sprintf(QtPluginPath, "%s/QtPlugins", root+1);
+		fclose(fp);
+
+		QFile file("rootpath");
+		file.remove();
+
+		QApplication::addLibraryPath(QtPluginPath);
+	}
+	else
+	{
+		QApplication::addLibraryPath("./QtPlugins");
+	}
 
 	QApplication app(argc, argv);
 

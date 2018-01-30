@@ -77,38 +77,40 @@ static void s_RegisterDefaultClasses()
 	s_PyScoreDraft.RegisterPercussionClass("TestPerc", &s_TestPerc, "\t# A simple signal to test the percussion interface. Not usable.\n");
 }
 
-static bool s_ClassesRegistered = false;
-static void s_RegisterClasses()
+static PyObject* ScanExtensions(PyObject *self, PyObject *args)
 {
-	//s_PyScoreDraft.SetLogger(&s_logger);
-	s_RegisterDefaultClasses();
-
+	const char* root;
+	if (!PyArg_ParseTuple(args, "s", &root))
+		return NULL;
 
 #ifdef _WIN32
 	WIN32_FIND_DATAA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	hFind = FindFirstFileA("Extensions\\*.dll", &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return;
+	char extSearchStr[1024];
+	sprintf(extSearchStr, "%s/Extensions/*.dll", root);
+
+	hFind = FindFirstFileA(extSearchStr, &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) return NULL;
 
 	do
 	{
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
 
 		char path[1024];
-		sprintf(path, "Extensions\\%s", ffd.cFileName);
+		sprintf(path, "%s/Extensions/%s", root, ffd.cFileName);
 
 		HINSTANCE hinstLib;
 		hinstLib = LoadLibraryA(path);
 
 		if (hinstLib != NULL)
 		{
-			typedef void (InitializeFunc)(PyScoreDraft* pyScoreDraft);			
+			typedef void (InitializeFunc)(PyScoreDraft* pyScoreDraft, const char* root);
 			InitializeFunc* initFunc = (InitializeFunc*)GetProcAddress(hinstLib, "Initialize");
 			if (initFunc != NULL)
 			{
 				printf("Loading extension: %s\n", ffd.cFileName);
-				initFunc(&s_PyScoreDraft);
+				initFunc(&s_PyScoreDraft, root);
 			}
 		}
 
@@ -117,7 +119,10 @@ static void s_RegisterClasses()
 	DIR *dir;
 	struct dirent *entry;
 
-	if (dir = opendir("Extensions"))
+	char extPath[1024];
+	sprintf(extPath, "%s/Extensions", root);
+
+	if (dir = opendir(extPath))
 	{
 		while ((entry = readdir(dir)) != NULL)
 		{
@@ -125,19 +130,19 @@ static void s_RegisterClasses()
 			if (strcmp(ext, ".so") == 0)
 			{
 				char path[1024];
-				sprintf(path, "Extensions/%s", entry->d_name);
+				sprintf(path, "%s/Extensions/%s", root, entry->d_name);
 
 				void *handle = dlopen(path, RTLD_LAZY);
 				if (handle)
 				{
 					dlerror();
-					typedef void (InitializeFunc)(PyScoreDraft* pyScoreDraft);			
+					typedef void (InitializeFunc)(PyScoreDraft* pyScoreDraft, const char* root);
 					InitializeFunc* initFunc;
 					*(void **)(&initFunc) = dlsym(handle, "Initialize");
 					if (!dlerror())
 					{
 						printf("Loading extension: %s\n", entry->d_name);
-						initFunc(&s_PyScoreDraft);
+						initFunc(&s_PyScoreDraft, const char* root);
 					}
 
 				}
@@ -148,7 +153,8 @@ static void s_RegisterClasses()
 
 #endif
 
-	s_ClassesRegistered = true;
+
+	return PyLong_FromLong(0);
 }
 
 static PyObject* GenerateCode(PyObject *self, PyObject *args)
@@ -687,6 +693,12 @@ static PyObject* CallExtension(PyObject *self, PyObject *args)
 
 static PyMethodDef PyScoreDraftMethods[] = {
 	{
+		"ScanExtensions",
+		ScanExtensions,
+		METH_VARARGS,
+		""
+	},
+	{
 		"GenerateCode",
 		GenerateCode,
 		METH_VARARGS,
@@ -819,6 +831,6 @@ static struct PyModuleDef cModPyDem =
 }; 
 
 PyMODINIT_FUNC PyInit_PyScoreDraft(void) {
-	if (!s_ClassesRegistered) s_RegisterClasses();
+	s_RegisterDefaultClasses();
 	return PyModule_Create(&cModPyDem);
 }

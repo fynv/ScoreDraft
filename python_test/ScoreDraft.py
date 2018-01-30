@@ -1,5 +1,11 @@
+import os
+ScoreDraftPath= os.path.dirname(os.path.abspath(__file__))
+os.environ["PATH"]+=ScoreDraftPath
+
 import PyScoreDraft
 import types 
+
+PyScoreDraft.ScanExtensions(ScoreDraftPath)
 
 def ObjectToId(obj):
 	'''

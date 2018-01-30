@@ -1060,11 +1060,12 @@ private:
 class UtauDraftInitializer : public SingerInitializer
 {
 public:
-	void SetName(const char *name)
+	void SetName(const char* root, const char *name)
 	{
+		m_root = root;
 		m_name = name;
 		char charFileName[1024];
-		sprintf(charFileName,"UTAUVoice/%s/character.txt", name);
+		sprintf(charFileName, "%s/UTAUVoice/%s/character.txt", root, name);
 		FILE *fp = fopen(charFileName, "r");
 		if (fp)
 		{
@@ -1149,14 +1150,18 @@ public:
 		if (m_OtoMap.size() == 0)
 		{
 			char rootPath[1024];
-			sprintf(rootPath, "UTAUVoice/%s", m_name.data());
+			sprintf(rootPath, "%s/UTAUVoice/%s", m_root.data(), m_name.data());
 			BuildOtoMap(rootPath);
 
 			char prefixMapFn[1024];
-			sprintf(prefixMapFn, "UTAUVoice/%s/prefix.map", m_name.data());
+			sprintf(prefixMapFn, "%s/UTAUVoice/%s/prefix.map", m_root.data(), m_name.data());
 			m_PrefixMap.LoadFromFile(prefixMapFn);
 
+#ifdef _WIN32
 			m_charset = "shiftjis";
+#else
+			m_charset = "utf-8";
+#endif
 			char charsetFn[1024];
 			sprintf(charsetFn, "%s/charset", rootPath);
 
@@ -1182,6 +1187,7 @@ private:
 	PrefixMap m_PrefixMap;
 	std::string m_charset;
 	std::string m_name;
+	std::string m_root;
 	std::string m_charecter_txt;
 };
 
@@ -1199,7 +1205,7 @@ PyObject* UtauDraftSetLyricConverter(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	s_PyScoreDraft = pyScoreDraft;
 
@@ -1210,7 +1216,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	WIN32_FIND_DATAA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	hFind = FindFirstFileA("UTAUVoice\\*", &ffd);
+	char findStr[1024];
+	sprintf(findStr, "%s/UTAUVoice/*", root);
+
+	hFind = FindFirstFileA(findStr, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) return;
 
 	do
@@ -1218,7 +1227,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
 		{
 			UtauDraftInitializer initializer;
-			initializer.SetName(ffd.cFileName);
+			initializer.SetName(root, ffd.cFileName);
 			s_initializers.push_back(initializer);
 		}
 
@@ -1228,7 +1237,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	DIR *dir;
 	struct dirent *entry;
 
-	if (dir = opendir("UTAUVoice"))
+	char searchPath[1024];
+	sprintf(searchPath, "%s/UTAUVoice", root);
+
+	if (dir = opendir(searchPath))
 	{
 		while ((entry = readdir(dir)) != NULL)
 		{

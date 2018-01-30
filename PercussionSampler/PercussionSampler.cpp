@@ -41,10 +41,10 @@ public:
 		delete[] m_wav_samples;
 	}
 
-	bool LoadWav(const char* name)
+	bool LoadWav(const char* root, const char* name)
 	{
 		char filename[1024];
-		sprintf(filename, "PercussionSamples/%s.wav", name);
+		sprintf(filename, "%s/PercussionSamples/%s.wav", root, name);
 
 		delete[] m_wav_samples;
 		m_wav_length = 0;
@@ -166,13 +166,14 @@ class PercussionSamplerInitializer : public PercussionInitializer
 {
 public:
 	std::string m_name;
+	std::string m_root;
 	std::string GetComment()
 	{
 		return std::string("\t# A percussion based on a single sample ") + m_name + ".wav\n";
 	}
 	virtual Percussion_deferred Init()
 	{
-		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_name.data());
+		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_root.data(), m_name.data());
 
 		Percussion_deferred perc = Percussion_deferred::Instance<PercussionSampler>();
 		perc.DownCast<PercussionSampler>()->SetSample(&m_sample);
@@ -182,14 +183,17 @@ private:
 	PercussionSample m_sample;
 };
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	static std::vector<PercussionSamplerInitializer> s_initializers;
 #ifdef _WIN32
 	WIN32_FIND_DATAA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	hFind = FindFirstFileA("PercussionSamples\\*.wav", &ffd);
+	char findStr[1024];
+	sprintf(findStr, "%s/PercussionSamples/*.wav", root);
+
+	hFind = FindFirstFileA(findStr, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) return;
 
 	do
@@ -201,15 +205,18 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 		name[strlen(ffd.cFileName) - 4] = 0;
 
 		PercussionSamplerInitializer initializer;
-		initializer.m_name=name;
+		initializer.m_name = name;
+		initializer.m_root = root;
 		s_initializers.push_back(initializer);
 
 	} while (FindNextFile(hFind, &ffd) != 0);
 #else
 	DIR *dir;
 	struct dirent *entry;
+	char searchPath[1024];
+	sprintf(searchPath, "%s/PercussionSamples", root);
 
-	if (dir = opendir("PercussionSamples"))
+	if (dir = opendir(searchPath))
 	{
 		while ((entry = readdir(dir)) != NULL)
 		{
@@ -222,6 +229,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 
 				PercussionSamplerInitializer initializer;
 				initializer.m_name=name;
+				initializer.m_root = root;
 				s_initializers.push_back(initializer);
 			}
 		}

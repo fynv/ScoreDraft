@@ -21,6 +21,7 @@ class InstrumentSamplerInitializer : public InstrumentInitializer
 {
 public:
 	std::string m_name;
+	std::string m_root;
 	bool m_IsMultiSampler;
 
 	std::string GetComment()
@@ -43,7 +44,7 @@ public:
 	}
 	virtual Instrument_deferred Init()
 	{
-		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_name.data());
+		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_root.data(), m_name.data());
 
 		Instrument_deferred inst = Instrument_deferred::Instance<InstrumentSingleSampler>();
 		inst.DownCast<InstrumentSingleSampler>()->SetSample(&m_sample);
@@ -86,7 +87,7 @@ public:
 			HANDLE hFind = INVALID_HANDLE_VALUE;
 
 			char searchPath[1024];
-			sprintf(searchPath, "InstrumentSamples\\%s\\*.wav", m_name.data());
+			sprintf(searchPath, "%s/InstrumentSamples/%s/*.wav", m_root.data(), m_name.data());
 
 			hFind = FindFirstFileA(searchPath, &ffd);
 			if (INVALID_HANDLE_VALUE != hFind)
@@ -99,7 +100,7 @@ public:
 					name[strlen(ffd.cFileName) - 4] = 0;
 
 					InstrumentSample_deferred wav;
-					wav->LoadWav(name, m_name.data());
+					wav->LoadWav(m_root.data(), name, m_name.data());
 					m_SampleWavList.push_back(wav);
 
 				} while (FindNextFile(hFind, &ffd) != 0);
@@ -125,7 +126,7 @@ public:
 							name[strlen(entry->d_name) - 4] = 0;
 
 							InstrumentSample_deferred wav;
-							wav->LoadWav(name, m_name.data());
+							wav->LoadWav(m_root.data(), name, m_name.data());
 							m_SampleWavList.push_back(wav);
 						}
 					}
@@ -147,7 +148,7 @@ private:
 };
 
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
+PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	static std::vector<InstrumentSamplerInitializer_Deferred> s_initializers;
 
@@ -155,7 +156,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	WIN32_FIND_DATAA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	hFind = FindFirstFileA("InstrumentSamples\\*.wav", &ffd);
+	char findStr[1024];
+	sprintf(findStr, "%s/InstrumentSamples/*.wav", root);
+
+	hFind = FindFirstFileA(findStr, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) return;
 
 	do
@@ -170,13 +174,15 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 			InstrumentSamplerInitializer_Deferred::Instance<InstrumentSingleSamplerInitializer>();
 	
 		initializer->m_name = name;
+		initializer->m_root = root;
 		s_initializers.push_back(initializer);
 
 	} while (FindNextFile(hFind, &ffd) != 0);
 
 
 	// build multi-samplers
-	hFind = FindFirstFileA("InstrumentSamples\\*", &ffd);
+	sprintf(findStr, "%s/InstrumentSamples/*", root);
+	hFind = FindFirstFileA(findStr, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) return;
 
 	do
@@ -187,6 +193,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 				InstrumentSamplerInitializer_Deferred::Instance<InstrumentMultiSamplerInitializer>();
 
 			initializer->m_name = ffd.cFileName;
+			initializer->m_root = root;
 			s_initializers.push_back(initializer);
 		}
 
@@ -196,7 +203,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 	DIR *dir;
 	struct dirent *entry;
 
-	if (dir = opendir("InstrumentSamples"))
+	char searchPath[1024];
+	sprintf(searchPath, "%s/InstrumentSamples", root);
+
+	if (dir = opendir(searchPath))
 	{
 		while ((entry = readdir(dir)) != NULL)
 		{
@@ -207,6 +217,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 					InstrumentSamplerInitializer_Deferred initializer=
 						InstrumentSamplerInitializer_Deferred::Instance<InstrumentMultiSamplerInitializer>();
 					initializer->m_name = entry->d_name;
+					initializer->m_root = root;
 					s_initializers.push_back(initializer);
 				}
 			}
@@ -222,6 +233,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft)
 					InstrumentSamplerInitializer_Deferred initializer =
 						InstrumentSamplerInitializer_Deferred::Instance<InstrumentSingleSamplerInitializer>();
 					initializer->m_name = name;
+					initializer->m_root = root;
 					s_initializers.push_back(initializer);
 
 				}
