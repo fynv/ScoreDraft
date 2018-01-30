@@ -142,7 +142,7 @@ static PyObject* ScanExtensions(PyObject *self, PyObject *args)
 					if (!dlerror())
 					{
 						printf("Loading extension: %s\n", entry->d_name);
-						initFunc(&s_PyScoreDraft, const char* root);
+						initFunc(&s_PyScoreDraft, root);
 					}
 
 				}

@@ -1249,7 +1249,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
 				{
 					UtauDraftInitializer initializer;
-					initializer.SetName(entry->d_name);
+					initializer.SetName(root, entry->d_name);
 					s_initializers.push_back(initializer);
 				}
 			}

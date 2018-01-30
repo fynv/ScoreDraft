@@ -110,7 +110,7 @@ public:
 			struct dirent *entry;
 
 			char dirPath[1024];
-			sprintf(dirPath, "InstrumentSamples/%s", m_name.data());
+			sprintf(dirPath, "%s/InstrumentSamples/%s", m_root.data(), m_name.data());
 
 			if (dir = opendir(dirPath))
 			{
@@ -242,6 +242,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 		}
 
 	}
+	
 
 #endif
 

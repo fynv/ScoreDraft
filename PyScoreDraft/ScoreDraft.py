@@ -1,6 +1,10 @@
 import os
-ScoreDraftPath= os.path.dirname(os.path.abspath(__file__))
-os.environ["PATH"]+=ScoreDraftPath
+ScoreDraftPath= os.path.dirname(__file__)
+
+if os.name == 'nt':
+	os.environ["PATH"]+=";"+ScoreDraftPath
+elif os.name == "posix":
+	os.environ["PATH"]+=":"+ScoreDraftPath
 
 import PyScoreDraft
 import types 
