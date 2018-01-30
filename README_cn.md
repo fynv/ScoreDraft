@@ -74,7 +74,6 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 	/python_test/ScoreDraft.py: ScoreDraft核心Python接口， 是对PyScoreDraft的封装
 	/python_test/ScoreDraftNotes.py: 音符定义
 	/python_test/ScoreDraftRapChinese.py: 用于中文四声的Rap辅助函数
-	/python_test/ScoreDraftArranging.py: “编配” 接口，目前功能很少，将来会有用
 	/python_test/print_generated_code.py: 打印由C++部分动态生成的Python代码，包含扩展接口
 	/python_test/print_generated_code_summary.py: 打印动态Python代码的摘要
 
@@ -84,7 +83,8 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 	/python_test/InstrumentSamples: 乐器音频样本，用于 InstrumentSampler 扩展
 	/python_testPercussionSamples: 打击乐音频样本，用语 PercussionSampler 扩展
 	/python_test/KeLaSamples: 用语 KeLa 歌唱引擎的语音样本
-	/python_test/UTAUVoice: 符合UTAU标准的音源库，用于UtauDraft歌唱引擎
+	/python_test/UTAUVoice: 符合UTAU标准的音源库，用于UtauDraft歌唱引擎，可以从Utau的voice目录下拷贝过来
+	/python_test/Examples: 例子 
 
 用于UtauDraft歌唱引擎的歌词转换器:
 
@@ -94,22 +94,24 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 
 用Python写的各种测试样例:
 
-	/python_test/Hello.py: 最简单的例子
-	/python_test/piano_test.py: InstrumentSampler 测试
-	/python_test/percussion_test.py: PercussionSampler 测试
-	/python_test/FlyMeToTheMoon.py: fly me to the moon 纯律版
-	/python_test/FlyMeToTheMoon_eq.py: fly me to the moon 平均律版
-	/python_test/NaushikaRequiem.py: 那乌西卡安魂曲
-	/python_test/KeLaTest.py: 一个使用金坷垃音源的小测试
-	/python_test/GePi.py: 葛平圆周率10分钟版
-	/python_test/GePi_unlimited.py: 葛平圆周率无限版
-	/python_test/RapTest.py: Rap测试，朗读唐诗300首
-	/python_test/tang300.py: 唐诗300首，RapTest的数据库
-	/python_test/CVVCTest.py: 英文CVVC音源测试，测试所用音源:
+	/python_test/Examples/Hello.py: 最简单的例子
+	/python_test/Examples/piano_test.py: InstrumentSampler 测试
+	/python_test/Examples/percussion_test.py: PercussionSampler 测试
+	/python_test/Examples/FlyMeToTheMoon.py: fly me to the moon 纯律版
+	/python_test/Examples/FlyMeToTheMoon_eq.py: fly me to the moon 平均律版
+	/python_test/Examples/NaushikaRequiem.py: 那乌西卡安魂曲
+	/python_test/Examples/KeLaTest.py: 一个使用金坷垃音源的小测试
+	/python_test/Examples/GePi.py: 葛平圆周率10分钟版
+	/python_test/Examples/GePi_unlimited.py: 葛平圆周率无限版
+	/python_test/Examples/RapTest.py: Rap测试，朗读唐诗300首
+	/python_test/Examples/tang300.py: 唐诗300首，RapTest的数据库
+	/python_test/Examples/CVVCTest.py: 英文CVVC音源测试，测试所用音源:
 		[kasaneteto, English Voicebank (CVVC) Voicebank](http://kasaneteto.jp/en/voicebank.html)
-	/python_test/CVVCTest2.py: CVVCChinese 音源测试，测试所用音源:
+	/python_test/Examples/CVVCTest2.py: CVVCChinese 音源测试，测试所用音源:
 		[三色あやかCVVChinese V1.0](https://bowlroll.net/file/53297)
-	/python_test/uta_test.py: 日语音源测试，测试所用音源:
+	/python_test/Examples/VCVTest.py: 樗式中文VCV音源测试，测试所用音源：
+		[綰儿] (http://lindayana.lofter.com/waner)
+	/python_test/Examples/uta_test.py: 日语音源测试，测试所用音源:
 		a. UTAU软件自带的"uta"音源
 		b. [三色あやか 連続音V2.0](https://bowlroll.net/file/69898)
 
