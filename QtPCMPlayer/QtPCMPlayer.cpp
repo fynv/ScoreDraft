@@ -103,14 +103,16 @@ void QtPCMPlayer::_playFile(const char* filename)
 		m_initialized = true;
 	}
 
-	FILE *fp = fopen(filename, "rb");
-	fseek(fp, 0, SEEK_END);
-	long size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	size /= 2;
+	unsigned AlignPos;
+	unsigned size;
 
+	FILE *fp = fopen(filename, "rb");
+	fread(&AlignPos, sizeof(unsigned), 1, fp);
+	fread(&size, sizeof(unsigned), 1, fp);
+	
 	AudioBuffer_Deferred newBuffer;
 	newBuffer->resize((size_t)size);
+	newBuffer->m_AlignPos = AlignPos;
 
 	fread(newBuffer->data(), sizeof(short), size, fp);
 	fclose(fp);

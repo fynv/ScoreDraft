@@ -63,6 +63,8 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(args);
 	TrackBuffer_deferred buffer = s_pPyScoreDraft->GetTrackBuffer(BufferId);
 
+	unsigned AlignPos = buffer->AlignPos();
+
 	unsigned size = buffer->NumberOfSamples();
 	short* data = new short[size];
 
@@ -77,6 +79,8 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 	count++;
 
 	FILE *fp = fopen(fn, "wb");
+	fwrite(&AlignPos, sizeof(unsigned), 1, fp);
+	fwrite(&size, sizeof(unsigned), 1, fp);
 	fwrite(data, sizeof(short), size, fp);
 	fclose(fp);
 

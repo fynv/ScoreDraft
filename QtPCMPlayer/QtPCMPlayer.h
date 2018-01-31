@@ -11,7 +11,7 @@
 #include <Deferred.h>
 #include <vector>
 
-typedef std::vector<short> AudioBuffer;
+class AudioBuffer;
 typedef Deferred<AudioBuffer> AudioBuffer_Deferred;
 
 class BufferQueue;

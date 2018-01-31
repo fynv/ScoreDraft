@@ -3,9 +3,18 @@
 
 #include <Deferred.h>
 #include <vector>
-#include <queue>
+#include <list>
 
-typedef std::vector<short> AudioBuffer;
+class AudioBuffer : public std::vector<short>
+{
+public:
+	AudioBuffer()
+	{
+		m_AlignPos = 0;
+	}
+	unsigned m_AlignPos;
+};
+
 typedef Deferred<AudioBuffer> AudioBuffer_Deferred;
 
 class BufferQueue
@@ -25,7 +34,7 @@ public:
 	unsigned GetRemainingSamples();
 
 private:
-	std::queue<AudioBuffer_Deferred> m_queue;
+	std::list<AudioBuffer_Deferred> m_queue;
 	unsigned m_HeadPos;
 	int m_GetPos_rel;
 	unsigned m_totalBufferLenth;

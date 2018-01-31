@@ -3,8 +3,9 @@
 void BufferQueue::AddBuffer(AudioBuffer_Deferred buf)
 {
 	unsigned size = (unsigned)buf->size();
-	m_queue.push(buf);
-	m_totalBufferLenth += size;
+	unsigned alignPos = buf->m_AlignPos;
+	m_queue.push_back(buf);
+	m_totalBufferLenth += size - alignPos;
 }
 
 void BufferQueue::SetCursor(unsigned pos)
@@ -28,16 +29,34 @@ short BufferQueue::GetSample()
 	{
 		AudioBuffer_Deferred buf = m_queue.front();
 		unsigned size = (unsigned)buf->size();
-		if ((unsigned)m_GetPos_rel < size)
+		unsigned alignPos = buf->m_AlignPos;
+		if ((unsigned)m_GetPos_rel < size - alignPos)
 		{
-			short value = (*buf)[m_GetPos_rel];
+			short value = (*buf)[alignPos+(unsigned)m_GetPos_rel];
+
+			std::list<AudioBuffer_Deferred>::iterator iter = m_queue.begin();
+			iter++;
+			if (iter != m_queue.end())
+			{
+				AudioBuffer_Deferred buf_next = *iter;
+				if ((unsigned)m_GetPos_rel >= size - alignPos - buf_next->m_AlignPos)
+				{
+					short value2 = (*buf_next)[(unsigned)m_GetPos_rel - (size - alignPos - buf_next->m_AlignPos)];
+					int v= (int)value + (int)value2;
+					if (v > 32767) v = 32767;
+					else if (v < -32767) v = -32767;
+					value = (short)v;
+				}
+
+			}
+
 			m_GetPos_rel++;
 			return value;
 		}
-		m_queue.pop();
-		m_HeadPos += size;
-		m_GetPos_rel -= size;
-		m_totalBufferLenth -= size;
+		m_queue.pop_front();
+		m_HeadPos += size - alignPos;
+		m_GetPos_rel -= size - alignPos;
+		m_totalBufferLenth -= size - alignPos;
 	}
 	return 0;
 }
