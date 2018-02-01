@@ -25,12 +25,12 @@ seq=[]
 for i in range(int(len(poem[1])/divider)):
 	line=()
 	for j in range(poem[0]):
-		line += RapTone(poem[1][i*divider+j][0], poem[1][i*divider+j][1], durations[0][j] )
+		line += CRap(poem[1][i*divider+j][0], poem[1][i*divider+j][1], durations[0][j] )
 	seq+=[line, BL(48)]
 
 	line=()
 	for j in range(poem[0],divider):
-		line += RapTone(poem[1][i*divider+j][0], poem[1][i*divider+j][1], durations[0][j] )
+		line += CRap(poem[1][i*divider+j][0], poem[1][i*divider+j][1], durations[0][j] )
 	seq+=[line,BL(48)]
 '''
 
@@ -47,12 +47,12 @@ seq=[]
 for i in range(int(len(poem[1])/divider)):
 	line=()
 	for j in range(poem[0]):
-		line+=RapTone(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j]) 
+		line+=CRap(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j]) 
 	seq+=[line, BL(48)]
 	
 	line=()
 	for j in range(poem[0],divider):
-		line+=RapTone(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])
+		line+=CRap(poem[1][i*divider+j][0],poem[1][i*divider+j][1], durations[0][j])
 	seq+=[line,BL(48)]
 
 
