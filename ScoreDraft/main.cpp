@@ -12,7 +12,6 @@
 #include "instruments/BottleBlow.h"
 
 #include "Beat.h"
-#include "percussions/TestPerc.h"
 
 #ifdef _WIN32
 #include "WinPCMPlayer.h"
@@ -143,7 +142,6 @@ void FlyMeToTheMoon_just();
 void FlyMeToTheMoon_eq();
 
 void BBD();
-void TestPercussion();
 
 int main(int argc, char *argv[])
 {
@@ -155,8 +153,6 @@ int main(int argc, char *argv[])
 		//FlyMeToTheMoon_just();
 		//FlyMeToTheMoon_eq();
 		//BBD();
-
-		//TestPercussion();
 
 		return 0;
 	}
@@ -332,27 +328,4 @@ void BBD()
 
 	WriteToWav(tb, "BBD.wav");
 
-}
-
-void TestPercussion()
-{
-	BeatSequence seq;
-	seq.resize(10);
-
-	for (int i = 0; i < 5; i++)
-	{
-		seq[i * 2].m_PercId = 0;
-		seq[i * 2].m_duration = 48;
-
-		seq[i * 2+1].m_PercId = -1;
-		seq[i * 2+1].m_duration = 48;
-	}
-
-	TrackBuffer tb;
-
-	Percussion_deferred percList[1];
-	percList[0] = Percussion_deferred::Instance<TestPerc>();
-
-	Percussion::PlayBeats(tb, percList, seq);
-	WriteToWav(tb, "perc.wav");
 }

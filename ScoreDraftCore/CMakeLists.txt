@@ -11,7 +11,6 @@ instruments/PureSin.cpp
 instruments/Sawtooth.cpp
 instruments/Square.cpp
 instruments/Triangle.cpp
-percussions/TestPerc.cpp
 )
 
 set(HEADERS 
@@ -31,7 +30,6 @@ instruments/PureSin.h
 instruments/Sawtooth.h
 instruments/Square.h
 instruments/Triangle.h
-percussions/TestPerc.h
 )
 
 set (INCLUDE_DIR

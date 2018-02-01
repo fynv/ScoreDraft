@@ -28,7 +28,6 @@
 #include <instruments/Triangle.h>
 #include <instruments/NaivePiano.h>
 #include <instruments/BottleBlow.h>
-#include <percussions/TestPerc.h>
 
 #include "WinWavWriter.h"
 
@@ -73,8 +72,7 @@ static void s_RegisterDefaultClasses()
 	s_PyScoreDraft.RegisterInstrumentClass("NaivePiano", &s_NaivePiano, "\t# A naive piano tone by algebra formulas\n" );
 	static t_InstInitializer<BottleBlow> s_BottleBlow;
 	s_PyScoreDraft.RegisterInstrumentClass("BottleBlow", &s_BottleBlow, "\t# A bottle-blow tone using a noise signal passing a BPF\n");
-	static t_PercInitializer<TestPerc> s_TestPerc;
-	s_PyScoreDraft.RegisterPercussionClass("TestPerc", &s_TestPerc, "\t# A simple signal to test the percussion interface. Not usable.\n");
+
 }
 
 static PyObject* ScanExtensions(PyObject *self, PyObject *args)
