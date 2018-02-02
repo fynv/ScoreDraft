@@ -134,6 +134,8 @@ which are used to build the binaries.
 
 # Usage by Examples
 
+[New added Jupyter notebook slides](https://github.com/fynv/ScoreDraft/blob/master/python_test/Examples/Singing through Python.ipynb)
+
 First
 
 ```Python
