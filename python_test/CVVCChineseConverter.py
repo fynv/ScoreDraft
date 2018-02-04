@@ -79,20 +79,3 @@ def CVVCChineseConverter(LyricForEachSyllable):
 		else:
 			ret+=[(lyric,1.0)]
 	return ret
-
-'''
-# v2
-def CVVCChineseConverter(LyricForEachSyllable):	
-	CV = [getCV(lyric) for lyric in  LyricForEachSyllable]
-	ret=[]
-	for i in range(len(LyricForEachSyllable)):
-		lyric=LyricForEachSyllable[i]
-		if i==0:
-			ret+=[('- '+lyric,1.0)]
-		else:
-			if CV[i][0]=='':
-				ret+=[(CV[i-1][1]+" "+lyric,1.0)]
-			else:
-				ret+=[(CV[i-1][1]+" "+ CV[i][0], 0.125, lyric, 0.875)]
-	return ret
-'''

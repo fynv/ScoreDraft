@@ -5,7 +5,7 @@ sys.path+=['../']
 
 import ScoreDraft
 from ScoreDraftNotes import *
-import CVVCChineseConverter
+import XiaYYConverter
 
 
 line= ("zheng", re(5,24), "yue", do(5,48), "li", re(5,24), "cai", mi(5,36), so(5,12), "hua", mi(5,24), la(4,24))
@@ -21,11 +21,11 @@ line+=("hua", la(4,24), "you", do(5,48), "zheng", la(4,12), do(5,12), "kai", la(
 seq += [line]
 
 
-Ayaka = ScoreDraft.Ayaka_UTAU()
-ScoreDraft.UtauDraftSetLyricConverter(Ayaka, CVVCChineseConverter.CVVCChineseConverter)
+XiaYY = ScoreDraft.XiaYY_UTAU()
+ScoreDraft.UtauDraftSetLyricConverter(XiaYY, XiaYYConverter.XiaYYConverter)
 
 doc=ScoreDraft.Document()
 doc.setReferenceFreqeuncy(440.0)
-doc.sing(seq, Ayaka)
-doc.mixDown('cvvc2.wav')
+doc.sing(seq, XiaYY)
+doc.mixDown('XiaYY.wav')
 

@@ -10,62 +10,74 @@ def getCV(CVLyric):
 	vowel=CVLyric[min_i:len(CVLyric)]
 
 	if CVLyric=="zhi" or CVLyric=="chi" or CVLyric=="shi" or CVLyric=="ri":
-		vowel="ir"
+		vowel="h-i"
 	if CVLyric=="zi" or CVLyric=="ci" or CVLyric=="si":
-		vowel="i0"
+		vowel="-i"
 	if CVLyric=="ju" or CVLyric=="qu" or CVLyric=="xu" or CVLyric=="yu":
 		vowel="v"
 	if CVLyric=="ye":
-		vowel="e0"
+		vowel="eh"
 
 	if vowel=="ia":
-		vowel="a"
+		vowel="ya"
 	if vowel=="iao":
-		vowel="ao"
+		vowel="yao"
 	if vowel=="ian":
-		vowel="an"
+		vowel="yan"
 	if vowel=="iang":
-		vowel="ang"
+		vowel="yang"
 	if vowel=="ie":
-		vowel="e0"
-	if vowel=="iong":
-		vowel="ong"
-	if vowel=="iu":
-		vowel="ou"
-	if vowel=="ua":
-		vowel="a"
-	if vowel=="uai":
-		vowel="ai"
-	if vowel=="uan":
-		vowel="an"
-	if vowel=="uai":
-		vowel="ai"
-	if vowel=="ui":
-		vowel="ei"
-	if vowel=="uang":
-		vowel="ang"
-	if vowel=="un":
+		vowel="eh"
+	if vowel=="in":
 		vowel="en"
+	if vowel=="ing":
+		vowel="eng"
+	if vowel=="ong":
+		vowel="weng"
+	if vowel=="iong":
+		vowel="weng"
+	if vowel=="iu":
+		vowel="you"
+	if vowel=="ua":
+		vowel="wa"
+	if vowel=="uai":
+		vowel="wai"
+	if vowel=="uan":
+		vowel="wan"
+	if vowel=="uai":
+		vowel="wai"
+	if vowel=="ui":
+		vowel="wei"
+	if vowel=="uang":
+		vowel="wang"
+	if vowel=="un":
+		vowel="wen"
 	if vowel=="uo":
-		vowel="o"
+		vowel="wo"
 	if (vowel=="ue"):
-		vowel="e0"
+		vowel="ueh"
 
-	if consonant=="j" or consonant=="q" or consonant=="x":
-		if vowel[0]=="u":
-			consonant+="w"
-		else:
-			consonant+="y"
+	if vowel=="i":
+		vowel="y"
+	if vowel=="u":
+		vowel="w"
+	if vowel=="v":
+		vowel="yu"
 
-	if consonant=="y":
-		if vowel[0]=="u":
-			consonant="v"
-		else:
+	if consonant=="":
+		if vowel=="a":
+			consonant="ah"
+		if vowel=="er":
+			consonant="ah"
+		if vowel=="u":
+			consonant="w"
+		if vowel=="y":
 			consonant="y"
+
 	return (consonant,vowel)
 
 # v1
-def CVVCChineseConverter(LyricForEachSyllable):	
+def XiaYYConverter(LyricForEachSyllable):	
 	CV = [getCV(lyric) for lyric in  LyricForEachSyllable]
 	ret=[]
 	for i in range(len(LyricForEachSyllable)):
@@ -75,7 +87,11 @@ def CVVCChineseConverter(LyricForEachSyllable):
 		elif CV[i][0]=='':
 			lyric=CV[i-1][1]+" "+lyric
 		if i<len(LyricForEachSyllable)-1 and CV[i+1][0]!='':
-			ret+=[(lyric,0.875, CV[i][1]+" "+CV[i+1][0], 0.125)]
+			if (CV[i][1]=="w" or CV[i][1]=="y") and	(CV[i+1][0]=="w" or CV[i+1][0]=="y"):
+				ret+=[(lyric,1.0)]
+			else:
+				ret+=[(lyric,0.875, CV[i][1]+" "+CV[i+1][0], 0.125)]
 		else:
 			ret+=[(lyric,1.0)]
 	return ret
+
