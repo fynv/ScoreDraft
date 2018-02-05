@@ -27,6 +27,7 @@ XiaYY = ScoreDraft.XiaYY_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(XiaYY, XiaYYConverter.XiaYYConverter)
 
 doc=ScoreDraft.Document()
+doc.setTempo(60)
 #doc.setReferenceFreqeuncy(440.0)
 doc.sing(seq, XiaYY)
 doc.mixDown('XiaYY.wav')

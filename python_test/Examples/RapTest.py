@@ -14,7 +14,7 @@ from tang300 import poems
 
 durations=[ [36,60,48,48,48, 36,60,48,48,48] ]
 
-poem=poems[70]
+poem=poems[100]
 divider= poem[0]*2
 
 assert(divider==10)
