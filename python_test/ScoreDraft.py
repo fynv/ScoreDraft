@@ -9,6 +9,8 @@ elif os.name == "posix":
 import PyScoreDraft
 import types 
 
+from PyScoreDraft import TellDuration
+
 PyScoreDraft.ScanExtensions(ScoreDraftPath)
 
 def ObjectToId(obj):

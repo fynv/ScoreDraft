@@ -371,47 +371,49 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 		if (PyObject_TypeCheck(item, &PyTuple_Type))
 		{
 			PyObject* _item = PyTuple_GetItem(item, 0);
-			if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
+			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
+			{
+				size_t tupleSize = PyTuple_Size(item);
+
+				size_t j = 0;
+				while (j < tupleSize)
+				{
+					j++; // by-pass lyric
+					_item = PyTuple_GetItem(item, j);
+					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
+					{
+						for (; j<tupleSize; j++)
+						{
+							_item = PyTuple_GetItem(item, j);
+							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;
+
+							Note note;
+							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
+							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+					
+							instrument->PlayNote(*buffer, note, tempo, RefFreq);
+						}
+					}
+					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
+					{
+						int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						j++; // at freq1
+						j++; // at freq2
+						j++; // at next
+						Note note;
+						note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j + 1));
+						note.m_duration = duration;
+						instrument->PlayNote(*buffer, note, tempo, RefFreq);
+					}
+				}
+			}
+			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
 				Note note;
 				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
 				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
 
 				instrument->PlayNote(*buffer, note, tempo, RefFreq);
-			}
-			else if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
-			{
-				size_t tupleSize = PyTuple_Size(item);
-				_item = PyTuple_GetItem(item, 1);
-				if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing notes
-				{
-					for (size_t j = 1; j < tupleSize; j++)
-					{
-						_item = PyTuple_GetItem(item, j);
-						if (PyObject_TypeCheck(_item, &PyTuple_Type))
-						{
-							Note note;
-							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
-							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
-							instrument->PlayNote(*buffer, note, tempo, RefFreq);
-						}
-					}
-				}
-				else if(PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
-				{
-					for (size_t j = 1; j < tupleSize; j+=2)
-					{
-						_item = PyTuple_GetItem(item, j);
-						if (PyObject_TypeCheck(_item, &PyLong_Type))
-						{
-							int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
-							Note note;
-							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j+1));
-							note.m_duration = duration;
-							instrument->PlayNote(*buffer, note, tempo, RefFreq);
-						}
-					}
-				}
 			}
 		}
 		else if (PyObject_TypeCheck(item, &PyUnicode_Type))
@@ -689,6 +691,60 @@ static PyObject* CallExtension(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject* TellDuration(PyObject *self, PyObject *args)
+{
+	PyObject *seq_py = PyTuple_GetItem(args, 0);
+	size_t piece_count = PyList_Size(seq_py);
+
+	unsigned dure = 0;
+	for (size_t i = 0; i < piece_count; i++)
+	{
+		PyObject *item = PyList_GetItem(seq_py, i);
+		if (PyObject_TypeCheck(item, &PyTuple_Type))
+		{
+			PyObject* _item = PyTuple_GetItem(item, 0);
+			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
+			{
+				size_t tupleSize = PyTuple_Size(item);
+				size_t j = 0;
+				while (j < tupleSize)
+				{
+					j++; // by-pass lyric
+					_item = PyTuple_GetItem(item, j);
+					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
+					{
+						for (; j<tupleSize; j++)
+						{
+							_item = PyTuple_GetItem(item, j);
+							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;
+							dure+= (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+						}
+					}
+					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
+					{
+						dure += (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						j++; // at freq1
+						j++; // at freq2
+						j++; // at next
+					}
+				}
+
+			}
+			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
+			{
+				dure += (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+			}
+			else if (PyObject_TypeCheck(_item, &PyLong_Type)) // beat
+			{
+				dure += (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+			}
+		}
+	}
+
+	return PyLong_FromUnsignedLong(dure);
+
+}
+
 static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"ScanExtensions",
@@ -813,6 +869,12 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"CallExtension",
 		CallExtension,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TellDuration",
+		TellDuration,
 		METH_VARARGS,
 		""
 	},
