@@ -10,6 +10,13 @@ import PyScoreDraft
 import types 
 
 from PyScoreDraft import TellDuration
+'''
+TellDuration(seq) takes in a single input "seq"
+It can be a note-sequence, a beat-sequence, or a singing-sequence, 
+anything acceptable by Instrument.play(), Percussion.play(), Singer.sing()
+as the "seq" parameter
+The return value is the total duration of the sequence as an integer
+'''
 
 PyScoreDraft.ScanExtensions(ScoreDraftPath)
 
