@@ -13,13 +13,14 @@ parse the notes and generates an audio file. However, after trying using
 Python as a script layer, it has shown very much benefit comparing to text 
 parsing. So I moved quickly to Python.
 
-Then, I became interested in extending ScoreDraft for singing sythesis, simliar 
+Then, I became interested in extending ScoreDraft for singing synthesis, simliar 
 to Vocaloid and UTAU, but using script, and this has become the focus of the 
 developent of ScoreDraft recently. In the first stage, I implemented a simple
 voice synthesizing engine that generates voice note by note from individual voice
 samples. This engine is called "KeLa", named after the famous video on Bilibili.
 In the second stage, I try to build a new engine that can make use of voice-banks 
-made for UTAU, including those CVVC and VCV voice-banks. The new engine is called "UtauDraft". The name only indicates the intension to be compatible with UTAU voice
+made for UTAU, including those CVVC and VCV voice-banks. The new engine is called 
+"UtauDraft". The name only indicates the intension to be compatible with UTAU voice
 banks.
 
 I'm really not sure where ScoreDraft will go in the furture. Basically, here, 
@@ -105,6 +106,10 @@ Lyric converters used for UtauDraft voice engine:
 	/python_test/CVVCChineseConverter.py: converting PinYin lyrics for each syllable into CVVCChinese lyrics
 	/python_test/TsuroVCVConverter.py: converting PinYin lyrics for each syllable into Tsuro style Chinese VCV lyrics
 	/python_test/JPVCVConverter.py: converting Japanese 単独音 lyrics to 連続音 lyrics
+	/python_test/TTEnglishConverter.py: simplifing the input of english lyrics for Kasane Teto English Voicebank. You'll still need TTEnglishInputHelper, but can use the "for presamp" form of phonetics.
+	/python_test/TTLyricSet.data: data file for TTEnglishConverter, dumped from the oto.ini
+	of the voice-bank.
+	/python_test/XiaYYConverter.py: converting PinYin lyrics for each syllable into lyrics specifically for XiaYuYao voice-bank
 
 Examples:
 
@@ -128,6 +133,8 @@ Examples:
 	/python_test/Examples/uta_test.py: a test using Japanese voice-banks, specifically:
 		a. the "uta" voice-bank that comes with UTAU
 		b. [三色あやか 連続音V2.0](https://bowlroll.net/file/69898)
+	/python_test/Examples/XiaYYTest.py: a test using XiaYuYao voice-bank, which is a 
+        special form of CVVCChinese. [XiaYuYao](http://www.voicemith.com/download.html)
 
 Contents outside of python_test are basically C++ source-code files managed with CMake, 
 which are used to build the binaries.

@@ -91,6 +91,9 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 	/python_test/CVVCChineseConverter.py: 将汉语单独音歌词转为CVVCChinese歌词
 	/python_test/TsuroVCVConverter.py: 将汉语单独音歌词转为樗式VCV歌词
 	/python_test/JPVCVConverter.py: 将日语单独音歌词转为日语连续音歌词
+	/python_test/TTEnglishConverter.py: 英文歌词（Delta式）转换器，仍需要TTEnglishInputHelper，但可以使用“for presamp”形式
+	/python_test/TTLyricSet.data: TTEnglishConverter的数据文件, 由oto.ini转换得到
+	/python_test/XiaYYConverter.py: 将汉语单独音歌词转为夏语遥式歌词
 
 用Python写的各种测试样例:
 
@@ -114,6 +117,7 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 	/python_test/Examples/uta_test.py: 日语音源测试，测试所用音源:
 		a. UTAU软件自带的"uta"音源
 		b. [三色あやか 連続音V2.0](https://bowlroll.net/file/69898)
+	/python_test/Examples/XiaYYTest.py: 夏语遥式中文CVVC测试 [夏语遥](http://www.voicemith.com/download.html)
 
 python_test 之外的内容基本上是C++代码，您可以自行编译。
 
