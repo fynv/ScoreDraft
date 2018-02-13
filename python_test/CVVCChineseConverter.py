@@ -74,8 +74,16 @@ def CVVCChineseConverter(LyricForEachSyllable):
 			lyric='- '+lyric
 		elif CV[i][0]=='':
 			lyric=CV[i-1][1]+" "+lyric
-		if i<len(LyricForEachSyllable)-1 and CV[i+1][0]!='':
-			ret+=[(lyric,0.875, CV[i][1]+" "+CV[i+1][0], 0.125)]
+		if i<len(LyricForEachSyllable)-1:
+			if CV[i+1][0]!='':
+				ret+=[(lyric,0.875, CV[i][1]+" "+CV[i+1][0], 0.125)]
+			else:
+				ret+=[(lyric,1.0)]
 		else:
-			ret+=[(lyric,1.0)]
+			if CV[i][1]=='ai' or CV[i][1]=='ei':
+				ret+=[(lyric,0.875, CV[i][1]+" y", 0.125)]
+			elif CV[i][1]=='ou':
+				ret+=[(lyric,0.875, CV[i][1]+" w", 0.125)]
+			else:
+				ret+=[(lyric,1.0)]
 	return ret
