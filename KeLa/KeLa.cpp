@@ -27,13 +27,6 @@
 #include "VoiceUtil.h"
 using namespace VoiceUtil;
 
-struct SymmetricWindowWithPosition
-{
-	SymmetricWindow win;
-	float center;
-};
-
-
 void DetectFreqs(const Buffer& buf, std::vector<float>& frequencies, unsigned step)
 {
 	unsigned halfWinLen = 1024;

@@ -113,6 +113,21 @@ namespace VoiceUtil
 			}
 		}
 
+		virtual void Interpolate(const Window& win0, const Window& win1, float k, float targetHalfWidth)
+		{
+			m_halfWidth = targetHalfWidth;
+			unsigned u_halfWidth = (unsigned)ceilf(targetHalfWidth);
+			unsigned u_Width = u_halfWidth << 1;
+			m_data.resize(u_Width);
+
+			for (int i = -((int)u_halfWidth - 1); i <= (int)u_halfWidth - 1; i++)
+			{
+				float v0 = win0.GetSample(i);
+				float v1 = win1.GetSample(i);
+				this->SetSample(i, (1.0f - k) *v0 + k* v1);
+			}
+		}
+
 		virtual unsigned GetHalfWidthOfData() const
 		{
 			unsigned u_width = (unsigned)m_data.size();
@@ -155,7 +170,7 @@ namespace VoiceUtil
 			else
 			{
 				if (((int)u_width + i) < (int)u_halfWidth + 1) return;
-				pos = (unsigned)(u_width - (unsigned)(-i));
+				pos = u_width - (unsigned)(-i);
 			}
 
 			m_data[pos] = v;
@@ -199,7 +214,11 @@ namespace VoiceUtil
 #else
 				m_data[-i] = -v;
 #endif
-
+			}
+			else
+			{
+				if (i >= m_data.size()) return;
+				m_data[i] = v;
 			}
 		}
 
@@ -216,17 +235,15 @@ namespace VoiceUtil
 				fftLen <<= 1;
 			}
 
-			m_halfWidth = src.m_halfWidth;
-			m_data.resize(fftLen / 2);
-
 			DComp* fftBuf = new DComp[fftLen];
 			memset(fftBuf, 0, sizeof(DComp)*fftLen);
 
-			for (unsigned i = 0; i < u_srcHalfWidth; i++)
+			for (unsigned i = 0; i < fftLen / 2; i++)
 			{
-				fftBuf[i].Re = (double)src.GetSample((int)i);
-				if (i > 0) fftBuf[fftLen - i].Re = (double)src.GetSample(-(int)(i));
+				fftBuf[i].Re = (double)src.GetSample((int)i) + (double)src.GetSample((int)i - (int)fftLen / 2);
+				if (i > 0) fftBuf[fftLen - i].Re = (double)src.GetSample(-(int)(i)) + (double)src.GetSample(-(int)i + (int)fftLen / 2);
 			}
+			fftBuf[fftLen / 2].Re = (double)src.GetSample(0);
 
 			fft(fftBuf, l);
 
@@ -254,8 +271,19 @@ namespace VoiceUtil
 
 			ifft(fftBuf, l);
 
+			m_data.resize(fftLen / 2);
+			m_halfWidth = (float)(fftLen / 2);
+
 			for (unsigned i = 0; i < fftLen / 2; i++)
 				m_data[i] = (float)fftBuf[i].Re;
+
+		
+			// rewindow
+			for (unsigned i = 0; i < fftLen / 2; i++)
+			{
+				float window = (cosf((float)i * (float)PI / m_halfWidth) + 1.0f)*0.5f;
+				m_data[i] *= window;
+			}
 
 			delete[] fftBuf;
 
@@ -356,6 +384,20 @@ namespace VoiceUtil
 			{
 				float window = (cosf((float)i * (float)PI / targetHalfWidth) + 1.0f)*0.5f;
 				m_data[i] *= amplitude*window;
+			}
+		}
+
+		virtual void Interpolate(const SymmetricWindow& win0, const SymmetricWindow& win1, float k, float targetHalfWidth)
+		{
+			m_halfWidth = targetHalfWidth;
+			unsigned u_halfWidth = (unsigned)ceilf(targetHalfWidth);
+			m_data.resize(u_halfWidth);
+
+			for (unsigned i = 0; i <= u_halfWidth - 1; i++)
+			{
+				float v0 = win0.GetSample(i);
+				float v1 = win1.GetSample(i);
+				this->SetSample(i, (1.0f - k) *v0 + k* v1);
 			}
 		}
 

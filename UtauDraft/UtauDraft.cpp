@@ -32,12 +32,6 @@ using namespace VoiceUtil;
 #include "FrqData.h"
 #include "PrefixMap.h"
 
-struct SymmetricWindowWithPosition
-{
-	SymmetricWindow win;
-	float center;
-};
-
 bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end)
 {
 	Buffer whole;
@@ -936,12 +930,7 @@ private:
 			else
 			{
 				shiftedWin1.Repitch_FormantPreserved(win1, destHalfWinLen);
-				l_win.m_halfWidth = destHalfWinLen;
-				unsigned u_halfWidth = (unsigned)ceilf(destHalfWinLen);
-				l_win.m_data.resize(u_halfWidth);
-
-				for (unsigned i = 0; i < destHalfWinLen; i++)
-					l_win.m_data[i] = (1.0f - k) *shiftedWin0.m_data[i] + k* shiftedWin1.m_data[i];
+				l_win.Interpolate(shiftedWin0, shiftedWin1, k, destHalfWinLen);
 			}
 
 			SymmetricWindow *win_final_dest = destWin;
@@ -975,29 +964,15 @@ private:
 				else
 				{
 					shiftedWin1_next.Repitch_FormantPreserved(win1_next, destHalfWinLen);
-					l_win_next.m_halfWidth = destHalfWinLen;
-					unsigned u_halfWidth = (unsigned)ceilf(destHalfWinLen);
-					l_win_next.m_data.resize(u_halfWidth);
-
-					for (unsigned i = 0; i < destHalfWinLen; i++)
-						l_win_next.m_data[i] = (1.0f - k) *shiftedWin0_next.m_data[i] + k* shiftedWin1_next.m_data[i];
-
+					l_win_next.Interpolate(shiftedWin0_next, shiftedWin1_next, k, destHalfWinLen);
 				}
 				
 				float x = (fWinPos - transitionEnd) / (transitionEnd*m_transition);
 				if (x > 0.0f) x = 0.0f;
 				float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
-
 				win_final_dest = &l_win_transit;
-				l_win_transit.m_halfWidth = destHalfWinLen;
-				unsigned u_halfWidth = (unsigned)ceilf(destHalfWinLen);
-				l_win_transit.m_data.resize(u_halfWidth);
 
-				for (unsigned i = 0; i < destHalfWinLen; i++)
-				{
-					l_win_transit.m_data[i] = (1.0f - k2) * destWin->m_data[i] + k2* destWin_next->m_data[i];
-				}
-
+				l_win_transit.Interpolate(*destWin, *destWin_next, k2, destHalfWinLen);
 			}
 
 			SymmetricWindow l_win2;
