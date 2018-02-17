@@ -670,7 +670,7 @@ private:
 		noteBuf->m_sampleNum = uSumLen;
 		noteBuf->Allocate();
 
-		float multFac = m_noteVolume / maxv;
+		float multFac = 1.0f / maxv;
 
 		for (unsigned pos = 0; pos < uSumLen; pos++)
 		{

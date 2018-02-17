@@ -45,10 +45,7 @@ public:
 	~Singer();
 
 	void SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
-	void SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
-
 	void RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
-	void RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo = 80, float RefFreq = 261.626f);
 
 	void SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo = 80, float RefFreq = 261.626f);
 	void RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo = 80, float RefFreq = 261.626f);

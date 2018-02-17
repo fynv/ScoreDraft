@@ -91,7 +91,7 @@ public:
 		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 		beatBuf->Allocate();
 
-		float mult = m_beatVolume / m_sample->m_max_v;
+		float mult = 1.0f / m_sample->m_max_v;
 
 		if (beatBuf->m_sampleRate == (float)m_sample->m_origin_sample_rate)
 		{

@@ -26,7 +26,7 @@ void Square::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer*
 		float x = sampleFreq*j;
 		x = x - floor(x);
 		float wave = x > 0.5f ? -1.0f : 1.0f;
-		noteBuf->m_data[j] = wave* m_noteVolume;
+		noteBuf->m_data[j] = wave;
 	}
 }
 

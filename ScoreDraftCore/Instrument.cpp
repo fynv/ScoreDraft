@@ -40,9 +40,6 @@ void Instrument::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuf
 
 void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo, float RefFreq)
 {
-	NoteBuffer noteBuf;
-	noteBuf.m_sampleRate = (float)buffer.Rate();
-
 	float fduration=fabsf((float)(aNote.m_duration*60))/(float)(tempo*48);
 	float fNumOfSamples = buffer.Rate()*fduration;
 
@@ -62,10 +59,16 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 	}
 
 	float freq = RefFreq*aNote.m_freq_rel;
-	float sampleFreq=freq/(float)buffer.Rate();				
+	float sampleFreq=freq/(float)buffer.Rate();			
+
+	NoteBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
+	noteBuf.m_cursorDelta = fNumOfSamples;
+	noteBuf.m_volume = m_noteVolume;
+
 	GenerateNoteWave(fNumOfSamples, sampleFreq, &noteBuf);
 	
-	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples, noteBuf.m_alignPos);
+	buffer.WriteBlend(noteBuf);
 		
 }
 

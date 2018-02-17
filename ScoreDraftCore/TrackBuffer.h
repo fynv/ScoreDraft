@@ -12,8 +12,12 @@ public:
 
 	float m_sampleRate;
 	unsigned m_sampleNum;
-	unsigned m_alignPos;
 	float* m_data;
+
+	float m_cursorDelta;
+	unsigned m_alignPos;
+	float m_volume;
+
 	void Allocate();
 };
 
@@ -42,7 +46,9 @@ public:
 	void SetCursor(float fpos);
 	void MoveCursor(float delta);
 
-	void WriteBlend(unsigned count, const float* samples, float cursorDelta, unsigned alignPos=0);
+	void SeekToCursor();
+
+	void WriteBlend(const NoteBuffer& noteBuf);
 
 	// sample read
 	unsigned NumberOfSamples()

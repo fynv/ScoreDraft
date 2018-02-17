@@ -994,7 +994,6 @@ private:
 
 		// post processing
 
-		float multFac = m_noteVolume;
 		for (unsigned pos = 0; pos < uSumLen; pos++, noteBufPos++)
 		{
 			float pos_tmpBuf = stretchingMap[pos];
@@ -1012,7 +1011,7 @@ private:
 				sum += tempBuf.GetSample(ipos);
 			}
 			float value = sum / (float)(ipos2 - ipos1 + 1);
-			noteBuf->m_data[noteBufPos] = value*multFac;
+			noteBuf->m_data[noteBufPos] = value;
 		}
 
 		delete[] stretchingMap;

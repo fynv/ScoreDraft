@@ -41,14 +41,17 @@ void Percussion::GenerateBeatWave(float fNumOfSamples, NoteBuffer* beatBuf)
 
 void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 {
-	NoteBuffer beatBuf;
-	beatBuf.m_sampleRate = (float)buffer.Rate();
 
 	float fduration = (float)(duration * 60) / (float)(tempo * 48);
 	float fNumOfSamples = buffer.Rate()*fduration;
 
+	NoteBuffer beatBuf;
+	beatBuf.m_sampleRate = (float)buffer.Rate();
+	beatBuf.m_cursorDelta = fNumOfSamples;
+	beatBuf.m_volume = m_beatVolume;
+
 	GenerateBeatWave(fNumOfSamples, &beatBuf);
-	buffer.WriteBlend(beatBuf.m_sampleNum, beatBuf.m_data, fNumOfSamples, beatBuf.m_alignPos);
+	buffer.WriteBlend(beatBuf);
 }
 
 void Percussion::PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo)

@@ -74,8 +74,6 @@ void Singer::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuf
 void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo, float RefFreq)
 {
 	std::vector<SingerNoteParams> noteParams;
-	NoteBuffer noteBuf;
-	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float totalDuration = 0.0f;
 
@@ -93,8 +91,13 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 				SingingPieceInternal _piece;
 				_piece.lyric = lyric;
 				_piece.notes = noteParams;
+				NoteBuffer noteBuf;
+				noteBuf.m_sampleRate = (float)buffer.Rate();
+				noteBuf.m_cursorDelta = totalDuration;
+				noteBuf.m_volume = m_noteVolume;
+
 				GenerateWave(_piece, &noteBuf);
-				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
+				buffer.WriteBlend(noteBuf);
 				noteParams.clear();
 				totalDuration = 0.0f;
 			}
@@ -125,35 +128,19 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 		SingingPieceInternal _piece;
 		_piece.lyric = lyric;
 		_piece.notes = noteParams;
+		NoteBuffer noteBuf;
+		noteBuf.m_sampleRate = (float)buffer.Rate();
+		noteBuf.m_cursorDelta = totalDuration;
+		noteBuf.m_volume = m_noteVolume;
+
 		GenerateWave(_piece, &noteBuf);
-		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
+		buffer.WriteBlend(noteBuf);
 	}
 
-}
-
-void Singer::SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsigned tempo, float RefFreq)
-{
-	int i;
-	int prog = 0;
-	for (i = 0; i<(int)seq.size(); i++)
-	{
-		int newprog = (i + 1) * 10 / (int)seq.size();
-		if (newprog>prog)
-		{
-			printf("-");
-			prog = newprog;
-		}
-
-		SingPiece(buffer, seq[i], tempo, RefFreq);
-	}
-	printf("\n");
 }
 
 void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo, float RefFreq)
 {
-	NoteBuffer noteBuf;
-	noteBuf.m_sampleRate = (float)buffer.Rate();
-
 	float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
 	float fNumOfSamples = buffer.Rate()*fduration;
 
@@ -178,34 +165,19 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 	_piece.sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
 	_piece.sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
 
+	NoteBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
+	noteBuf.m_cursorDelta = fNumOfSamples;
+	noteBuf.m_volume = m_noteVolume;
+
 	GenerateWave_Rap(_piece, &noteBuf);
 
-	buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, fNumOfSamples, noteBuf.m_alignPos);
-}
-
-void Singer::RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned tempo, float RefFreq)
-{
-	int i;
-	int prog = 0;
-	for (i = 0; i<(int)seq.size(); i++)
-	{
-		int newprog = (i + 1) * 10 / (int)seq.size();
-		if (newprog>prog)
-		{
-			printf("-");
-			prog = newprog;
-		}
-
-		RapAPiece(buffer, seq[i], tempo, RefFreq);
-	}
-	printf("\n");
+	buffer.WriteBlend(noteBuf);
 }
 
 void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo, float RefFreq)
 {
 	SingingPieceInternalList pieceList;
-	NoteBuffer noteBuf;
-	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float totalDuration = 0.0f;
 
@@ -232,8 +204,13 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 						_piece->notes = noteParams;
 						pieceList.push_back(_piece);
 					}
+					NoteBuffer noteBuf;
+					noteBuf.m_sampleRate = (float)buffer.Rate();
+					noteBuf.m_cursorDelta = totalDuration;
+					noteBuf.m_volume = m_noteVolume;
+
 					GenerateWave_SingConsecutive(pieceList, &noteBuf);
-					buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
+					buffer.WriteBlend(noteBuf);
 					noteParams.clear();
 					pieceList.clear();
 					totalDuration = 0.0f;
@@ -269,16 +246,19 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 
 	if (pieceList.size() > 0)
 	{
+		NoteBuffer noteBuf;
+		noteBuf.m_sampleRate = (float)buffer.Rate();
+		noteBuf.m_cursorDelta = totalDuration;
+		noteBuf.m_volume = m_noteVolume;
+
 		GenerateWave_SingConsecutive(pieceList, &noteBuf);
-		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
+		buffer.WriteBlend(noteBuf);
 	}
 }
 
 void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo, float RefFreq)
 {
 	RapPieceInternalList pieceList;
-	NoteBuffer noteBuf;
-	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float totalDuration = 0.0f;
 
@@ -292,8 +272,13 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 		{
 			if (pieceList.size()>0)
 			{
+				NoteBuffer noteBuf;
+				noteBuf.m_sampleRate = (float)buffer.Rate();
+				noteBuf.m_cursorDelta = totalDuration;
+				noteBuf.m_volume = m_noteVolume;
+
 				GenerateWave_RapConsecutive(pieceList, &noteBuf);
-				buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
+				buffer.WriteBlend(noteBuf);
 				pieceList.clear();
 				totalDuration = 0.0f;
 			}
@@ -323,8 +308,13 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 	}
 	if (pieceList.size() > 0)
 	{
+		NoteBuffer noteBuf;
+		noteBuf.m_sampleRate = (float)buffer.Rate();
+		noteBuf.m_cursorDelta = totalDuration;
+		noteBuf.m_volume = m_noteVolume;
+
 		GenerateWave_RapConsecutive(pieceList, &noteBuf);
-		buffer.WriteBlend(noteBuf.m_sampleNum, noteBuf.m_data, totalDuration, noteBuf.m_alignPos);
+		buffer.WriteBlend(noteBuf);
 	}
 
 }

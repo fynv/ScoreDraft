@@ -29,7 +29,7 @@ void Triangle::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffe
 		x = x - floor(x);
 		
 		float wave = x > 0.5f ? (x-0.75f)*4.0f: (0.25f-x)*4.0f;
-		noteBuf->m_data[j] = wave*amplitude* m_noteVolume;
+		noteBuf->m_data[j] = wave*amplitude;
 	}
 }
 

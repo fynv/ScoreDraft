@@ -62,6 +62,7 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 
 	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(args);
 	TrackBuffer_deferred buffer = s_pPyScoreDraft->GetTrackBuffer(BufferId);
+	buffer->SeekToCursor();
 
 	unsigned AlignPos = buffer->AlignPos();
 

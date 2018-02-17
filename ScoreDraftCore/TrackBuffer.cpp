@@ -13,10 +13,13 @@
 
 NoteBuffer::NoteBuffer()
 {
-	m_sampleNum = 0;
-	m_alignPos = 0;
-	m_data = 0;
 	m_sampleRate = 44100.0f;
+	m_sampleNum = 0;
+	m_data = nullptr;
+
+	m_cursorDelta = 0.0f;
+	m_alignPos = 0;	
+	m_volume = 1.0f;
 }
 
 NoteBuffer::~NoteBuffer()
@@ -91,6 +94,12 @@ void TrackBuffer::MoveCursor(float delta)
 	SetCursor(m_cursor + delta);
 }
 
+void TrackBuffer::SeekToCursor()
+{
+	unsigned upos = (unsigned)(m_cursor);
+	_seek(upos);
+}
+
 void TrackBuffer::_writeSamples(unsigned count, const float* samples, unsigned alignPos)
 {
 	unsigned upos = (unsigned)(m_cursor)+m_alignPos - alignPos;
@@ -100,8 +109,14 @@ void TrackBuffer::_writeSamples(unsigned count, const float* samples, unsigned a
 	m_localBufferPos = -1;
 }
 
-void TrackBuffer::WriteBlend(unsigned count, const float* samples, float cursorDelta, unsigned note_alignPos)
+void TrackBuffer::WriteBlend(const NoteBuffer& noteBuf)
 {
+	unsigned count = noteBuf.m_sampleNum;
+	float* samples = noteBuf.m_data;
+	unsigned note_alignPos = noteBuf.m_alignPos;
+	float cursorDelta = noteBuf.m_cursorDelta;
+	float volume = noteBuf.m_volume;
+
 	if (m_alignPos == (unsigned)(-1))
 	{
 		m_alignPos = note_alignPos;
@@ -114,16 +129,13 @@ void TrackBuffer::WriteBlend(unsigned count, const float* samples, float cursorD
 		note_alignPos -= truncate;
 	}
 	unsigned upos = (unsigned)(m_cursor)+m_alignPos - note_alignPos;
-	if (upos >= m_length)
-	{
-		_writeSamples(count, samples, note_alignPos);
-	}
-	else
-	{
 
-		float *tmpSamples = new float[count];
-		memcpy(tmpSamples, samples, sizeof(float)*count);
-
+	float *tmpSamples = new float[count];
+	for (unsigned i = 0; i < count; i++)
+		tmpSamples[i] = samples[i] * volume;
+	
+	if (upos < m_length)
+	{
 		unsigned sec = min(count, m_length - upos);
 		float* secbuf = new float[sec];
 		_seek(upos);
@@ -133,18 +145,21 @@ void TrackBuffer::WriteBlend(unsigned count, const float* samples, float cursorD
 			tmpSamples[i] += secbuf[i];
 
 		delete[] secbuf;
-
-		_writeSamples(count, tmpSamples, note_alignPos);
-
-		delete[] tmpSamples;
 	}
+
+	_writeSamples(count, tmpSamples, note_alignPos);
+
+	delete[] tmpSamples;
 
 	MoveCursor(cursorDelta);
 }
 
 bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffer_deferred* tracks)
 {
-	float *targetBuffer=new float[s_localBufferSize];
+	NoteBuffer targetBuffer;
+	targetBuffer.m_sampleNum = s_localBufferSize;
+	targetBuffer.Allocate();
+
 	unsigned *lengths=new unsigned[num];
 	int* sourcePos = new int[num];
 	float* trackVolumes = new float[num];
@@ -161,7 +176,6 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 		{
 			delete[] trackVolumes;
 			delete[] sourcePos;
-			delete[] targetBuffer;
 			delete[] lengths;
 			return false;
 		}
@@ -189,7 +203,7 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 	while (!finish)
 	{
 		finish=true;
-		memset(targetBuffer,0,sizeof(float)*s_localBufferSize);
+		memset(targetBuffer.m_data,0,sizeof(float)*s_localBufferSize);
 		unsigned maxCount=0;
 
 		for (i=0;i<num;i++)
@@ -202,13 +216,16 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 				for (j=0;j<count;j++)
 				{
 					if ((int)j + sourcePos[i]>0)
-						targetBuffer[j] += tracks[i]->Sample((unsigned)((int)j + sourcePos[i]))* trackVolumes[i];
+						targetBuffer.m_data[j] += tracks[i]->Sample((unsigned)((int)j + sourcePos[i]))* trackVolumes[i];
 				}
 				sourcePos[i] += count;
 				if ((int)lengths[i] > sourcePos[i]) finish = false;
 			}
 		}	
-		sumbuffer.WriteBlend(maxCount, targetBuffer, (float)(maxCount - maxAlign), maxAlign);
+		targetBuffer.m_sampleNum = maxCount;
+		targetBuffer.m_cursorDelta = (float)(maxCount - maxAlign);
+		targetBuffer.m_alignPos = maxAlign;
+		sumbuffer.WriteBlend(targetBuffer);
 		maxAlign = 0;
 	}
 	sumbuffer.SetCursor(maxCursor);
@@ -216,7 +233,6 @@ bool TrackBuffer::CombineTracks(TrackBuffer& sumbuffer, unsigned num, TrackBuffe
 	delete[] trackVolumes;
 	delete[] sourcePos;
 	delete[] lengths;
-	delete[] targetBuffer;
 	
 	return true;
 }

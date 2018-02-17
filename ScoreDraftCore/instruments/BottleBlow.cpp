@@ -45,7 +45,7 @@ void BottleBlow::GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuf
 	//float b = 2 * PI * powf(2.0f*(sqrtf(powf(FreqCut, 4.0f) + powf(sampleFreq, 4.0f)) - powf(sampleFreq, 2.0f)),0.5f);
 	float b = 2 * PI * FreqCut*FreqCut / sampleFreq;
 
-	float ampfac = powf(FreqCut, 1.5f) * m_noteVolume;
+	float ampfac = powf(FreqCut, 1.5f);
 
 	for (j = 0; j < noteBuf->m_sampleNum; j++)
 	{

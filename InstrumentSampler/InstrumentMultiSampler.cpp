@@ -42,7 +42,7 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 	noteBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
 	noteBuf->Allocate();
 
-	float mult = m_noteVolume / wav->m_max_v;
+	float mult = 1.0f / wav->m_max_v;
 
 	bool interpolation = sampleFreq <= origin_SampleFreq;
 
