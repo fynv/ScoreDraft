@@ -14,25 +14,6 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-NoteBuffer::NoteBuffer()
-{
-	m_sampleNum=0;
-	m_alignPos = 0;
-	m_data=0;
-	m_sampleRate = 44100.0f;
-}
-
-NoteBuffer::~NoteBuffer()
-{
-	delete[] m_data;
-}
-
-void NoteBuffer::Allocate()
-{
-	delete[] m_data;
-	m_data=new float[m_sampleNum];
-}
-
 #include <cmath>
 #include <time.h>
 Instrument::Instrument() : m_noteVolume(1.0f)

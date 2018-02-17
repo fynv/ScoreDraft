@@ -83,7 +83,7 @@ public:
 		m_sample = sample;
 	}
 
-	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf)
+	virtual void GenerateBeatWave(float fNumOfSamples, NoteBuffer* beatBuf)
 	{
 		if (!m_sample) return;
 

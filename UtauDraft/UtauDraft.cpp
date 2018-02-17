@@ -145,7 +145,7 @@ public:
 		return false;
 	}
 
-	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
+	virtual void GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
 	{
 		SingingPieceInternal_Deferred dPiece;
 		*dPiece = piece;
@@ -154,7 +154,7 @@ public:
 		GenerateWave_SingConsecutive(pieceList, noteBuf);
 	}
 
-	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf)
 	{
 		RapPieceInternal_Deferred dPiece;
 		*dPiece = piece;
@@ -203,7 +203,7 @@ public:
 		delete[] buf2;
 	}
 
-	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf)
 	{
 		if (m_LyricConverter != nullptr)
 		{
@@ -335,7 +335,7 @@ public:
 		delete[] lens;
 	}
 
-	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
 	{
 		if (m_LyricConverter != nullptr)
 		{
@@ -626,7 +626,7 @@ private:
 
 	}
 
-	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, VoiceBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote)
+	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote)
 	{
 		/// calculate finalBuffer->tmpBuffer map
 		float minSampleFreq = FLT_MAX;

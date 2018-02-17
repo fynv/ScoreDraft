@@ -225,11 +225,10 @@ namespace VoiceUtil
 		void CreateFromAsymmetricWindow(const Window& src)
 		{
 			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
-			unsigned u_srcWidth = u_srcHalfWidth << 1;
-
+	
 			unsigned l = 0;
 			unsigned fftLen = 1;
-			while (fftLen < u_srcWidth)
+			while (fftLen < u_srcHalfWidth)
 			{
 				l++;
 				fftLen <<= 1;
@@ -238,12 +237,10 @@ namespace VoiceUtil
 			DComp* fftBuf = new DComp[fftLen];
 			memset(fftBuf, 0, sizeof(DComp)*fftLen);
 
-			for (unsigned i = 0; i < fftLen / 2; i++)
+			for (unsigned i = 0; i < fftLen; i++)
 			{
-				fftBuf[i].Re = (double)src.GetSample((int)i) + (double)src.GetSample((int)i - (int)fftLen / 2);
-				if (i > 0) fftBuf[fftLen - i].Re = (double)src.GetSample(-(int)(i)) + (double)src.GetSample(-(int)i + (int)fftLen / 2);
+				fftBuf[i].Re = (double)src.GetSample((int)i) + (double)src.GetSample((int)i - (int)fftLen);
 			}
-			fftBuf[fftLen / 2].Re = (double)src.GetSample(0);
 
 			fft(fftBuf, l);
 
@@ -271,18 +268,20 @@ namespace VoiceUtil
 
 			ifft(fftBuf, l);
 
-			m_data.resize(fftLen / 2);
-			m_halfWidth = (float)(fftLen / 2);
+			m_data.resize(fftLen);
+			m_halfWidth = (float)(fftLen);
+			float rate = m_halfWidth /  src.m_halfWidth;
 
-			for (unsigned i = 0; i < fftLen / 2; i++)
+			for (unsigned i = 0; i < fftLen; i++)
 				m_data[i] = (float)fftBuf[i].Re;
 
 		
 			// rewindow
-			for (unsigned i = 0; i < fftLen / 2; i++)
+			float amplitude = sqrtf(rate);
+			for (unsigned i = 0; i < fftLen; i++)
 			{
 				float window = (cosf((float)i * (float)PI / m_halfWidth) + 1.0f)*0.5f;
-				m_data[i] *= window;
+				m_data[i] *= window*amplitude;
 			}
 
 			delete[] fftBuf;

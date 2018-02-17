@@ -4,19 +4,7 @@
 #include<string>
 #include "Deferred.h"
 
-class BeatBuffer
-{
-public:
-	BeatBuffer();
-	~BeatBuffer();
-
-	float m_sampleRate;
-	unsigned m_sampleNum;
-	unsigned m_alignPos;
-	float* m_data;
-	void Allocate();
-};
-
+class NoteBuffer;
 class TrackBuffer;
 class BeatSequence;
 class Percussion;
@@ -37,8 +25,8 @@ public:
 
 
 protected:
-	static void Silence(unsigned numOfSamples, BeatBuffer* noteBuf);
-	virtual void GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf);
+	static void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
+	virtual void GenerateBeatWave(float fNumOfSamples, NoteBuffer* beatBuf);
 
 	float m_beatVolume;
 };

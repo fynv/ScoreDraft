@@ -14,26 +14,6 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-
-BeatBuffer::BeatBuffer()
-{
-	m_sampleNum = 0;
-	m_alignPos = 0;
-	m_data = 0;
-	m_sampleRate = 44100.0f;
-}
-
-BeatBuffer::~BeatBuffer()
-{
-	delete[] m_data;
-}
-
-void BeatBuffer::Allocate()
-{
-	delete[] m_data;
-	m_data = new float[m_sampleNum];
-}
-
 #include <cmath>
 #include <time.h>
 Percussion::Percussion() : m_beatVolume(1.0f)
@@ -47,21 +27,21 @@ Percussion::~Percussion()
 }
 
 
-void Percussion::Silence(unsigned numOfSamples, BeatBuffer* noteBuf)
+void Percussion::Silence(unsigned numOfSamples, NoteBuffer* noteBuf)
 {
 	noteBuf->m_sampleNum = numOfSamples;
 	noteBuf->Allocate();
 	memset(noteBuf->m_data, 0, sizeof(float)*numOfSamples);
 }
 
-void Percussion::GenerateBeatWave(float fNumOfSamples, BeatBuffer* beatBuf)
+void Percussion::GenerateBeatWave(float fNumOfSamples, NoteBuffer* beatBuf)
 {
 	Silence((unsigned)ceilf(fNumOfSamples), beatBuf);
 }
 
 void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 {
-	BeatBuffer beatBuf;
+	NoteBuffer beatBuf;
 	beatBuf.m_sampleRate = (float)buffer.Rate();
 
 	float fduration = (float)(duration * 60) / (float)(tempo * 48);

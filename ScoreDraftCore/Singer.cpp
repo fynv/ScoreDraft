@@ -15,26 +15,6 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-
-VoiceBuffer::VoiceBuffer()
-{
-	m_sampleNum = 0;
-	m_alignPos = 0;
-	m_data = 0;
-	m_sampleRate = 44100.0f;
-}
-
-VoiceBuffer::~VoiceBuffer()
-{
-	delete[] m_data;
-}
-
-void VoiceBuffer::Allocate()
-{
-	delete[] m_data;
-	m_data = new float[m_sampleNum];
-}
-
 Singer::Singer() : m_noteVolume(1.0f)
 {
 	m_lyric_charset = "utf-8";
@@ -46,14 +26,14 @@ Singer::~Singer()
 }
 
 
-void Singer::Silence(unsigned numOfSamples, VoiceBuffer* noteBuf)
+void Singer::Silence(unsigned numOfSamples, NoteBuffer* noteBuf)
 {
 	noteBuf->m_sampleNum = numOfSamples;
 	noteBuf->Allocate();
 	memset(noteBuf->m_data, 0, sizeof(float)*numOfSamples);
 }
 
-void Singer::GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
+void Singer::GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
 {
 	float totalDuration = 0.0f;
 	for (size_t i = 0; i < piece.notes.size(); i++)
@@ -62,12 +42,12 @@ void Singer::GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
 	Silence((unsigned)ceilf(totalDuration), noteBuf);
 }
 
-void Singer::GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
+void Singer::GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf)
 {
 	Silence((unsigned)ceilf(piece.fNumOfSamples), noteBuf);
 }
 
-void Singer::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
+void Singer::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf)
 {
 	float totalDuration = 0.0f;
 	for (size_t j = 0; j < pieceList.size(); j++)
@@ -80,7 +60,7 @@ void Singer::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, Vo
 
 }
 
-void Singer::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
+void Singer::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
 {
 	float totalDuration = 0.0f;
 	for (size_t j = 0; j < pieceList.size(); j++)
@@ -94,7 +74,7 @@ void Singer::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBu
 void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo, float RefFreq)
 {
 	std::vector<SingerNoteParams> noteParams;
-	VoiceBuffer noteBuf;
+	NoteBuffer noteBuf;
 	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float totalDuration = 0.0f;
@@ -171,7 +151,7 @@ void Singer::SingSequence(TrackBuffer& buffer, const SingingSequence& seq, unsig
 
 void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo, float RefFreq)
 {
-	VoiceBuffer noteBuf;
+	NoteBuffer noteBuf;
 	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
@@ -224,7 +204,7 @@ void Singer::RapASequence(TrackBuffer& buffer, const RapSequence& seq, unsigned 
 void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo, float RefFreq)
 {
 	SingingPieceInternalList pieceList;
-	VoiceBuffer noteBuf;
+	NoteBuffer noteBuf;
 	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float totalDuration = 0.0f;
@@ -297,7 +277,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo, float RefFreq)
 {
 	RapPieceInternalList pieceList;
-	VoiceBuffer noteBuf;
+	NoteBuffer noteBuf;
 	noteBuf.m_sampleRate = (float)buffer.Rate();
 
 	float totalDuration = 0.0f;

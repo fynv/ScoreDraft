@@ -5,19 +5,7 @@
 #include <string>
 #include <Deferred.h>
 
-class VoiceBuffer
-{
-public:
-	VoiceBuffer();
-	~VoiceBuffer();
-
-	float m_sampleRate;
-	unsigned m_sampleNum;
-	unsigned m_alignPos;
-	float* m_data;
-	void Allocate();
-};
-
+class NoteBuffer;
 class TrackBuffer;
 class SingingPiece;
 class SingingSequence;
@@ -73,12 +61,12 @@ public:
 	virtual bool Tune(const char* cmd);
 
 protected:
-	void Silence(unsigned numOfSamples, VoiceBuffer* noteBuf);
-	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf);
-	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf);
+	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
+	virtual void GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf);
+	virtual void GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf);
 
-	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf);
-	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf);
+	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf);
+	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf);
 
 	float m_noteVolume;
 	std::string m_defaultLyric;

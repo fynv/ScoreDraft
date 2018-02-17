@@ -231,7 +231,7 @@ public:
 		}
 		return false;
 	}
-	virtual void GenerateWave(SingingPieceInternal piece, VoiceBuffer* noteBuf)
+	virtual void GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
 	{
 		if (piece.notes.size() < 1) return;
 
@@ -295,7 +295,7 @@ public:
 
 	}
 
-	virtual void GenerateWave_Rap(RapPieceInternal piece, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf)
 	{
 		float sumLen = piece.fNumOfSamples;
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
@@ -334,17 +334,17 @@ public:
 		}
 	}
 
-	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf)
 	{
-		typedef Deferred<VoiceBuffer> VoiceBuffer_Deferred;
-		std::vector <VoiceBuffer_Deferred> subBufs;
+		typedef Deferred<NoteBuffer> NoteBuffer_Deferred;
+		std::vector <NoteBuffer_Deferred> subBufs;
 
 		float sumAllLen = 0.0f;
 
 		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 		{
 			SingingPieceInternal& piece = *pieceList[i];
-			VoiceBuffer_Deferred subBuf;
+			NoteBuffer_Deferred subBuf;
 			subBuf->m_sampleRate = noteBuf->m_sampleRate;
 			GenerateWave(piece, subBuf);
 			sumAllLen += subBuf->m_sampleNum;
@@ -357,7 +357,7 @@ public:
 		float bufPos = 0.0f;
 		for (unsigned i = 0; i < (unsigned)subBufs.size(); i++)
 		{
-			VoiceBuffer& subBuf = *subBufs[i];
+			NoteBuffer& subBuf = *subBufs[i];
 			unsigned noteStart = (unsigned)ceilf(bufPos);
 			unsigned noteEnd = (unsigned)ceilf(bufPos + subBuf.m_sampleNum);
 			for (unsigned j = noteStart; j < noteEnd; j++)
@@ -369,17 +369,17 @@ public:
 		
 	}
 
-	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, VoiceBuffer* noteBuf)
+	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
 	{
-		typedef Deferred<VoiceBuffer> VoiceBuffer_Deferred;
-		std::vector <VoiceBuffer_Deferred> subBufs;
+		typedef Deferred<NoteBuffer> NoteBuffer_Deferred;
+		std::vector <NoteBuffer_Deferred> subBufs;
 
 		float sumAllLen = 0.0f;
 
 		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
 		{
 			RapPieceInternal&  piece = *pieceList[i];
-			VoiceBuffer_Deferred subBuf;
+			NoteBuffer_Deferred subBuf;
 			subBuf->m_sampleRate = noteBuf->m_sampleRate;
 			GenerateWave_Rap(piece, subBuf);
 			sumAllLen += subBuf->m_sampleNum;
@@ -393,7 +393,7 @@ public:
 		float bufPos = 0.0f;
 		for (unsigned i = 0; i < (unsigned)subBufs.size(); i++)
 		{
-			VoiceBuffer& subBuf = *subBufs[i];
+			NoteBuffer& subBuf = *subBufs[i];
 			unsigned noteStart = (unsigned)ceilf(bufPos);
 			unsigned noteEnd = (unsigned)ceilf(bufPos + subBuf.m_sampleNum);
 			for (unsigned j = noteStart; j < noteEnd; j++)
@@ -406,7 +406,7 @@ public:
 	}
 
 private:
-	void _generateWave(const char* lyric, float sumLen, float* freqMap, VoiceBuffer* noteBuf)
+	void _generateWave(const char* lyric, float sumLen, float* freqMap, NoteBuffer* noteBuf)
 	{
 		unsigned uSumLen = (unsigned)ceilf(sumLen);
 

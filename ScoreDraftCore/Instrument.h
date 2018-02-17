@@ -1,19 +1,7 @@
 #ifndef _scoredraft_Instrument_h
 #define _scoredraft_Instrument_h
 
-class  NoteBuffer
-{
-public:
-	NoteBuffer();
-	~NoteBuffer();
-	
-	float m_sampleRate;
-	unsigned m_sampleNum;
-	unsigned m_alignPos;
-	float* m_data;
-	void Allocate();	
-};
-
+class NoteBuffer;
 class TrackBuffer;
 class Note;
 class NoteSequence;

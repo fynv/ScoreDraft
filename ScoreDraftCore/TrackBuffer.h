@@ -4,6 +4,20 @@
 #include "stdio.h"
 #include "Deferred.h"
 
+class NoteBuffer
+{
+public:
+	NoteBuffer();
+	~NoteBuffer();
+
+	float m_sampleRate;
+	unsigned m_sampleNum;
+	unsigned m_alignPos;
+	float* m_data;
+	void Allocate();
+};
+
+
 class TrackBuffer;
 typedef Deferred<TrackBuffer> TrackBuffer_deferred;
 
