@@ -25,6 +25,7 @@ class PercussionSample
 {
 public:
 	unsigned m_wav_length;
+	unsigned m_chn;
 	float *m_wav_samples;
 	float m_max_v;
 
@@ -48,13 +49,14 @@ public:
 
 		delete[] m_wav_samples;
 		m_wav_length = 0;
+		m_chn = 1;
 		m_wav_samples = nullptr;
 
 		ReadWav reader;
 		reader.OpenFile(filename);
-		if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length)) return false;
+		if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length, m_chn)) return false;
 
-		m_wav_samples = new float[m_wav_length];
+		m_wav_samples = new float[m_wav_length*m_chn];
 		if (!reader.ReadSamples(m_wav_samples, m_wav_length, m_max_v))
 		{
 			delete[] m_wav_samples;
@@ -89,6 +91,7 @@ public:
 
 		unsigned maxSample = (unsigned)((float)m_sample->m_wav_length * beatBuf->m_sampleRate / m_sample->m_origin_sample_rate);
 		beatBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
+		unsigned chn= beatBuf->m_channelNum = m_sample->m_chn;
 		beatBuf->Allocate();
 
 		float mult = 1.0f / m_sample->m_max_v;
@@ -101,7 +104,10 @@ public:
 				float x2 = (float)j / fNumOfSamples;
 				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-				beatBuf->m_data[j] = amplitude*m_sample->m_wav_samples[j] * mult;
+				for (unsigned c = 0; c < chn; c++)
+				{
+					beatBuf->m_data[j * chn + c] = amplitude*m_sample->m_wav_samples[j * chn + c] * mult;
+				}
 			}
 		}
 		else
@@ -112,7 +118,7 @@ public:
 				float x2 = (float)j / fNumOfSamples;
 				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-				float wave;
+				float wave[2];
 				if (interpolation)
 				{
 					float pos = (float)j *(float)m_sample->m_origin_sample_rate / beatBuf->m_sampleRate;
@@ -128,14 +134,19 @@ public:
 					int ipos3 = ipos1 + 2;
 					if (ipos3 >= (int)m_sample->m_wav_length) ipos3 = (int)m_sample->m_wav_length - 1;
 
-					float p0 = m_sample->m_wav_samples[ipos0];
-					float p1 = m_sample->m_wav_samples[ipos1];
-					float p2 = m_sample->m_wav_samples[ipos2];
-					float p3 = m_sample->m_wav_samples[ipos3];
+					for (unsigned c = 0; c < chn; c++)
+					{
+						float p0 = m_sample->m_wav_samples[ipos0*chn +c];
+						float p1 = m_sample->m_wav_samples[ipos1*chn + c];
+						float p2 = m_sample->m_wav_samples[ipos2*chn + c];
+						float p3 = m_sample->m_wav_samples[ipos3*chn + c];
 
-					wave = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
-						(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
-						(-0.5f*p0 + 0.5f*p2)*frac + p1;
+						wave[c] = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+							(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+							(-0.5f*p0 + 0.5f*p2)*frac + p1;
+
+					}
+					
 				}
 				else
 				{
@@ -144,15 +155,26 @@ public:
 					if (ipos1 < 0) ipos1 = 0;
 					if (ipos2 >= (int)m_sample->m_wav_length) ipos2 = (int)m_sample->m_wav_length - 1;
 					int count = ipos2 - ipos1 + 1;
-					float sum = 0.0f;
-					for (int ipos = ipos1; ipos <= ipos2; ipos++)
-					{
-						sum += m_sample->m_wav_samples[ipos];
-					}
-					wave = sum / (float)count;
-				}
 
-				beatBuf->m_data[j] = amplitude*wave* mult;
+					for (unsigned c = 0; c < chn; c++)
+					{
+						float sum = 0.0f;
+						for (int ipos = ipos1; ipos <= ipos2; ipos++)
+						{
+							sum += m_sample->m_wav_samples[ipos*chn+c];
+						}
+						wave[c] = sum / (float)count;
+					}
+				}
+				if (beatBuf->m_channelNum == 1)
+				{
+					beatBuf->m_data[j] = amplitude*wave[0] * mult;
+				}
+				else if (beatBuf->m_channelNum == 2)
+				{
+					beatBuf->m_data[j * 2] = amplitude*wave[0] * mult;
+					beatBuf->m_data[j * 2 + 1] = amplitude*wave[1] * mult;
+				}
 			}
 		}
 	}

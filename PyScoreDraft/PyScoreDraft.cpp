@@ -79,7 +79,7 @@ static PyObject* ScanExtensions(PyObject *self, PyObject *args)
 {
 	const char* root;
 	if (!PyArg_ParseTuple(args, "s", &root))
-		return NULL;
+		return PyLong_FromLong(0);
 
 #ifdef _WIN32
 	WIN32_FIND_DATAA ffd;
@@ -89,7 +89,7 @@ static PyObject* ScanExtensions(PyObject *self, PyObject *args)
 	sprintf(extSearchStr, "%s/Extensions/*.dll", root);
 
 	hFind = FindFirstFileA(extSearchStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return NULL;
+	if (INVALID_HANDLE_VALUE == hFind) return PyLong_FromLong(0);
 
 	do
 	{
@@ -248,7 +248,11 @@ static PyObject* GenerateCode(PyObject *self, PyObject *args)
 
 static PyObject* InitTrackBuffer(PyObject *self, PyObject *args)
 {
-	TrackBuffer_deferred buffer;
+	unsigned chn;
+	if (!PyArg_ParseTuple(args, "I", &chn))
+		return NULL;
+
+	TrackBuffer_deferred buffer(44100,chn);
 	unsigned id = s_PyScoreDraft.AddTrackBuffer(buffer);
 	return PyLong_FromUnsignedLong((unsigned long)(id));
 }
@@ -351,6 +355,36 @@ static PyObject* TrackBufferSetVolume(PyObject *self, PyObject *args)
 	buffer->SetVolume(volume);
 
 	return PyLong_FromLong(0);
+}
+
+static PyObject* TrackBufferGetVolume(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	if (!PyArg_ParseTuple(args, "I", &BufferId))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	return PyFloat_FromDouble((double)buffer->Volume());
+}
+
+static PyObject* TrackBufferGetNumberOfSamples(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	if (!PyArg_ParseTuple(args, "I", &BufferId))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	return PyLong_FromLong((long)buffer->NumberOfSamples());
+}
+
+static PyObject* TrackBufferGetNumberOfChannels(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	if (!PyArg_ParseTuple(args, "I", &BufferId))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	return PyLong_FromLong((long)buffer->NumberOfChannels());
 }
 
 static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
@@ -641,7 +675,7 @@ static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 		bufferList[i] = s_PyScoreDraft.GetTrackBuffer(listId);
 	}
 
-	TrackBuffer::CombineTracks(*targetBuffer, (unsigned)bufferCount, bufferList);
+	targetBuffer->CombineTracks((unsigned)bufferCount, bufferList);
 	delete[] bufferList;
 
 	return PyLong_FromUnsignedLong(0);
@@ -658,24 +692,6 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 	WriteToWav(*buffer, fn);
 
 	return PyLong_FromUnsignedLong(0);
-}
-
-static PyObject* GetPCMDataFromTrackBuffer(PyObject *self, PyObject *args)
-{
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
-
-	unsigned numSamples = buffer->NumberOfSamples();
-	float volume = buffer->AbsoluteVolume();
-
-	PyObject* list = PyList_New(0);
-	for (unsigned i = 0; i < buffer->NumberOfSamples(); i++)
-		PyList_Append(list, PyFloat_FromDouble((double)max(min(buffer->Sample(i) * volume, 1.0f), -1.0f)));
-
-	return list;
 }
 
 static PyObject* CallExtension(PyObject *self, PyObject *args)
@@ -813,6 +829,24 @@ static PyMethodDef PyScoreDraftMethods[] = {
 		""
 	},
 	{
+		"TrackBufferGetVolume",
+		TrackBufferGetVolume,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferGetNumberOfSamples",
+		TrackBufferGetNumberOfSamples,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferGetNumberOfChannels",
+		TrackBufferGetNumberOfChannels,
+		METH_VARARGS,
+		""
+	},
+	{
 		"InstrumentPlay",
 		InstrumentPlay,
 		METH_VARARGS,
@@ -857,12 +891,6 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"WriteTrackBufferToWav",
 		WriteTrackBufferToWav,
-		METH_VARARGS,
-		""
-	},
-	{
-		"GetPCMDataFromTrackBuffer",
-		GetPCMDataFromTrackBuffer,
 		METH_VARARGS,
 		""
 	},

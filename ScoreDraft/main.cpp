@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <cmath>
 
 #include "parser/Parser.h"
 #include "Note.h"
@@ -21,20 +22,48 @@
 
 #include "parser/CustomParser.h"
 
+class TestInstrument : public Instrument
+{
+
+	void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
+	{
+		noteBuf->m_sampleNum = (unsigned)ceilf(fNumOfSamples);
+		noteBuf->m_channelNum = 2;
+		noteBuf->Allocate();
+
+		unsigned j;
+
+		for (j = 0; j<noteBuf->m_sampleNum; j++)
+		{
+			float amplitude = 1.0f - ((float)j / (float)(noteBuf->m_sampleNum - 1));
+			float phase = sampleFreq*j;
+			phase = phase - floor(phase);
+			float wave = 1.0f - 2.0f*phase;
+			float wave1 = phase > 0.5f ? -1.0f : 1.0f;
+			noteBuf->m_data[j*2] = amplitude*wave;
+			noteBuf->m_data[j * 2 + 1] = wave1;
+		}
+	}
+
+
+};
+
 void Composite(const Document& doc, TrackBuffer& buffer)
 {
-	Sawtooth inst;
+	TestInstrument inst;
 
 	size_t numTracks = doc.m_tracks.size();
 	TrackBuffer_deferred *tracks = new TrackBuffer_deferred[numTracks];
 
 	for (size_t i = 0; i < doc.m_tracks.size(); i++)
 	{
-		inst.PlayNotes(*tracks[i], *doc.m_tracks[i].m_note_seq, doc.m_tempo, doc.m_RefFreq);
-		tracks[i]->SetVolume(doc.m_tracks[i].m_vol);
+		TrackBuffer_deferred track(44100, 2);
+		inst.PlayNotes(*track, *doc.m_tracks[i].m_note_seq, doc.m_tempo, doc.m_RefFreq);
+		track->SetVolume(doc.m_tracks[i].m_vol);
+		tracks[i] = track;
 	}
 
-	TrackBuffer::CombineTracks(buffer, (unsigned)numTracks, tracks);
+	buffer.CombineTracks((unsigned)numTracks, tracks);
 
 	delete[] tracks;
 }
@@ -97,7 +126,7 @@ void PlayFile(const char* filename)
 	Document doc;
 	ParseToDoc(filename, doc);
 
-	TrackBuffer tb;
+	TrackBuffer tb(44100,2);
 	Composite(doc, tb);
 
 	if (tb.NumberOfSamples() > 0)
@@ -117,7 +146,7 @@ void ToWav(const char* InFilename, const char* OutFileName)
 	Document doc;
 	ParseToDoc(InFilename, doc);
 
-	TrackBuffer tb;
+	TrackBuffer tb(44100,2);
 	Composite(doc, tb);
 
 	WriteToWav(tb, OutFileName);

@@ -60,7 +60,9 @@ namespace VoiceUtil
 		ReadWav reader;
 		if (!reader.OpenFile(filename)) return false;
 		unsigned numSamples;
-		if (!reader.ReadHeader(buf.m_sampleRate, numSamples)) return false;
+		unsigned chn;
+		if (!reader.ReadHeader(buf.m_sampleRate, numSamples, chn)) return false;
+		if (chn != 1) return false;
 		buf.m_data.resize((size_t)numSamples);
 		return reader.ReadSamples(buf.m_data.data(), numSamples, maxV);
 	}

@@ -23,13 +23,14 @@ bool InstrumentSample::LoadWav(const char* root, const char* name, const char* i
 
 	delete[] m_wav_samples;
 	m_wav_length = 0;
+	m_chn = 1;
 	m_wav_samples = nullptr;
 
 	ReadWav reader;
 	reader.OpenFile(filename);
-	if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length)) return false;
+	if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length, m_chn)) return false;
 
-	m_wav_samples = new float[m_wav_length];
+	m_wav_samples = new float[m_wav_length*m_chn];
 	if (!reader.ReadSamples(m_wav_samples, m_wav_length, m_max_v))
 	{
 		delete[] m_wav_samples;
@@ -57,11 +58,28 @@ void InstrumentSample::_fetchOriginFreq(const char* root, const char* name, cons
 	}
 	else
 	{
-		m_origin_freq = fetchFrequency(m_wav_length, m_wav_samples, m_origin_sample_rate);
+		float* localMono = nullptr;
+		float* pSamples = nullptr;
+		if (m_chn == 1)
+		{
+			pSamples = m_wav_samples;
+		}
+		else if (m_chn == 2)
+		{
+			float* localMono = new float[m_wav_length];
+			pSamples = localMono;
+			for (unsigned i = 0; i < m_wav_length; i++)
+			{
+				localMono[i] = 0.5f*(m_wav_samples[i * 2] + m_wav_samples[i * 2 + 1]);
+			}
+		}
+		m_origin_freq = fetchFrequency(m_wav_length, pSamples, m_origin_sample_rate);
 		printf("Detected frequency of %s.wav = %fHz\n", name, m_origin_freq);
 		fp = fopen(filename, "w");
 		fprintf(fp, "%f\n", m_origin_freq);
 		fclose(fp);
+
+		delete[] localMono;
 	}
 }
 

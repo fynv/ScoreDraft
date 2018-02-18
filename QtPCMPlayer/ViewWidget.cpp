@@ -56,7 +56,7 @@ void ViewWidget::paintGL()
 			{
 				float x = (float)((int)i - 1024) / 1024.0f;
 				float win = 0.5f*(cosf(x*(float)PI) + 1.0f);
-				fftData[i].Re = win*(float)m_BufferQueue.GetSample() / 32768.0f;
+				fftData[i].Re = win*m_BufferQueue.GetSample();
 				fftData[i].Im = 0.0f;
 			}
 
@@ -132,7 +132,7 @@ void ViewWidget::paintGL()
 			for (unsigned i = 0; i < winSize; i++)
 			{
 				float x = (float)i / (float)(winSize - 1)*2.0f - 1.0f;
-				float y = (float)m_BufferQueue.GetSample() / 40000.0f;
+				float y = m_BufferQueue.GetSample()*0.75f;
 
 				glVertex2f(x, y);
 			}

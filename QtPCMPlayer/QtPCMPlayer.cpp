@@ -33,11 +33,13 @@ qint64 BufferFeeder::readData(char *data, qint64 len)
 	time.start();
 	emit feedingPos(time, m_BufferQueue->GetCursor());
 	short* sdata = (short*)data;
-	qint64 count = len / sizeof(short);
+	qint64 count = len / sizeof(short)/2;
 	qint64 i;
-	for (i = 0; i<count; i++)
-		sdata[i] = m_BufferQueue->GetSample();
-	return count*sizeof(short);
+	for (i = 0; i < count; i++)
+	{
+		m_BufferQueue->GetSample(sdata+i*2);
+	}
+	return count*sizeof(short)*2;
 }
 
 qint64 BufferFeeder::writeData(const char *data, qint64 len)
@@ -51,7 +53,7 @@ qint64 BufferFeeder::writeData(const char *data, qint64 len)
 
 qint64 BufferFeeder::bytesAvailable() const
 {
-	return 20000 * sizeof(short) + QIODevice::bytesAvailable();
+	return 40000 * sizeof(short) + QIODevice::bytesAvailable();
 }
 
 
@@ -89,7 +91,7 @@ void QtPCMPlayer::_playFile(const char* filename)
 	if (!m_initialized)
 	{
 		m_format.setSampleRate(44100);
-		m_format.setChannelCount(1);
+		m_format.setChannelCount(2);
 		m_format.setSampleSize(16);
 		m_format.setCodec("audio/pcm");
 		m_format.setByteOrder(QAudioFormat::LittleEndian);
@@ -105,16 +107,19 @@ void QtPCMPlayer::_playFile(const char* filename)
 
 	unsigned AlignPos;
 	unsigned size;
+	unsigned chn;
 
 	FILE *fp = fopen(filename, "rb");
 	fread(&AlignPos, sizeof(unsigned), 1, fp);
 	fread(&size, sizeof(unsigned), 1, fp);
+	fread(&chn, sizeof(unsigned), 1, fp);
 	
 	AudioBuffer_Deferred newBuffer;
-	newBuffer->resize((size_t)size);
+	newBuffer->resize((size_t)size*chn);
 	newBuffer->m_AlignPos = AlignPos;
+	newBuffer->m_chn = chn;
 
-	fread(newBuffer->data(), sizeof(short), size, fp);
+	fread(newBuffer->data(), sizeof(short), size*chn, fp);
 	fclose(fp);
 
 	QFile file(filename);

@@ -18,6 +18,9 @@ public:
 
 	void SetSampleList(std::vector<InstrumentSample_deferred>* sampleWavList)
 	{
+		m_chn = (*sampleWavList)[0]->m_chn;
+		for (unsigned i = 1; i < (unsigned)sampleWavList->size(); i++)
+			if ((*sampleWavList)[i]->m_chn != m_chn) return;
 		m_SampleWavList = sampleWavList;
 	}
 
@@ -28,7 +31,7 @@ private:
 
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
-
+	unsigned m_chn;
 	std::vector<InstrumentSample_deferred>* m_SampleWavList;
 
 };

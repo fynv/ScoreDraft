@@ -12,7 +12,12 @@ public:
 	{
 		m_AlignPos = 0;
 	}
+	unsigned Size()
+	{
+		return (unsigned)this->size() / m_chn;
+	}
 	unsigned m_AlignPos;
+	unsigned m_chn;
 };
 
 typedef Deferred<AudioBuffer> AudioBuffer_Deferred;
@@ -30,7 +35,8 @@ public:
 	void AddBuffer(AudioBuffer_Deferred buf);
 	void SetCursor(unsigned pos);
 	unsigned GetCursor();
-	short GetSample();
+	void GetSample(short sample[2]);
+	float GetSample();
 	unsigned GetRemainingSamples();
 
 private:

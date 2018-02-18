@@ -71,6 +71,12 @@ public:
 		return (SubClass*)m->t;
 	}
 
+protected:
+	Deferred(T* t) : m(new Deferred<T>::Internal(t))
+	{
+		m->addRef();
+	}
+
 private:
 	template <class SubClass>
 	Deferred(SubClass* t) : m(new Deferred<T>::Internal(t))
@@ -84,6 +90,11 @@ private:
 		Internal()
 		{
 			t = new T;
+		}
+
+		Internal(T* t)
+		{
+			this->t = t;
 		}
 	
 		template <class SubClass>

@@ -8,6 +8,7 @@ public:
 	~InstrumentSample();
 
 	unsigned m_wav_length;
+	unsigned m_chn;
 	float *m_wav_samples;
 	float m_max_v;
 	float m_origin_freq;

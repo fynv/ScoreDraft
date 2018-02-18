@@ -40,6 +40,7 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 	unsigned maxSample = (unsigned)((float)wav->m_wav_length*origin_SampleFreq / sampleFreq);
 
 	noteBuf->m_sampleNum = min((unsigned)ceilf(fNumOfSamples), maxSample);
+	noteBuf->m_channelNum = m_chn;
 	noteBuf->Allocate();
 
 	float mult = 1.0f / wav->m_max_v;
@@ -48,7 +49,7 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 
 	for (unsigned j = 0; j < noteBuf->m_sampleNum; j++)
 	{
-		float wave;
+		float wave[2];
 		if (interpolation)
 		{
 			float pos = (float)j *sampleFreq / origin_SampleFreq;
@@ -67,14 +68,18 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 			int ipos3 = ipos1 + 2;
 			if (ipos3 >= (int)wav->m_wav_length) ipos3 = (int)wav->m_wav_length - 1;
 
-			float p0 = wav->m_wav_samples[ipos0];
-			float p1 = wav->m_wav_samples[ipos1];
-			float p2 = wav->m_wav_samples[ipos2];
-			float p3 = wav->m_wav_samples[ipos3];
+			for (unsigned c = 0; c < m_chn; c++)
+			{
 
-			wave = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
-				(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
-				(-0.5f*p0 + 0.5f*p2)*frac + p1;
+				float p0 = wav->m_wav_samples[ipos0*m_chn + c];
+				float p1 = wav->m_wav_samples[ipos1*m_chn + c];
+				float p2 = wav->m_wav_samples[ipos2*m_chn + c];
+				float p3 = wav->m_wav_samples[ipos3*m_chn + c];
+
+				wave[c] = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+					(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+					(-0.5f*p0 + 0.5f*p2)*frac + p1;
+			}
 		}
 		else
 		{
@@ -83,15 +88,20 @@ void InstrumentMultiSampler::_generateNoteWave(unsigned index, float fNumOfSampl
 			if (ipos1 < 0) ipos1 = 0;
 			if (ipos2 >= (int)wav->m_wav_length) ipos2 = (int)wav->m_wav_length - 1;
 			int count = ipos2 - ipos1 + 1;
-			float sum = 0.0f;
-			for (int ipos = ipos1; ipos <= ipos2; ipos++)
+			for (unsigned c = 0; c < m_chn; c++)
 			{
-				sum += wav->m_wav_samples[ipos];
+				float sum = 0.0f;
+				for (int ipos = ipos1; ipos <= ipos2; ipos++)
+				{
+					sum += wav->m_wav_samples[ipos*m_chn+c];
+				}
+				wave[c] = sum / (float)count;
 			}
-			wave = sum / (float)count;
 		}
-
-		noteBuf->m_data[j] = wave*mult;
+		for (unsigned c = 0; c < m_chn; c++)
+		{
+			noteBuf->m_data[j*m_chn+c] = wave[c]*mult;
+		}
 	}
 }
 
@@ -102,7 +112,10 @@ void InstrumentMultiSampler::_interpolateBuffers(const float* src1, const float*
 
 	for (unsigned j = 0; j <length; j++)
 	{
-		dst[j] = k1*src1[j] + k2*src2[j];
+		for (unsigned c = 0; c < m_chn; c++)
+		{
+			dst[j*m_chn + c] = k1*src1[j*m_chn + c] + k2*src2[j*m_chn + c];
+		}
 	}	
 }
 
@@ -173,6 +186,7 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 		_generateNoteWave(I, fNumOfSamples, sampleFreq, &tmpBuffer);
 
 		noteBuf->m_sampleNum = tmpBuffer.m_sampleNum;
+		noteBuf->m_channelNum = m_chn;
 		noteBuf->Allocate();
 
 		for (unsigned j = 0; j < noteBuf->m_sampleNum; j++)
@@ -180,7 +194,8 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 			float x2 = (float)j / (float)noteBuf->m_sampleNum;
 			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-			noteBuf->m_data[j] = amplitude*tmpBuffer.m_data[j];
+			for (unsigned c = 0; c < m_chn;c++)
+				noteBuf->m_data[j*m_chn + c] = amplitude*tmpBuffer.m_data[j*m_chn + c];
 		}
 	}
 	else
@@ -194,6 +209,7 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 		unsigned minLength = min(tmpBuffer1.m_sampleNum, tmpBuffer2.m_sampleNum);
 
 		noteBuf->m_sampleNum = minLength;
+		noteBuf->m_channelNum = m_chn;
 		noteBuf->Allocate();
 
 		_interpolateBuffers(tmpBuffer1.m_data, tmpBuffer2.m_data, noteBuf->m_data, minLength, origin_SampleFreq1, origin_SampleFreq2, sampleFreq);
@@ -203,7 +219,8 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 			float x2 = (float)j / (float)noteBuf->m_sampleNum;
 			float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
 
-			noteBuf->m_data[j] *= amplitude;
+			for (unsigned c = 0; c < m_chn; c++)
+				noteBuf->m_data[j*m_chn + c] *= amplitude;
 		}
 	}
 

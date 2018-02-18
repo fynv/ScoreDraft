@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.0)
 
 set(SOURCES
+TrackBuffer.cpp
 Instrument.cpp
 Percussion.cpp
-TrackBuffer.cpp
 Singer.cpp
 instruments/BottleBlow.cpp
 instruments/NaivePiano.cpp
@@ -14,16 +14,16 @@ instruments/Triangle.cpp
 )
 
 set(HEADERS 
-Beat.h
-Deferred.h
-Instrument.h
-Note.h
-Percussion.h
 RefCounted.h
+Deferred.h
 TrackBuffer.h
+Note.h
+Instrument.h
+Beat.h
+Percussion.h
 SingingPiece.h
-Singer.h
 RapPiece.h
+Singer.h
 instruments/BottleBlow.h
 instruments/NaivePiano.h
 instruments/PureSin.h

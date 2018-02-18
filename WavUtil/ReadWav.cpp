@@ -44,7 +44,7 @@ void ReadWav::CloseFile()
 }
 
 
-bool ReadWav::ReadHeader(unsigned& sampleRate, unsigned& numSamples)
+bool ReadWav::ReadHeader(unsigned& sampleRate, unsigned& numSamples, unsigned& chn)
 {
 	if (!m_fp) return false;
 
@@ -120,8 +120,8 @@ bool ReadWav::ReadHeader(unsigned& sampleRate, unsigned& numSamples)
 		return false;
 	}
 
-	m_num_channels = header.wChannels;
-	if (m_num_channels<1 || m_num_channels>2)
+	chn = header.wChannels;
+	if (chn<1 || chn>2)
 	{
 		fclose(m_fp);
 		return false;
@@ -145,9 +145,10 @@ bool ReadWav::ReadHeader(unsigned& sampleRate, unsigned& numSamples)
 	unsigned dataSize;
 	fread(&dataSize, 4, 1, m_fp);
 
-	numSamples = dataSize / m_num_channels / 2;
+	numSamples = dataSize / chn / 2;
 
 	m_totalSamples = numSamples;
+	m_num_channels = chn;
 	m_readSamples = 0;
 
 	return true;
@@ -165,19 +166,12 @@ bool ReadWav::ReadSamples(float* samples, unsigned count, float& max_v)
 		fread(data, sizeof(short), m_totalSamples*m_num_channels, m_fp);
 
 		max_v = 0.0f;
-		for (unsigned i = 0; i < m_totalSamples; i++)
-		{
-			float v = 0.0f;
-			for (unsigned j = 0; j < m_num_channels; j++)
-			{
-				v += (float)data[i * m_num_channels + j];
-			}
-			v /= 32767.0f*(float)m_num_channels;
+		for (unsigned i = 0; i < m_totalSamples*m_num_channels; i++)
+		{	
+			float v = (float)data[i] / 32767.0f;
 			samples[i] = v;
 			max_v = max(max_v, fabsf(v));
-
 		}
-
 		delete[] data;
 	}
 

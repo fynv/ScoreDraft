@@ -41,10 +41,10 @@ void WriteWav::CloseFile()
 	m_fp = nullptr;
 }
 
-void WriteWav::WriteHeader(unsigned sampleRate, unsigned numSamples)
+void WriteWav::WriteHeader(unsigned sampleRate, unsigned numSamples, unsigned chn)
 {
 	if (!m_fp) return;
-	unsigned dataSize = numSamples * 2;
+	unsigned dataSize = numSamples * chn * sizeof(short);
 	unsigned int adWord;
 	WavHeader header;
 
@@ -56,10 +56,10 @@ void WriteWav::WriteHeader(unsigned sampleRate, unsigned numSamples)
 	fwrite(&adWord, 4, 1, m_fp);
 
 	header.wFormatTag = 1;
-	header.wChannels = 1;
+	header.wChannels = chn;
 	header.dwSamplesPerSec = sampleRate;
-	header.dwAvgBytesPerSec = sampleRate * sizeof(short);
-	header.wBlockAlign = 2;
+	header.dwAvgBytesPerSec = sampleRate *chn* sizeof(short);
+	header.wBlockAlign = chn* sizeof(short);
 	header.wBitsPerSample = 16;
 
 	fwrite(&header, sizeof(WavHeader), 1, m_fp);
@@ -68,6 +68,7 @@ void WriteWav::WriteHeader(unsigned sampleRate, unsigned numSamples)
 	fwrite(&adWord, 4, 1, m_fp);
 
 	m_totalSamples = numSamples;
+	m_num_channels = chn;
 	m_writenSamples = 0;
 }
 
@@ -77,13 +78,13 @@ void WriteWav::WriteSamples(const float* samples, unsigned count, float volume)
 	count = min(count, m_totalSamples - m_writenSamples);
 	if (count > 0)
 	{
-		short* data = new short[count];
+		short* data = new short[count*m_num_channels];
 
 		unsigned i;
-		for (i = 0; i<count; i++)
+		for (i = 0; i<count*m_num_channels; i++)
 			data[i] = (short)(max(min(samples[i]*volume, 1.0f), -1.0f)*32767.0f);
 
-		fwrite(data, sizeof(short), count, m_fp);
+		fwrite(data, sizeof(short), count*m_num_channels, m_fp);
 
 		delete[] data;
 

@@ -13,15 +13,16 @@
 void WriteToWav(TrackBuffer& track, const char* fileName)
 {
 	unsigned numSamples = track.NumberOfSamples();
+	unsigned chn = track.NumberOfChannels();
 	unsigned sampleRate = track.Rate();
 	float volume = track.AbsoluteVolume();
 
 	WriteWav writer;
 	writer.OpenFile(fileName);
-	writer.WriteHeader(sampleRate, numSamples);
+	writer.WriteHeader(sampleRate, numSamples, chn);
 
 	unsigned localBufferSize = track.GetLocalBufferSize();
-	float *buffer = new float[localBufferSize];
+	float *buffer = new float[localBufferSize*chn];
 	unsigned pos = 0;
 	while (numSamples > 0)
 	{

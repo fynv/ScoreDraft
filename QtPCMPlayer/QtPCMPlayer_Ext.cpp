@@ -67,13 +67,26 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 	unsigned AlignPos = buffer->AlignPos();
 
 	unsigned size = buffer->NumberOfSamples();
-	short* data = new short[size];
+	unsigned chn = buffer->NumberOfChannels();
+	short* data = new short[size*chn];
 
 	float volume = buffer->AbsoluteVolume();
 
 	unsigned i;
-	for (i = 0; i<size; i++)
-		data[i] = (short)(max(min(buffer->Sample(i)*volume, 1.0f), -1.0f)*32767.0f);
+	for (i = 0; i < size; i++)
+	{
+		float sample[2];
+		buffer->Sample(i, sample);
+		if (chn == 1)
+		{
+			data[i] = (short)(max(min(sample[0]*volume, 1.0f), -1.0f)*32767.0f);
+		}
+		else if (chn == 2)
+		{
+			data[2 * i] = (short)(max(min(sample[0] * volume, 1.0f), -1.0f)*32767.0f);
+			data[2 * i + 1] = (short)(max(min(sample[1] * volume, 1.0f), -1.0f)*32767.0f);
+		}
+	}
 
 	char fn[100];
 	sprintf(fn, "%s/_tmp%d", s_root.toLocal8Bit().data(), count);
@@ -82,7 +95,8 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 	FILE *fp = fopen(fn, "wb");
 	fwrite(&AlignPos, sizeof(unsigned), 1, fp);
 	fwrite(&size, sizeof(unsigned), 1, fp);
-	fwrite(data, sizeof(short), size, fp);
+	fwrite(&chn, sizeof(unsigned), 1, fp);
+	fwrite(data, sizeof(short), size*chn, fp);
 	fclose(fp);
 
 	delete[] data;
