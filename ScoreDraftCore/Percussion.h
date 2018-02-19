@@ -29,6 +29,7 @@ protected:
 	virtual void GenerateBeatWave(float fNumOfSamples, NoteBuffer* beatBuf);
 
 	float m_beatVolume;
+	float m_beatPan;
 };
 
 

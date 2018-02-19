@@ -4,6 +4,28 @@
 #include "stdio.h"
 #include "Deferred.h"
 
+inline void CalcPan(float pan, float& l, float& r)
+{
+	if (pan == 0.0f) return;
+	else if (pan < 0.0f)
+	{
+		pan = -pan;
+		float ll = l;
+		float rl = r*pan;
+		float rr = r*(1.0f - pan);
+		l = ll + rl;
+		r = rr;
+	}
+	else
+	{
+		float ll = l*(1.0f - pan);
+		float lr = l*pan;
+		float rr = r;
+		l = ll;
+		r = lr + rr;
+	}
+}
+
 class NoteBuffer
 {
 public:
@@ -18,6 +40,7 @@ public:
 	float m_cursorDelta;
 	unsigned m_alignPos;
 	float m_volume;
+	float m_pan;
 
 	void Allocate();
 };
@@ -49,6 +72,9 @@ public:
 		return maxValue>0.0f ? m_volume / maxValue : 1.0f;
 	}
 	void SetVolume(float vol) { m_volume = vol; }
+
+	float Pan() const { return m_pan; }
+	void SetPan(float pan) { m_pan = pan; }
 
 	float GetCursor();
 	void SetCursor(float fpos);
@@ -82,6 +108,7 @@ private:
 	unsigned m_chn;
 
 	float m_volume;
+	float m_pan;
 
 	float *m_localBuffer;
 	unsigned m_localBufferPos;

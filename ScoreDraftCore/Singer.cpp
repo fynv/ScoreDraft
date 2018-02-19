@@ -15,7 +15,7 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-Singer::Singer() : m_noteVolume(1.0f)
+Singer::Singer() : m_noteVolume(1.0f), m_notePan(0.0f)
 {
 	m_lyric_charset = "utf-8";
 }
@@ -95,6 +95,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 				noteBuf.m_sampleRate = (float)buffer.Rate();
 				noteBuf.m_cursorDelta = totalDuration;
 				noteBuf.m_volume = m_noteVolume;
+				noteBuf.m_pan = m_notePan;
 
 				GenerateWave(_piece, &noteBuf);
 				buffer.WriteBlend(noteBuf);
@@ -132,6 +133,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 		noteBuf.m_sampleRate = (float)buffer.Rate();
 		noteBuf.m_cursorDelta = totalDuration;
 		noteBuf.m_volume = m_noteVolume;
+		noteBuf.m_pan = m_notePan;
 
 		GenerateWave(_piece, &noteBuf);
 		buffer.WriteBlend(noteBuf);
@@ -169,6 +171,7 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 	noteBuf.m_sampleRate = (float)buffer.Rate();
 	noteBuf.m_cursorDelta = fNumOfSamples;
 	noteBuf.m_volume = m_noteVolume;
+	noteBuf.m_pan = m_notePan;
 
 	GenerateWave_Rap(_piece, &noteBuf);
 
@@ -208,6 +211,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 					noteBuf.m_sampleRate = (float)buffer.Rate();
 					noteBuf.m_cursorDelta = totalDuration;
 					noteBuf.m_volume = m_noteVolume;
+					noteBuf.m_pan = m_notePan;
 
 					GenerateWave_SingConsecutive(pieceList, &noteBuf);
 					buffer.WriteBlend(noteBuf);
@@ -250,6 +254,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 		noteBuf.m_sampleRate = (float)buffer.Rate();
 		noteBuf.m_cursorDelta = totalDuration;
 		noteBuf.m_volume = m_noteVolume;
+		noteBuf.m_pan = m_notePan;
 
 		GenerateWave_SingConsecutive(pieceList, &noteBuf);
 		buffer.WriteBlend(noteBuf);
@@ -276,6 +281,7 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 				noteBuf.m_sampleRate = (float)buffer.Rate();
 				noteBuf.m_cursorDelta = totalDuration;
 				noteBuf.m_volume = m_noteVolume;
+				noteBuf.m_pan = m_notePan;
 
 				GenerateWave_RapConsecutive(pieceList, &noteBuf);
 				buffer.WriteBlend(noteBuf);
@@ -312,6 +318,7 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 		noteBuf.m_sampleRate = (float)buffer.Rate();
 		noteBuf.m_cursorDelta = totalDuration;
 		noteBuf.m_volume = m_noteVolume;
+		noteBuf.m_pan = m_notePan;
 
 		GenerateWave_RapConsecutive(pieceList, &noteBuf);
 		buffer.WriteBlend(noteBuf);
@@ -327,8 +334,22 @@ bool Singer::Tune(const char* cmd)
 	if (strcmp(command, "volume") == 0)
 	{
 		float value;
-		if(sscanf(cmd+7, "%f", &value))
+		if (sscanf(cmd + 7, "%f", &value))
+		{
+			if (value < 0.0f) value = 0.0f;
 			m_noteVolume = value;
+		}
+		return true;
+	}
+	else if (strcmp(command, "pan") == 0)
+	{
+		float value;
+		if (sscanf(cmd + 4, "%f", &value))
+		{
+			if (value<-1.0f) value = -1.0f;
+			else if (value>1.0f) value = 1.0f;
+			m_notePan = value;
+		}
 		return true;
 	}
 	else if (strcmp(command, "default_lyric") == 0)

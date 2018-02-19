@@ -12,7 +12,7 @@ public:
 	void CloseFile();
 
 	void WriteHeader(unsigned sampleRate, unsigned numSamples, unsigned chn=1);
-	void WriteSamples(const float* samples, unsigned count, float volume);
+	void WriteSamples(const float* samples, unsigned count, float volume=1.0f, float pan=0.0f);
 
 private:
 	FILE* m_fp;

@@ -16,6 +16,7 @@ void WriteToWav(TrackBuffer& track, const char* fileName)
 	unsigned chn = track.NumberOfChannels();
 	unsigned sampleRate = track.Rate();
 	float volume = track.AbsoluteVolume();
+	float pan = track.Pan();
 
 	WriteWav writer;
 	writer.OpenFile(fileName);
@@ -28,7 +29,7 @@ void WriteToWav(TrackBuffer& track, const char* fileName)
 	{
 		unsigned writeCount = min(numSamples, localBufferSize);
 		track.GetSamples(pos, writeCount, buffer);
-		writer.WriteSamples(buffer, writeCount, volume);
+		writer.WriteSamples(buffer, writeCount, volume, pan);
 		numSamples -= writeCount;
 		pos += writeCount;
 	}

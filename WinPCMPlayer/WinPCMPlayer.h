@@ -25,7 +25,6 @@ private:
 	BufferQueue* m_BufferQueue;
 
 	bool m_initialized;
-	float m_Volume;
 
 	WAVEOUTCAPS		m_WaveOutDevCaps;
     HWAVEOUT		m_WaveOut;

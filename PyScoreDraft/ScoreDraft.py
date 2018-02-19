@@ -62,7 +62,7 @@ class TrackBuffer:
 	def setVolume(self,volume):
 		'''
 		Set the volume of the track. This value is used as a weight when mixing tracks.
-		volume -- a float value
+		volume -- a float value, in range [0.0,1.0]
 		'''
 		PyScoreDraft.TrackBufferSetVolume(self.id, volume)
 
@@ -71,7 +71,21 @@ class TrackBuffer:
 		Get the volume of the track. This value is used as a weight when mixing tracks.
 		Returned value is a float
 		'''
-		return PyScoreDraft.TrackBufferSetVolume(self.id)
+		return PyScoreDraft.TrackBufferGetVolume(self.id)
+
+	def setPan(self, pan):
+		'''
+		Set the panning of the track. This value is used when mixing tracks.
+		pan -- a float value, in range [-1.0,1.0]
+		'''
+		PyScoreDraft.TrackBufferSetPan(self.id, pan)
+
+	def getPan(self):
+		'''
+		Get the panning of the track. This value is used when mixing tracks.
+		Returned value is a float
+		'''
+		return PyScoreDraft.TrackBufferGetPan(self.id)
 
 	def getNumberOfSamples(self):
 		'''
@@ -83,9 +97,33 @@ class TrackBuffer:
 	def getNumberOfChannles(self):
 		'''
 		Get the number of Channels of the buffer.
-		Returned values is an integer
+		Returned value is an integer
 		'''
 		return PyScoreDraft.TrackBufferGetNumberOfChannels(self.id)
+
+	def getCursor(self):
+		'''
+		Get the cursor position of the buffer.
+		The unit is in number of samples.
+		Returned value is a float
+		'''
+		return PyScoreDraft.TrackBufferGetCursor(self.id)
+
+	def setCursor(self, cursor):
+		'''
+		Set the curosr position of the buffer.
+		The unit is in number of samples.
+		cursor -- a float value, cursor >= 0.0
+		'''
+		PyScoreDraft.TrackBufferSetCursor(self.id, cursor)
+
+	def moveCursor(self, cursor_delta):
+		'''
+		Set the curosr position of the buffer to current position + cursor_delta.
+		The unit is in number of samples.
+		cursor_delta -- a float value
+		'''
+		PyScoreDraft.TrackBufferMoveCursor(self.id, cursor_delta)
 
 class Instrument:
 	'''
@@ -109,8 +147,10 @@ class Instrument:
 		Sending a tuning command to an instrument.
 		cmd -- A string to be parsed by the instrument.
 		       Different instrument can support different sets of tuning commands.
-		       A command common to all instruments is "volume", example: 
+		       A command common to all instruments is "volume", the value range is [0.0, 1.0] example: 
 		       inst.tune("volume 0.5")
+		       Another command common to all instruments is "pan",  the value range is [-1.0, 1.0] example: 
+		       inst.tune("pan -0.5")
 		'''
 		PyScoreDraft.InstrumentTune(self.id, cmd)
 
@@ -162,8 +202,10 @@ class Percussion:
 		Sending a tuning command to an percussion.
 		cmd -- A string to be parsed by the percussion.
 		       Different percussions can support different sets of tuning commands.
-		       A command common to all percussions is "volume", example: 
+		       A command common to all percussions is "volume", the value range is [0.0, 1.0], example: 
 		       perc.tune("volume 0.5")
+		       Another command common to all percussions is "pan",  the value range is [-1.0, 1.0] example: 
+		       perc.tune("pan -0.5")
 		'''
 		PyScoreDraft.PercussionTune(self.id, cmd)
 
@@ -209,8 +251,10 @@ class Singer:
 		Sending a tuning command to an singer.
 		cmd -- A string to be parsed by the singer.
 		       Different singers can support different sets of tuning commands.
-		       A command common to all singers is "volume", example: 
+		       A command common to all singers is "volume",  the value range is [0.0, 1.0], example: 
 		       singer.tune("volume 0.5")
+		       Another command common to all singers is "pan",  the value range is [-1.0, 1.0] example: 
+		       singer.tune("pan -0.5")
 		       Another command common to all singers is "default_lyric", example: 
 		       singer.tune("default_lyric la")
 		       This will make the singer to sing "la" when an empty lyric "" is recieved

@@ -21,6 +21,7 @@ protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
 	float m_noteVolume;
+	float m_notePan;
 
 };
 

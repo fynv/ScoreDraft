@@ -16,7 +16,7 @@
 
 #include <cmath>
 #include <time.h>
-Percussion::Percussion() : m_beatVolume(1.0f)
+Percussion::Percussion() : m_beatVolume(1.0f), m_beatPan(0.0f)
 {
 	srand((unsigned)time(NULL));
 }
@@ -49,6 +49,7 @@ void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 	beatBuf.m_sampleRate = (float)buffer.Rate();
 	beatBuf.m_cursorDelta = fNumOfSamples;
 	beatBuf.m_volume = m_beatVolume;
+	beatBuf.m_pan = m_beatPan;
 
 	GenerateBeatWave(fNumOfSamples, &beatBuf);
 	buffer.WriteBlend(beatBuf);
@@ -102,7 +103,21 @@ bool Percussion::Tune(const char* cmd)
 	{
 		float value;
 		if (sscanf(cmd + 7, "%f", &value))
+		{
+			if (value < 0.0f) value = 0.0f;
 			m_beatVolume = value;
+		}
+		return true;
+	}
+	else if (strcmp(command, "pan") == 0)
+	{
+		float value;
+		if (sscanf(cmd + 4, "%f", &value))
+		{
+			if (value<-1.0f) value = -1.0f;
+			else if (value>1.0f) value = 1.0f;
+			m_beatPan = value;
+		}
 		return true;
 	}
 	return false;

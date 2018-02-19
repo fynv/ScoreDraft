@@ -66,6 +66,8 @@ protected:
 	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf);
 
 	float m_noteVolume;
+	float m_notePan;
+
 	std::string m_defaultLyric;
 	std::string m_lyric_charset;
 

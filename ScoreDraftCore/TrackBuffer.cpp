@@ -22,6 +22,7 @@ NoteBuffer::NoteBuffer()
 	m_cursorDelta = 0.0f;
 	m_alignPos = 0;	
 	m_volume = 1.0f;
+	m_pan = 0.0f;
 }
 
 NoteBuffer::~NoteBuffer()
@@ -63,6 +64,7 @@ TrackBuffer::TrackBuffer(unsigned rate, unsigned chn) : m_rate(rate)
 	m_localBufferPos = (unsigned)(-1);
 
 	m_volume = 1.0f;
+	m_pan = 0.0f;
 	m_cursor = 0.0f;
 	m_length = 0;
 	m_alignPos = (unsigned)(-1);
@@ -174,6 +176,7 @@ void TrackBuffer::WriteBlend(const NoteBuffer& noteBuf)
 		}
 		else if (m_chn == 2)
 		{
+			CalcPan(noteBuf.m_pan, sample_l, sample_r);
 			tmpSamples[i * 2] = sample_l* volume;
 			tmpSamples[i * 2 + 1] = sample_r* volume;
 		}
@@ -211,6 +214,7 @@ bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer_deferred* tracks)
 	unsigned *lengths = new unsigned[num];
 	int* sourcePos = new int[num];
 	float* trackVolumes = new float[num];
+	float* trackPans = new float[num];
 
 	// scan
 	unsigned i;
@@ -221,6 +225,7 @@ bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer_deferred* tracks)
 	{
 		if (tracks[i]->Rate() != m_rate)
 		{
+			delete[] trackPans;
 			delete[] trackVolumes;
 			delete[] sourcePos;
 			delete[] lengths;
@@ -236,6 +241,7 @@ bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer_deferred* tracks)
 
 		sourcePos[i] = (int)(align);
 		trackVolumes[i] = tracks[i]->AbsoluteVolume();
+		trackPans[i] = tracks[i]->Pan();
 	}
 
 	for (i = 0; i < num; i++)
@@ -284,6 +290,7 @@ bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer_deferred* tracks)
 						}
 						else if (m_chn == 2)
 						{
+							CalcPan(trackPans[i], sample_l, sample_r);
 							targetBuffer.m_data[j * 2] += sample_l* trackVolumes[i];
 							targetBuffer.m_data[j * 2 + 1] += sample_r* trackVolumes[i];
 						}
@@ -301,6 +308,7 @@ bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer_deferred* tracks)
 	}
 	SetCursor(maxCursor);
 
+	delete[] trackPans;
 	delete[] trackVolumes;
 	delete[] sourcePos;
 	delete[] lengths;

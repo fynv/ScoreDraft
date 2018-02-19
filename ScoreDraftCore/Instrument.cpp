@@ -16,7 +16,7 @@
 
 #include <cmath>
 #include <time.h>
-Instrument::Instrument() : m_noteVolume(1.0f)
+Instrument::Instrument() : m_noteVolume(1.0f), m_notePan(0.0f)
 {
 	srand((unsigned)time(NULL));
 }
@@ -65,6 +65,7 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 	noteBuf.m_sampleRate = (float)buffer.Rate();
 	noteBuf.m_cursorDelta = fNumOfSamples;
 	noteBuf.m_volume = m_noteVolume;
+	noteBuf.m_pan = m_notePan;
 
 	GenerateNoteWave(fNumOfSamples, sampleFreq, &noteBuf);
 	
@@ -98,7 +99,21 @@ bool Instrument::Tune(const char* cmd)
 	{
 		float value;
 		if (sscanf(cmd + 7, "%f", &value))
+		{
+			if (value < 0.0f) value = 0.0f;
 			m_noteVolume = value;
+		}
+		return true;
+	}
+	else if (strcmp(command, "pan") == 0)
+	{
+		float value;
+		if (sscanf(cmd + 4, "%f", &value))
+		{
+			if (value<-1.0f) value = -1.0f;
+			else if (value>1.0f) value = 1.0f;
+			m_notePan = value;
+		}
 		return true;
 	}
 	return false;

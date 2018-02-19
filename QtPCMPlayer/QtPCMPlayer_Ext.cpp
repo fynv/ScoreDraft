@@ -71,6 +71,7 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 	short* data = new short[size*chn];
 
 	float volume = buffer->AbsoluteVolume();
+	float pan = buffer->Pan();
 
 	unsigned i;
 	for (i = 0; i < size; i++)
@@ -83,6 +84,7 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 		}
 		else if (chn == 2)
 		{
+			CalcPan(pan, sample[0], sample[1]);
 			data[2 * i] = (short)(max(min(sample[0] * volume, 1.0f), -1.0f)*32767.0f);
 			data[2 * i + 1] = (short)(max(min(sample[1] * volume, 1.0f), -1.0f)*32767.0f);
 		}

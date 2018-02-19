@@ -72,7 +72,30 @@ void WriteWav::WriteHeader(unsigned sampleRate, unsigned numSamples, unsigned ch
 	m_writenSamples = 0;
 }
 
-void WriteWav::WriteSamples(const float* samples, unsigned count, float volume)
+
+inline void CalcPan(float pan, float& l, float& r)
+{
+	if (pan == 0.0f) return;
+	else if (pan < 0.0f)
+	{
+		pan = -pan;
+		float ll = l;
+		float rl = r*pan;
+		float rr = r*(1.0f - pan);
+		l = ll + rl;
+		r = rr;
+	}
+	else
+	{
+		float ll = l*(1.0f - pan);
+		float lr = l*pan;
+		float rr = r;
+		l = ll;
+		r = lr + rr;
+	}
+}
+
+void WriteWav::WriteSamples(const float* samples, unsigned count, float volume, float pan)
 {
 	if (!m_fp) return;
 	count = min(count, m_totalSamples - m_writenSamples);
@@ -81,8 +104,16 @@ void WriteWav::WriteSamples(const float* samples, unsigned count, float volume)
 		short* data = new short[count*m_num_channels];
 
 		unsigned i;
-		for (i = 0; i<count*m_num_channels; i++)
-			data[i] = (short)(max(min(samples[i]*volume, 1.0f), -1.0f)*32767.0f);
+		for (i = 0; i < count; i++)
+		{
+			float sample[2];
+			for (unsigned c = 0; c < m_num_channels; c++)
+				sample[c] = samples[i*m_num_channels+c];
+			if (m_num_channels == 2)
+				CalcPan(pan, sample[0], sample[1]);
+			for (unsigned c = 0; c < m_num_channels; c++)
+				data[i*m_num_channels + c] = (short)(max(min(sample[c] * volume, 1.0f), -1.0f)*32767.0f);
+		}
 
 		fwrite(data, sizeof(short), count*m_num_channels, m_fp);
 

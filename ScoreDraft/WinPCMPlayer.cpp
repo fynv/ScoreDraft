@@ -57,8 +57,10 @@ public:
 		}
 	}
 
-	void AddBuffer(TrackBuffer &track,float volume)
+	void AddBuffer(TrackBuffer &track)
 	{
+		float volume = track.AbsoluteVolume();
+		float pan = track.Pan();
 		Buffer* newBuffer=new Buffer;
 		newBuffer->m_size=track.NumberOfSamples();
 		newBuffer->m_chn = track.NumberOfChannels();
@@ -73,6 +75,7 @@ public:
 				newBuffer->m_data[i] = (short)(max(min(v[0]*volume, 1.0f), -1.0f)*32767.0f);
 			else if (newBuffer->m_chn == 2)
 			{
+				CalcPan(pan, v[0], v[1]);
 				newBuffer->m_data[i * 2] = (short)(max(min(v[0] * volume, 1.0f), -1.0f)*32767.0f);
 				newBuffer->m_data[i * 2+1] = (short)(max(min(v[1] * volume, 1.0f), -1.0f)*32767.0f);
 			}
@@ -161,8 +164,6 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 {
 	if (!m_initialized)
 	{
-		m_Volume = track.AbsoluteVolume();
-
 		waveOutGetNumDevs(); 
 
 		waveOutGetDevCaps (0, &m_WaveOutDevCaps, sizeof(WAVEOUTCAPS));
@@ -193,7 +194,7 @@ void WinPCMPlayer::PlayTrack(TrackBuffer &track)
 
 		m_initialized=true;
 	}
-	m_BufferQueue->AddBuffer(track,m_Volume);
+	m_BufferQueue->AddBuffer(track);
 
 }
 #endif // WIN32

@@ -367,6 +367,31 @@ static PyObject* TrackBufferGetVolume(PyObject *self, PyObject *args)
 	return PyFloat_FromDouble((double)buffer->Volume());
 }
 
+
+static PyObject* TrackBufferSetPan(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	float pan;
+	if (!PyArg_ParseTuple(args, "If", &BufferId, &pan))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	buffer->SetPan(pan);
+
+	return PyLong_FromLong(0);
+}
+
+static PyObject* TrackBufferGetPan(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	if (!PyArg_ParseTuple(args, "I", &BufferId))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	return PyFloat_FromDouble((double)buffer->Pan());
+}
+
+
 static PyObject* TrackBufferGetNumberOfSamples(PyObject *self, PyObject *args)
 {
 	unsigned BufferId;
@@ -385,6 +410,42 @@ static PyObject* TrackBufferGetNumberOfChannels(PyObject *self, PyObject *args)
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
 	return PyLong_FromLong((long)buffer->NumberOfChannels());
+}
+
+static PyObject* TrackBufferGetCursor(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	if (!PyArg_ParseTuple(args, "I", &BufferId))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	return PyFloat_FromDouble((double)buffer->GetCursor());
+}
+
+static PyObject* TrackBufferSetCursor(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	float cursor;
+	if (!PyArg_ParseTuple(args, "If", &BufferId, &cursor))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	buffer->SetCursor(cursor);
+
+	return PyLong_FromLong(0);
+}
+
+static PyObject* TrackBufferMoveCursor(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	float cursor_delta;
+	if (!PyArg_ParseTuple(args, "If", &BufferId, &cursor_delta))
+		return NULL;
+
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	buffer->MoveCursor(cursor_delta);
+
+	return PyLong_FromLong(0);
 }
 
 static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
@@ -835,6 +896,18 @@ static PyMethodDef PyScoreDraftMethods[] = {
 		""
 	},
 	{
+		"TrackBufferSetPan",
+		TrackBufferSetPan,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferGetPan",
+		TrackBufferGetPan,
+		METH_VARARGS,
+		""
+	},
+	{
 		"TrackBufferGetNumberOfSamples",
 		TrackBufferGetNumberOfSamples,
 		METH_VARARGS,
@@ -843,6 +916,24 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{
 		"TrackBufferGetNumberOfChannels",
 		TrackBufferGetNumberOfChannels,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferGetCursor",
+		TrackBufferGetCursor,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferSetCursor",
+		TrackBufferSetCursor,
+		METH_VARARGS,
+		""
+	},
+	{
+		"TrackBufferMoveCursor",
+		TrackBufferMoveCursor,
 		METH_VARARGS,
 		""
 	},
