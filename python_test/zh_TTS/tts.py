@@ -61,7 +61,14 @@ def TTS(sentence):
 	if len(rap_seq)>0:
 		buf=ScoreDraft.TrackBuffer()
 		singer.sing(buf, rap_seq, tempo, ref_freq)
-		player(buf)	
+		return buf
+
+	return None
+
+def TTS_play(sentence):
+	buf=TTS(sentence)
+	if buf != None:
+		player(buf)
 	
 import os
 if __name__ == '__main__':
@@ -71,11 +78,11 @@ if __name__ == '__main__':
 				line = f.readline()
 				if not line:
 					break
-				TTS(line.strip('\n'))
+				TTS_play(line.strip('\n'))
 		exit(0)
 	print("输入点什么来朗读吧：")
 	if os.name == 'nt':
 		player=ScoreDraft.PlayTrackBuffer
 	while True:
 		line=sys.stdin.readline().strip('\n')
-		TTS(line)
+		TTS_play(line)
