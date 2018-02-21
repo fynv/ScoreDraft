@@ -29,6 +29,8 @@ def TTS(sentence, buf):
 	splits=[]	
 	for word in pinyins:
 		splitted=re.findall(r'[0-9]+|[a-z]+|[\S&^0-9&^a-z]+', word[0])
+		if len(splitted)<1:
+			continue
 		if len(splitted)<2:
 			if sentence.find(splitted[0])<0:
 				splitted+=['5']
