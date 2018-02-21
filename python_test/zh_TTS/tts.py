@@ -59,7 +59,7 @@ def TTS(sentence):
 		sub_seq=()
 
 	if len(rap_seq)>0:
-		buf=ScoreDraft.TrackBuffer()
+		buf=ScoreDraft.TrackBuffer(1)
 		singer.sing(buf, rap_seq, tempo, ref_freq)
 		return buf
 
