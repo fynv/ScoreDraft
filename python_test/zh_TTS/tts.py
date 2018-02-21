@@ -24,7 +24,7 @@ ref_freq=264.0
 
 player=ScoreDraft.QPlayTrackBuffer
 
-def TTS(sentence):
+def TTS(sentence, buf):
 	pinyins = pinyin(sentence,style=Style.TONE3)
 	splits=[]	
 	for word in pinyins:
@@ -59,14 +59,14 @@ def TTS(sentence):
 		sub_seq=()
 
 	if len(rap_seq)>0:
-		buf=ScoreDraft.TrackBuffer(1)
 		singer.sing(buf, rap_seq, tempo, ref_freq)
 		return buf
 
 	return None
 
 def TTS_play(sentence):
-	buf=TTS(sentence)
+	buf=ScoreDraft.TrackBuffer(1)
+	TTS(sentence,buf)
 	if buf != None:
 		player(buf)
 	

@@ -4,5 +4,6 @@ sys.path+=['../']
 import ScoreDraft
 from tts import TTS
 
-buf=TTS("光头")
+buf=ScoreDraft.TrackBuffer(1)
+TTS("光头",buf)
 ScoreDraft.WriteTrackBufferToWav(buf,'test.wav')
