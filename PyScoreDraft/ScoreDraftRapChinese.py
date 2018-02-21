@@ -14,4 +14,4 @@ def CRap(lyric, tone, duration=48):
 	elif tone == 4:
 		return (lyric, duration, baseFreq, baseFreq*0.5)
 	else:
-		return (lyric, duration, baseFreq*0.9, baseFreq*0.7)
+		return (lyric, duration, baseFreq*0.75, baseFreq*0.55)
