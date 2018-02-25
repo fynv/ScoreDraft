@@ -72,6 +72,7 @@ public:
 	{
 		m_transition = 0.1f;
 		m_rap_distortion = 1.0f;
+		m_gender = 0.0f;
 		m_LyricConverter = nullptr;
 
 		m_use_prefix_map = true;
@@ -140,6 +141,12 @@ public:
 						m_use_prefix_map = false;
 					}
 				}
+			}
+			else if (strcmp(command, "gender") == 0)
+			{
+				float value;
+				if (sscanf(cmd + strlen("gender") + 1, "%f", &value))
+					m_gender = value;
 			}
 		}
 		return false;
@@ -912,8 +919,7 @@ private:
 			
 			float destSampleFreq;
 			destSampleFreq = freqMap[pos_final];
-			float destHalfWinLen = 1.0f / destSampleFreq;
-
+			float destHalfWinLen = powf(2.0f,m_gender) / destSampleFreq;
 
 			SymmetricWindow shiftedWin0;
 			SymmetricWindow shiftedWin1;
@@ -1022,6 +1028,7 @@ private:
 
 	float m_transition;
 	float m_rap_distortion;
+	float m_gender;
 
 	PyObject* m_LyricConverter;
 
