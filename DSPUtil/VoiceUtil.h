@@ -5,12 +5,35 @@
 #define Symmetric_Type_Center 1
 #define Symmetric_Type Symmetric_Type_Center
 
+
 #include <vector>
 #include <ReadWav.h>
+#include <WriteWav.h>
 #include "fft.h"
+
+
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
 
 namespace VoiceUtil
 {
+	inline void calcPOT(unsigned lenIn, unsigned& lenOut, unsigned& l)
+	{
+		lenOut = 1;
+		l = 0;
+		while (lenOut < lenIn)
+		{
+			l++;
+			lenOut <<= 1;
+		}
+	}
+
 	struct Buffer
 	{
 		unsigned m_sampleRate;
@@ -55,7 +78,7 @@ namespace VoiceUtil
 	};
 
 
-	bool ReadWavToBuffer(const char* filename, Buffer& buf, float& maxV)
+	static inline bool ReadWavToBuffer(const char* filename, Buffer& buf, float& maxV)
 	{
 		ReadWav reader;
 		if (!reader.OpenFile(filename)) return false;
@@ -67,12 +90,31 @@ namespace VoiceUtil
 		return reader.ReadSamples(buf.m_data.data(), numSamples, maxV);
 	}
 
+	inline void WriteBufferToWav(const char* filename, Buffer& buf, float volume=1.0f)
+	{
+		WriteWav writer;
+		if (!writer.OpenFile(filename)) return;
+		unsigned numSamples = (unsigned)buf.m_data.size();
+		writer.WriteHeader(buf.m_sampleRate, numSamples);
+		writer.WriteSamples(buf.m_data.data(), numSamples, volume);
+	}
 
 	class Window
 	{
 	public:
 		float m_halfWidth;
 		std::vector<float> m_data;
+
+		void Allocate(float halfWidth)
+		{
+			unsigned u_halfWidth = (unsigned)ceilf(halfWidth);
+			unsigned u_width = u_halfWidth << 1;
+
+			m_halfWidth = halfWidth;
+			m_data.resize(u_width);
+
+			SetZero();
+		}
 
 		void SetZero()
 		{
@@ -178,10 +220,58 @@ namespace VoiceUtil
 			m_data[pos] = v;
 		}	
 
+		virtual void Scale(const Window& src, float targetHalfWidth)
+		{
+			m_halfWidth = targetHalfWidth;
+			unsigned u_TargetHalfWidth = (unsigned)ceilf(targetHalfWidth);
+			unsigned u_TargetWidth = u_TargetHalfWidth << 1;
+			m_data.resize(u_TargetWidth);
+
+			float rate = src.m_halfWidth / targetHalfWidth;
+			bool interpolation = rate < 1.0f;
+			for (int i = -(int)(u_TargetHalfWidth - 1); i <= (int)(u_TargetHalfWidth - 1); i++)
+			{
+				float destValue;
+				float srcPos = (float)i*rate;
+				if (interpolation)
+				{
+					int ipos1 = (int)floorf(srcPos);
+					float frac = srcPos - (float)ipos1;
+					int ipos2 = ipos1 + 1;
+					int ipos0 = ipos1 - 1;
+					int ipos3 = ipos1 + 2;
+
+					float p0 = src.GetSample(ipos0);
+					float p1 = src.GetSample(ipos1);
+					float p2 = src.GetSample(ipos2);
+					float p3 = src.GetSample(ipos3);
+
+					destValue = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+						(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+						(-0.5f*p0 + 0.5f*p2)*frac + p1;
+				}
+				else
+				{
+					int ipos1 = (int)ceilf(srcPos - rate*0.5f);
+					int ipos2 = (int)floorf(srcPos + rate*0.5f);
+
+					float sum = 0.0f;
+					for (int ipos = ipos1; ipos <= ipos2; ipos++)
+					{
+						sum += src.GetSample(ipos);
+					}
+					destValue = sum / (float)(ipos2 - ipos1 + 1);
+
+				}
+
+				this->SetSample(i, destValue);
+
+			}
+		}
+
 	};
 
-
-	class SymmetricWindow : public Window
+	class SymmetricWindow_Base : public Window
 	{
 	public:
 		virtual unsigned GetHalfWidthOfData() const
@@ -189,108 +279,14 @@ namespace VoiceUtil
 			unsigned u_halfWidth = (unsigned)m_data.size();
 			return u_halfWidth;
 		}
-		virtual float GetSample(int i) const
+
+		class FFTCallBack
 		{
-			if (i < 0)
-			{
-				if (-i >= m_data.size()) return 0.0f;
-#if Symmetric_Type == Symmetric_Type_Axis
-				return m_data[-i];
-#else
-				return -m_data[-i];
-#endif
-			}
-			else
-			{
-				if (i >= m_data.size()) return 0.0f;
-				return m_data[i];
-			}			
-		}
-		virtual void SetSample(int i, float v)
-		{
-			if (i < 0)
-			{
-				if (-i >= m_data.size()) return;
-#if Symmetric_Type == Symmetric_Type_Axis
-				m_data[-i] = v;
-#else
-				m_data[-i] = -v;
-#endif
-			}
-			else
-			{
-				if (i >= m_data.size()) return;
-				m_data[i] = v;
-			}
-		}
+		public:
+			virtual void process(DComp* fftBuf, unsigned l) = 0;
+		};
 
-		void CreateFromAsymmetricWindow(const Window& src)
-		{
-			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
-	
-			unsigned l = 0;
-			unsigned fftLen = 1;
-			while (fftLen < u_srcHalfWidth)
-			{
-				l++;
-				fftLen <<= 1;
-			}
-
-			DComp* fftBuf = new DComp[fftLen];
-			memset(fftBuf, 0, sizeof(DComp)*fftLen);
-
-			for (unsigned i = 0; i < fftLen; i++)
-			{
-				fftBuf[i].Re = (double)src.GetSample((int)i) + (double)src.GetSample((int)i - (int)fftLen);
-			}
-
-			fft(fftBuf, l);
-
-			fftBuf[0].Re = 0.0f;
-			fftBuf[0].Im = 0.0f;
-			fftBuf[fftLen / 2].Re = 0.0f;
-			fftBuf[fftLen / 2].Im = 0.0f;
-
-			for (unsigned i = 1; i < fftLen /2; i++)
-			{
-				double absv = DCAbs(&fftBuf[i]);
-
-#if Symmetric_Type == Symmetric_Type_Axis
-				fftBuf[i].Re = absv;
-				fftBuf[i].Im = 0.0f;
-				fftBuf[fftLen-i].Re = absv;
-				fftBuf[fftLen-i].Im = 0.0f;
-#else
-				fftBuf[i].Re = 0.0f;
-				fftBuf[i].Im = absv;
-				fftBuf[fftLen-i].Re = 0.0f;
-				fftBuf[fftLen-i].Im = -absv;
-#endif
-			}
-
-			ifft(fftBuf, l);
-
-			m_data.resize(fftLen);
-			m_halfWidth = (float)(fftLen);
-			float rate = m_halfWidth /  src.m_halfWidth;
-
-			for (unsigned i = 0; i < fftLen; i++)
-				m_data[i] = (float)fftBuf[i].Re;
-
-		
-			// rewindow
-			float amplitude = sqrtf(rate);
-			for (unsigned i = 0; i < fftLen; i++)
-			{
-				float window = (cosf((float)i * (float)PI / m_halfWidth) + 1.0f)*0.5f;
-				m_data[i] *= window*amplitude;
-			}
-
-			delete[] fftBuf;
-
-		}
-
-		void Scale(const SymmetricWindow& src, float targetHalfWidth)
+		virtual void Scale(const SymmetricWindow_Base& src, float targetHalfWidth)
 		{
 			m_halfWidth = targetHalfWidth;
 			unsigned u_TargetHalfWidth = (unsigned)ceilf(targetHalfWidth);
@@ -338,7 +334,117 @@ namespace VoiceUtil
 			}
 		}
 
-		void Repitch_FormantPreserved(const SymmetricWindow& src, float targetHalfWidth)
+		virtual void Interpolate(const SymmetricWindow_Base& win0, const SymmetricWindow_Base& win1, float k, float targetHalfWidth)
+		{
+			m_halfWidth = targetHalfWidth;
+			unsigned u_halfWidth = (unsigned)ceilf(targetHalfWidth);
+			m_data.resize(u_halfWidth);
+
+			for (unsigned i = 0; i <= u_halfWidth - 1; i++)
+			{
+				float v0 = win0.GetSample(i);
+				float v1 = win1.GetSample(i);
+				this->SetSample(i, (1.0f - k) *v0 + k* v1);
+			}
+		}
+
+	};
+
+
+	class SymmetricWindow_Axis : public SymmetricWindow_Base
+	{
+	public:
+		virtual float GetSample(int i) const
+		{
+			if (i < 0)
+			{
+				if (-i >= m_data.size()) return 0.0f;
+				return m_data[-i];
+			}
+			else
+			{
+				if (i >= m_data.size()) return 0.0f;
+				return m_data[i];
+			}			
+		}
+		virtual void SetSample(int i, float v)
+		{
+			if (i < 0)
+			{
+				if (-i >= m_data.size()) return;
+				m_data[-i] = v;
+			}
+			else
+			{
+				if (i >= m_data.size()) return;
+				m_data[i] = v;
+			}
+		}
+
+		void CreateFromAsymmetricWindow(const Window& src, FFTCallBack* processor=nullptr)
+		{
+			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
+	
+			unsigned l = 0;
+			unsigned fftLen = 1;
+			while (fftLen < u_srcHalfWidth)
+			{
+				l++;
+				fftLen <<= 1;
+			}
+
+			DComp* fftBuf = new DComp[fftLen];
+			memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				fftBuf[i].Re = (double)src.GetSample((int)i) + (double)src.GetSample((int)i - (int)fftLen);
+			}
+
+			fft(fftBuf, l);
+			if (processor != nullptr)
+			{
+				processor->process(fftBuf, l);
+			}
+
+			fftBuf[0].Re = 0.0f;
+			fftBuf[0].Im = 0.0f;
+			fftBuf[fftLen / 2].Re = 0.0f;
+			fftBuf[fftLen / 2].Im = 0.0f;
+
+			for (unsigned i = 1; i < fftLen /2; i++)
+			{
+				double absv = DCAbs(&fftBuf[i]);
+
+				fftBuf[i].Re = absv;
+				fftBuf[i].Im = 0.0f;
+				fftBuf[fftLen-i].Re = absv;
+				fftBuf[fftLen-i].Im = 0.0f;
+			}
+
+			ifft(fftBuf, l);
+
+			m_data.resize(fftLen);
+			m_halfWidth = (float)(fftLen);
+			float rate = m_halfWidth /  src.m_halfWidth;
+
+			for (unsigned i = 0; i < fftLen; i++)
+				m_data[i] = (float)fftBuf[i].Re;
+
+		
+			// rewindow
+			float amplitude = sqrtf(rate);
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				float window = (cosf((float)i * (float)PI / m_halfWidth) + 1.0f)*0.5f;
+				m_data[i] *= window*amplitude;
+			}
+
+			delete[] fftBuf;
+
+		}
+
+		void Repitch_FormantPreserved(const SymmetricWindow_Axis& src, float targetHalfWidth)
 		{
 			m_halfWidth = targetHalfWidth;
 			unsigned u_TargetHalfWidth = (unsigned)ceilf(targetHalfWidth);
@@ -369,11 +475,7 @@ namespace VoiceUtil
 
 				while (uSrcPos < uSrcHalfWidth)
 				{
-#if Symmetric_Type == Symmetric_Type_Axis
 					m_data[i] += src.m_data[uSrcPos];	
-#else
-					m_data[i] -= src.m_data[uSrcPos];
-#endif
 					srcPos += targetHalfWidth;
 					uSrcPos = (unsigned)(srcPos + 0.5f);
 				}
@@ -388,23 +490,275 @@ namespace VoiceUtil
 			}
 		}
 
-		virtual void Interpolate(const SymmetricWindow& win0, const SymmetricWindow& win1, float k, float targetHalfWidth)
+	};
+
+
+	class SymmetricWindow_Center : public SymmetricWindow_Base
+	{
+	public:
+		virtual float GetSample(int i) const
+		{
+			if (i < 0)
+			{
+				if (-i >= m_data.size()) return 0.0f;
+				return -m_data[-i];
+			}
+			else
+			{
+				if (i >= m_data.size()) return 0.0f;
+				return m_data[i];
+			}
+		}
+		virtual void SetSample(int i, float v)
+		{
+			if (i < 0)
+			{
+				if (-i >= m_data.size()) return;
+				m_data[-i] = -v;
+			}
+			else
+			{
+				if (i >= m_data.size()) return;
+				m_data[i] = v;
+			}
+		}
+
+		void CreateFromAsymmetricWindow(const Window& src, FFTCallBack* processor = nullptr)
+		{
+			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
+
+			unsigned l = 0;
+			unsigned fftLen = 1;
+			while (fftLen < u_srcHalfWidth)
+			{
+				l++;
+				fftLen <<= 1;
+			}
+
+			DComp* fftBuf = new DComp[fftLen];
+			memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				fftBuf[i].Re = (double)src.GetSample((int)i) + (double)src.GetSample((int)i - (int)fftLen);
+			}
+
+			fft(fftBuf, l);
+			if (processor != nullptr)
+			{
+				processor->process(fftBuf, l);
+			}
+
+			fftBuf[0].Re = 0.0f;
+			fftBuf[0].Im = 0.0f;
+			fftBuf[fftLen / 2].Re = 0.0f;
+			fftBuf[fftLen / 2].Im = 0.0f;
+
+			for (unsigned i = 1; i < fftLen / 2; i++)
+			{
+				double absv = DCAbs(&fftBuf[i]);
+				fftBuf[i].Re = 0.0f;
+				fftBuf[i].Im = absv;
+				fftBuf[fftLen - i].Re = 0.0f;
+				fftBuf[fftLen - i].Im = -absv;
+			}
+
+			ifft(fftBuf, l);
+
+			m_data.resize(fftLen);
+			m_halfWidth = (float)(fftLen);
+			float rate = m_halfWidth / src.m_halfWidth;
+
+			for (unsigned i = 0; i < fftLen; i++)
+				m_data[i] = (float)fftBuf[i].Re;
+
+
+			// rewindow
+			float amplitude = sqrtf(rate);
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				float window = (cosf((float)i * (float)PI / m_halfWidth) + 1.0f)*0.5f;
+				m_data[i] *= window*amplitude;
+			}
+
+			delete[] fftBuf;
+
+		}
+
+		void Repitch_FormantPreserved(const SymmetricWindow_Center& src, float targetHalfWidth)
 		{
 			m_halfWidth = targetHalfWidth;
-			unsigned u_halfWidth = (unsigned)ceilf(targetHalfWidth);
-			m_data.resize(u_halfWidth);
+			unsigned u_TargetHalfWidth = (unsigned)ceilf(targetHalfWidth);
+			m_data.resize(u_TargetHalfWidth);
 
-			for (unsigned i = 0; i <= u_halfWidth - 1; i++)
+			float srcHalfWidth = src.m_halfWidth;
+			unsigned uSrcHalfWidth = src.GetHalfWidthOfData();
+			float rate = targetHalfWidth / srcHalfWidth;
+
+			float targetWidth = targetHalfWidth*2.0f;
+
+			for (unsigned i = 0; (float)i < targetHalfWidth; i++)
 			{
-				float v0 = win0.GetSample(i);
-				float v1 = win1.GetSample(i);
-				this->SetSample(i, (1.0f - k) *v0 + k* v1);
+				m_data[i] = 0.0f;
+
+				float srcPos = (float)i;
+				unsigned uSrcPos = (unsigned)(srcPos + 0.5f);
+
+				while (uSrcPos < uSrcHalfWidth)
+				{
+					m_data[i] += src.m_data[uSrcPos];
+					srcPos += targetHalfWidth;
+					uSrcPos = (unsigned)(srcPos + 0.5f);
+				}
+
+				srcPos = targetHalfWidth - (float)i;
+				uSrcPos = (unsigned)(srcPos + 0.5f);
+
+				while (uSrcPos < uSrcHalfWidth)
+				{
+					m_data[i] -= src.m_data[uSrcPos];
+					srcPos += targetHalfWidth;
+					uSrcPos = (unsigned)(srcPos + 0.5f);
+				}
+			}
+
+			// rewindow
+			float amplitude = sqrtf(rate);
+			for (unsigned i = 0; (float)i < targetHalfWidth; i++)
+			{
+				float window = (cosf((float)i * (float)PI / targetHalfWidth) + 1.0f)*0.5f;
+				m_data[i] *= amplitude*window;
 			}
 		}
 
 	};
 
+#if Symmetric_Type==Symmetric_Type_Axis
+	typedef SymmetricWindow_Axis SymmetricWindow;
+#else
+	typedef SymmetricWindow_Center SymmetricWindow;
+#endif
 
+
+#define AutoRegression_numCoefs 10
+#define AutoRegression_numSD 10
+
+	class AutoRegression
+	{
+		static void LevinsonSolve(const float* samples, float* solution, unsigned n)
+		{
+			float *solution_last = new float[n];
+
+			for (unsigned pass = 0; pass < n; pass++)
+			{
+				float numerator = samples[pass + 1];
+				float denominator = samples[0];
+
+				for (unsigned i = 0; i < pass; i++)
+				{
+					numerator -= solution_last[i] * samples[pass - i];
+					denominator -= solution_last[i] * samples[i + 1];
+				}
+
+				float solution_pass = numerator / denominator;
+				solution[pass] = solution_pass;
+				for (unsigned i = 0; i < pass; i++)
+					solution[i] = solution_last[i]-solution_pass*solution_last[pass - 1 - i];
+
+				memcpy(solution_last, solution, sizeof(float)*n);
+			}
+
+			delete[] solution_last;
+
+			/*for (unsigned i = 0; i < n; i++)
+			{
+				float y = samples[i + 1];
+				float y1 = 0.0f;
+				for (unsigned j = 0; j < n; j++)
+				{
+					int delta = (int)i - (int)j;
+					if (delta < 0) delta = -delta;
+					y1 += samples[delta] * solution[j];
+				}
+				printf("%f %f\n", y, y1);
+			}*/
+		}
+
+	public:
+		float m_coefs[AutoRegression_numCoefs];
+		float m_sd[AutoRegression_numSD];
+
+		void Estimate(const float* samples, unsigned count)
+		{
+			if (count <= AutoRegression_numCoefs)
+				return;
+
+			float ave = 0.0f;
+			for (unsigned i = 0; i < count; i++)
+			{
+				ave += samples[i];
+			}
+			ave /= (float)(count);
+
+			float* _samples = new float[count];
+			for (unsigned i = 0; i < count; i++)
+			{
+				_samples[i] = samples[i] - ave;
+			}
+
+			float ac[AutoRegression_numCoefs + 1];
+			for (unsigned i = 0; i <= AutoRegression_numCoefs; i++)
+			{
+				float sum = 0.0f;
+				for (unsigned j = 0; j < count - i; j++)
+				{
+					sum += _samples[j] * _samples[j + i];
+				}
+				ac[i] = sum;
+			}
+
+			if (ac[0] == 0.0f)
+			{
+				memset(m_coefs, 0, sizeof(float)* AutoRegression_numCoefs);
+				memset(m_sd, 0, sizeof(float)* AutoRegression_numSD);
+				return;
+			}
+
+			LevinsonSolve(ac, m_coefs, AutoRegression_numCoefs);
+
+			unsigned num_samples = count - AutoRegression_numCoefs;
+
+			float pos = 0.0f;
+			float step = (float)num_samples / AutoRegression_numSD;
+			for (unsigned j = 0; j < AutoRegression_numSD; j++, pos += step)
+			{
+				float dev = 0.0f;
+				float sqrErr = 0.0f;
+				for (unsigned i = (unsigned)ceilf(pos); i <= (unsigned)floorf(pos + step); i++)
+				{
+					if (i + AutoRegression_numCoefs < count)
+					{
+						float est = 0.0f;
+						for (unsigned j = 0; j < AutoRegression_numCoefs; j++)
+						{
+							est += m_coefs[AutoRegression_numCoefs-1-j] * _samples[i + j];
+						}
+						float err_i = _samples[i + AutoRegression_numCoefs] - est;
+						sqrErr += err_i*err_i;
+						dev += 1.0f;
+					}
+				}
+
+				m_sd[j] = sqrtf(sqrErr / dev);
+
+				//printf("%f ", m_sd[j]);
+			}
+			//printf("\n");
+
+			delete[] _samples;
+		}
+
+	};
 
 
 }

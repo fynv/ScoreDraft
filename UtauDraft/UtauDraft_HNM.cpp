@@ -1,0 +1,652 @@
+#include "UtauDraft.h"
+
+
+inline float rand01()
+{
+	float f = (float)rand() / (float)RAND_MAX;
+	if (f < 0.0000001f) f = 0.0000001f;
+	if (f > 0.9999999f) f = 0.9999999f;
+	return f;
+}
+
+inline float randGauss(float sd)
+{
+	return sd*sqrtf(-2.0f*logf(rand01()))*cosf(rand01()*(float)PI);
+}
+
+
+void UtauDraft::GenWaveStruct::_generateWave_HNM()
+{
+	float minSampleFreq;
+
+	/// calculate finalBuffer->tmpBuffer map
+	minSampleFreq = FLT_MAX;
+	for (unsigned pos = 0; pos < uSumLen; pos++)
+	{
+		float sampleFreq = freqMap[pos];
+		if (sampleFreq < minSampleFreq) minSampleFreq = sampleFreq;
+	}
+
+	float* stretchingMap;
+	stretchingMap = new float[uSumLen];
+
+	float pos_tmpBuf = 0.0f;
+	for (unsigned pos = 0; pos < uSumLen; pos++)
+	{
+		float sampleFreq;
+		sampleFreq = freqMap[pos];
+
+		float speed = sampleFreq / minSampleFreq;
+		pos_tmpBuf += speed;
+		stretchingMap[pos] = pos_tmpBuf;
+	}
+
+	float tempLen = stretchingMap[uSumLen - 1];
+	unsigned uTempLen = (unsigned)ceilf(tempLen);
+
+	Buffer tempBuf;
+	tempBuf.m_sampleRate = source.m_sampleRate;
+	tempBuf.m_data.resize(uTempLen);
+	tempBuf.SetZero();
+
+#define NOISE_HALF_WINDOW_L 9
+#define NOISE_HALF_WINDOW (1<<NOISE_HALF_WINDOW_L)
+
+	class ParameterSet
+	{
+	public:
+		float m_pos;
+		SymmetricWindow m_win;
+		float m_noiseAmps[NOISE_HALF_WINDOW / 2 + 1];
+	};
+
+	std::vector<ParameterSet> parameters;
+
+	class Filter : public SymmetricWindow::FFTCallBack
+	{
+	public:
+		unsigned char* voiced;
+		float win1_len;
+		ParameterSet *param;
+
+		virtual void process(DComp* fftBuf, unsigned l)
+		{
+			unsigned fftLen = 1 << l;
+			SymmetricWindow_Axis win1;
+			win1.Allocate(win1_len);
+
+			float voicedEngerySum = 0.0f;
+			float voicedCount = 0.0f;
+
+			for (unsigned i = 1; i < fftLen / 2; i++)
+			{
+				if (voiced[i] == 0)
+				{
+					float engery = (float)DCEnergy(&fftBuf[i]);
+					float amplitude = sqrtf(engery);
+
+					if ((float)i < win1_len)
+						win1.m_data[i] = amplitude;
+
+					fftBuf[i].Re = 0.0f;
+					fftBuf[i].Im = 0.0f;
+					fftBuf[fftLen - i].Re = 0.0f;
+					fftBuf[fftLen - i].Im = 0.0f;
+				}
+			}
+
+			SymmetricWindow_Axis win2;
+			win2.Scale(win1, (float)(NOISE_HALF_WINDOW / 2));
+
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2; i++)
+			{
+				param->m_noiseAmps[i] = win2.m_data[i];
+			}
+			param->m_noiseAmps[NOISE_HALF_WINDOW / 2] = 0.0f;
+		}
+	} filter;
+
+	float fPeriodCount = 0.0f;
+	float logicalPos = firstNote ? (-overlap_pos*headerWeight) : (-preutter_pos* fixed_Weight);
+
+	for (unsigned srcPos = 0; srcPos < source.m_data.size(); srcPos++)
+	{
+		float srcSampleFreq;
+		float srcFreqPos = (srcbegin + (float)srcPos) / (float)frq.m_window_interval;
+		unsigned uSrcFreqPos = (unsigned)srcFreqPos;
+		float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
+
+		float freq1 = (float)frq[uSrcFreqPos].freq;
+		if (freq1 <= 55.0f) freq1 = (float)frq.m_key_freq;
+
+		float freq2 = (float)frq[uSrcFreqPos + 1].freq;
+		if (freq2 <= 55.0f) freq2 = (float)frq.m_key_freq;
+
+		float sampleFreq1 = freq1 / (float)source.m_sampleRate;
+		float sampleFreq2 = freq2 / (float)source.m_sampleRate;
+
+		srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
+
+		unsigned paramId = (unsigned)fPeriodCount;
+		if (paramId >= parameters.size())
+		{
+			float halfWinlen = 3.0f / srcSampleFreq;
+			Window capture;
+			capture.CreateFromBuffer(source, (float)srcPos, halfWinlen);
+
+			unsigned l;
+			unsigned potHalfWinLen;
+			calcPOT((unsigned)ceilf(halfWinlen), potHalfWinLen, l);
+
+			Window Scaled;
+			Scaled.Scale(capture, (float)potHalfWinLen);
+
+			DComp* fftBuf = new DComp[potHalfWinLen];
+			memset(fftBuf, 0, sizeof(DComp)*potHalfWinLen);
+
+			for (unsigned i = 0; i < potHalfWinLen; i++)
+			{
+				float v = Scaled.GetSample((int)i) + Scaled.GetSample((int)i - (int)potHalfWinLen);
+				fftBuf[i].Re = v;
+			}
+			fft(fftBuf, l);
+
+			unsigned char voiced[410];
+			memset(voiced, 0, potHalfWinLen / 6);
+
+			for (unsigned i = 3; i < potHalfWinLen / 2; i += 3)
+			{
+				double absv0 = DCAbs(&fftBuf[i]);
+				double absv1 = DCAbs(&fftBuf[i - 1]);
+				double absv2 = DCAbs(&fftBuf[i + 1]);
+
+				double rate = absv0 / (absv0 + absv1 + absv2);
+
+				if (rate > 0.6)
+				{
+					voiced[i / 3] = 1;
+				}
+			}
+
+			for (unsigned i = potHalfWinLen / 6 - 2; i > 1; i--)
+			{
+				if (voiced[i] + voiced[i - 1] + voiced[i + 1] > 1)
+				{
+					for (unsigned j = 1; j <= i; j++)
+					{
+						voiced[j] = 1;
+					}
+					break;
+				}
+
+			}
+
+			delete[] fftBuf;
+
+			ParameterSet paramSet;
+
+			filter.voiced = voiced;
+			filter.win1_len = 0.5f / srcSampleFreq / powf(2.0f, _gender);
+			filter.param = &paramSet;
+
+			float srcHalfWinWidth = 1.0f / srcSampleFreq;
+			Window srcWin;
+			srcWin.CreateFromBuffer(source, (float)srcPos, srcHalfWinWidth);
+
+			unsigned fftLen;
+			calcPOT((unsigned)ceilf(srcHalfWinWidth), fftLen, l);
+
+			Window scaledWin;
+			scaledWin.Scale(srcWin, (float)fftLen);
+
+			SymmetricWindow symWin;
+			symWin.CreateFromAsymmetricWindow(scaledWin, &filter);
+
+			paramSet.m_win.Scale(symWin, srcHalfWinWidth);
+			paramSet.m_pos = logicalPos;
+
+			parameters.push_back(paramSet);
+		}
+		fPeriodCount += srcSampleFreq;
+
+		if (firstNote && (float)srcPos < preutter_pos)
+		{
+			logicalPos += headerWeight;
+		}
+		else if ((float)srcPos < fixed_end)
+		{
+			logicalPos += fixed_Weight;
+		}
+		else
+		{
+			logicalPos += vowel_Weight;
+		}
+	}
+
+	std::vector<ParameterSet> parameters_next;
+
+	if (hasNextNote)
+	{
+		float fPeriodCount = 0.0f;
+		float logicalPos = 1.0f - preutter_pos_next*fixed_Weight;
+
+		for (unsigned srcPos = 0; (float)srcPos < preutter_pos_next; srcPos++)
+		{
+			float srcSampleFreq;
+			float srcFreqPos = (nextbegin + (float)srcPos) / (float)frq_next.m_window_interval;
+			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
+			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
+
+			float freq1 = (float)frq_next[uSrcFreqPos].freq;
+			if (freq1 <= 55.0f) freq1 = (float)frq_next.m_key_freq;
+
+			float freq2 = (float)frq_next[uSrcFreqPos + 1].freq;
+			if (freq2 <= 55.0f) freq2 = (float)frq_next.m_key_freq;
+
+			float sampleFreq1 = freq1 / (float)source_next.m_sampleRate;
+			float sampleFreq2 = freq2 / (float)source_next.m_sampleRate;
+
+			srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
+
+			unsigned paramId = (unsigned)fPeriodCount;
+			if (paramId >= parameters_next.size())
+			{
+				float halfWinlen = 3.0f / srcSampleFreq;
+				Window capture;
+				capture.CreateFromBuffer(source_next, (float)srcPos, halfWinlen);
+
+				unsigned l;
+				unsigned potHalfWinLen;
+				calcPOT((unsigned)ceilf(halfWinlen), potHalfWinLen, l);
+
+				Window Scaled;
+				Scaled.Scale(capture, (float)potHalfWinLen);
+
+				DComp* fftBuf = new DComp[potHalfWinLen];
+				memset(fftBuf, 0, sizeof(DComp)*potHalfWinLen);
+
+				for (unsigned i = 0; i < potHalfWinLen; i++)
+				{
+					float v = Scaled.GetSample((int)i) + Scaled.GetSample((int)i - (int)potHalfWinLen);
+					fftBuf[i].Re = v;
+				}
+
+				fft(fftBuf, l);
+
+				unsigned char voiced[410];
+				memset(voiced, 0, potHalfWinLen / 6);
+
+				for (unsigned i = 3; i < potHalfWinLen / 2; i += 3)
+				{
+					double absv0 = DCAbs(&fftBuf[i]);
+					double absv1 = DCAbs(&fftBuf[i - 1]);
+					double absv2 = DCAbs(&fftBuf[i + 1]);
+
+					double rate = absv0 / (absv0 + absv1 + absv2);
+
+					if (rate > 0.6)
+					{
+						voiced[i / 3] = 1;
+					}
+				}
+
+				for (unsigned i = potHalfWinLen / 6 - 2; i > 1; i--)
+				{
+					if (voiced[i] + voiced[i - 1] + voiced[i + 1] > 1)
+					{
+						for (unsigned j = 1; j <= i; j++)
+						{
+							voiced[j] = 1;
+						}
+						break;
+					}
+
+				}
+
+				delete[] fftBuf;
+
+				ParameterSet paramSet;
+
+				filter.voiced = voiced;
+				filter.win1_len = 0.5f / srcSampleFreq / powf(2.0f, _gender);
+				filter.param = &paramSet;
+
+				float srcHalfWinWidth = 1.0f / srcSampleFreq;
+				Window srcWin;
+				srcWin.CreateFromBuffer(source_next, (float)srcPos, srcHalfWinWidth);
+
+				unsigned fftLen;
+				calcPOT((unsigned)ceilf(srcHalfWinWidth), fftLen, l);
+
+				Window scaledWin;
+				scaledWin.Scale(srcWin, (float)fftLen);
+
+				SymmetricWindow symWin;
+				symWin.CreateFromAsymmetricWindow(scaledWin, &filter);
+
+				paramSet.m_win.Scale(symWin, srcHalfWinWidth);
+				paramSet.m_pos = logicalPos;
+
+				parameters_next.push_back(paramSet);
+			}
+
+			fPeriodCount += srcSampleFreq;
+			logicalPos += fixed_Weight;
+		}
+	}
+
+	if (parameters_next.size() == 0) hasNextNote = false;
+
+	float tempHalfWinLen = 1.0f / minSampleFreq;
+
+	unsigned paramId0 = 0;
+	unsigned paramId0_next = 0;
+	unsigned pos_final = 0;
+
+	float& phase = *_phase;
+	while (phase > -1.0f) phase -= 1.0f;
+
+	float fTmpWinCenter;
+	float transitionEnd = 1.0f - (preutter_pos_next - overlap_pos_next)*fixed_Weight;
+	float transitionStart = transitionEnd* (1.0f - _transition);
+
+	for (fTmpWinCenter = phase*tempHalfWinLen; fTmpWinCenter - tempHalfWinLen <= tempLen; fTmpWinCenter += tempHalfWinLen)
+	{
+		while (fTmpWinCenter > stretchingMap[pos_final] && pos_final<uSumLen - 1) pos_final++;
+		float fParamPos = (float)pos_final / float(uSumLen);
+
+		bool in_transition = hasNextNote && _transition > 0.0f && _transition < 1.0f && fParamPos >= transitionStart;
+
+		unsigned paramId1 = paramId0 + 1;
+		while (paramId1 < parameters.size() && parameters[paramId1].m_pos < fParamPos)
+		{
+			paramId0++;
+			paramId1 = paramId0 + 1;
+		}
+		if (paramId1 == parameters.size()) paramId1 = paramId0;
+
+		unsigned paramId1_next = paramId0_next + 1;
+
+		if (in_transition)
+		{
+			while (paramId1_next < parameters_next.size() && parameters_next[paramId1_next].m_pos < fParamPos)
+			{
+				paramId0_next++;
+				paramId1_next = paramId0_next + 1;
+			}
+			if (paramId1_next == parameters_next.size()) paramId1_next = paramId0_next;
+		}
+
+		ParameterSet& param0 = parameters[paramId0];
+		ParameterSet& param1 = parameters[paramId1];
+
+		float k;
+		if (fParamPos >= param1.m_pos) k = 1.0f;
+		else if (fParamPos <= param0.m_pos) k = 0.0f;
+		else
+		{
+			k = (fParamPos - param0.m_pos) / (param1.m_pos - param0.m_pos);
+		}
+
+		float destSampleFreq;
+		destSampleFreq = freqMap[pos_final];
+		float destHalfWinLen = powf(2.0f, _gender) / destSampleFreq;
+
+		SymmetricWindow shiftedWin0;
+		SymmetricWindow shiftedWin1;
+
+		SymmetricWindow l_win;
+		SymmetricWindow* destWin = &l_win;
+
+		shiftedWin0.Repitch_FormantPreserved(param0.m_win, destHalfWinLen);
+
+		if (paramId0 == paramId1)
+		{
+			destWin = &shiftedWin0;
+		}
+		else
+		{
+			shiftedWin1.Repitch_FormantPreserved(param1.m_win, destHalfWinLen);
+			l_win.Interpolate(shiftedWin0, shiftedWin1, k, destHalfWinLen);
+		}
+		SymmetricWindow *win_final_dest = destWin;
+		SymmetricWindow l_win_transit;
+
+		if (in_transition)
+		{
+			ParameterSet& param0_next = parameters_next[paramId0_next];
+			ParameterSet& param1_next = parameters_next[paramId1_next];
+
+			float k;
+			if (fParamPos >= param1_next.m_pos) k = 1.0f;
+			else if (fParamPos <= param0_next.m_pos) k = 0.0f;
+			else
+			{
+				k = (fParamPos - param0_next.m_pos) / (param1_next.m_pos - param0_next.m_pos);
+			}
+
+			SymmetricWindow shiftedWin0_next;
+			SymmetricWindow shiftedWin1_next;
+
+			SymmetricWindow l_win_next;
+			SymmetricWindow* destWin_next = &l_win_next;
+
+			shiftedWin0_next.Repitch_FormantPreserved(param0_next.m_win, destHalfWinLen);
+
+			if (paramId0_next == paramId1_next)
+			{
+				destWin_next = &shiftedWin0_next;
+			}
+			else
+			{
+				shiftedWin1_next.Repitch_FormantPreserved(param1_next.m_win, destHalfWinLen);
+				l_win_next.Interpolate(shiftedWin0_next, shiftedWin1_next, k, destHalfWinLen);
+			}
+			float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
+			if (x > 0.0f) x = 0.0f;
+			float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			win_final_dest = &l_win_transit;
+
+			l_win_transit.Interpolate(*destWin, *destWin_next, k2, destHalfWinLen);
+		}
+
+		SymmetricWindow l_win2;
+		SymmetricWindow *winToMerge = &l_win2;
+
+		if (destHalfWinLen == tempHalfWinLen)
+		{
+			winToMerge = win_final_dest;
+		}
+		else
+		{
+			l_win2.Scale(*win_final_dest, tempHalfWinLen);
+		}
+
+		winToMerge->MergeToBuffer(tempBuf, fTmpWinCenter);
+
+	}
+
+	phase = (fTmpWinCenter - tempLen) / tempHalfWinLen;
+
+	for (unsigned pos = 0; pos < uSumLen; pos++)
+	{
+		float pos_tmpBuf = stretchingMap[pos];
+		float sampleFreq;
+		sampleFreq = freqMap[pos];
+
+		float speed = sampleFreq / minSampleFreq;
+
+		int ipos1 = (int)ceilf(pos_tmpBuf - speed*0.5f);
+		int ipos2 = (int)floorf(pos_tmpBuf + speed*0.5f);
+
+		float sum = 0.0f;
+		for (int ipos = ipos1; ipos <= ipos2; ipos++)
+		{
+			sum += tempBuf.GetSample(ipos);
+		}
+		float value = sum / (float)(ipos2 - ipos1 + 1);
+		dstBuf.m_data[pos] = value;
+	}
+
+	delete[] stretchingMap;
+	
+	float noiseBuf[NOISE_HALF_WINDOW];
+	memset(noiseBuf, 0, sizeof(float)*NOISE_HALF_WINDOW);
+	unsigned noiseBufPos = 0;
+
+	float noiseDev = 1.0f / sqrtf((float)(NOISE_HALF_WINDOW / 2));
+
+	paramId0 = 0;
+	paramId0_next = 0;
+
+	for (pos_final = 0; pos_final < uSumLen; pos_final += NOISE_HALF_WINDOW / 2)
+	{
+		for (unsigned i = noiseBufPos; i < noiseBufPos + NOISE_HALF_WINDOW / 2; i++)
+		{
+			noiseBuf[i] = randGauss(noiseDev);
+		}
+		float fParamPos = (float)pos_final / float(uSumLen);
+
+		bool in_transition = hasNextNote && _transition > 0.0f && _transition < 1.0f && fParamPos >= transitionStart;
+
+		unsigned paramId1 = paramId0 + 1;
+		while (paramId1 < parameters.size() && parameters[paramId1].m_pos < fParamPos)
+		{
+			paramId0++;
+			paramId1 = paramId0 + 1;
+		}
+		if (paramId1 == parameters.size()) paramId1 = paramId0;
+
+		unsigned paramId1_next = paramId0_next + 1;
+
+		if (in_transition)
+		{
+			while (paramId1_next < parameters_next.size() && parameters_next[paramId1_next].m_pos < fParamPos)
+			{
+				paramId0_next++;
+				paramId1_next = paramId0_next + 1;
+			}
+			if (paramId1_next == parameters_next.size()) paramId1_next = paramId0_next;
+		}
+
+		ParameterSet& param0 = parameters[paramId0];
+		ParameterSet& param1 = parameters[paramId1];
+
+		float k;
+		if (fParamPos >= param1.m_pos) k = 1.0f;
+		else if (fParamPos <= param0.m_pos) k = 0.0f;
+		else
+		{
+			k = (fParamPos - param0.m_pos) / (param1.m_pos - param0.m_pos);
+		}
+
+		float l_noiseAmps[NOISE_HALF_WINDOW / 2 + 1];
+		float* dest_noiseAmps = l_noiseAmps;
+
+		if (paramId0 == paramId1)
+		{
+			dest_noiseAmps = param0.m_noiseAmps;
+		}
+		else
+		{
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2 + 1; i++)
+				l_noiseAmps[i] = (1.0f - k)*param0.m_noiseAmps[i] + k* param1.m_noiseAmps[i];
+		}
+
+		float* final_dest_noiseAmps = dest_noiseAmps;
+		float l_noiseAmps_transit[NOISE_HALF_WINDOW / 2 + 1];
+
+		if (in_transition)
+		{
+			ParameterSet& param0_next = parameters_next[paramId0_next];
+			ParameterSet& param1_next = parameters_next[paramId1_next];
+
+			float k;
+			if (fParamPos >= param1_next.m_pos) k = 1.0f;
+			else if (fParamPos <= param0_next.m_pos) k = 0.0f;
+			else
+			{
+				k = (fParamPos - param0_next.m_pos) / (param1_next.m_pos - param0_next.m_pos);
+			}
+
+			float l_noiseAmps_next[NOISE_HALF_WINDOW / 2 + 1];
+			float* dest_noiseAmps_next = l_noiseAmps_next;
+
+			if (paramId0_next == paramId1_next)
+			{
+				dest_noiseAmps_next = param0_next.m_noiseAmps;
+			}
+			else
+			{
+				for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2 + 1; i++)
+					l_noiseAmps_next[i] = (1.0f - k)*param0_next.m_noiseAmps[i] + k* param1_next.m_noiseAmps[i];
+			}
+
+			float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
+			if (x > 0.0f) x = 0.0f;
+			float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			final_dest_noiseAmps = l_noiseAmps_transit;
+
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2 + 1; i++)
+				l_noiseAmps_transit[i] = (1.0f - k2)*dest_noiseAmps[i] + k2* dest_noiseAmps_next[i];
+		}
+
+		DComp* fftBuf = new DComp[NOISE_HALF_WINDOW * 2];
+		memset(fftBuf, 0, sizeof(DComp)*NOISE_HALF_WINDOW * 2);
+		for (unsigned i = 0; i< NOISE_HALF_WINDOW / 2; i++)
+		{
+			float window = (cosf((float)i * (float)PI / ((float)NOISE_HALF_WINDOW*0.5f)) + 1.0f)*0.5f;
+			float v = noiseBuf[i + noiseBufPos];
+			fftBuf[i].Re = v*window;
+			if (i > 0)
+			{
+				v = noiseBuf[(noiseBufPos + NOISE_HALF_WINDOW - i) % NOISE_HALF_WINDOW];
+				fftBuf[NOISE_HALF_WINDOW * 2 - i].Re = v*window;
+			}
+		}
+
+		fft(fftBuf, NOISE_HALF_WINDOW_L + 1);
+
+		for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
+		{
+			float mult;
+			if (i % 2 == 0)
+			{
+				mult = final_dest_noiseAmps[i / 2];
+			}
+			else
+			{
+				mult = 0.5f*(final_dest_noiseAmps[i / 2] + final_dest_noiseAmps[i / 2 + 1]);
+			}
+
+			fftBuf[i].Re *= mult;
+			fftBuf[i].Im *= mult;
+
+			if (i > 0)
+			{
+				fftBuf[NOISE_HALF_WINDOW * 2 - i].Re *= mult;
+				fftBuf[NOISE_HALF_WINDOW * 2 - i].Im *= mult;
+			}
+		}
+		fftBuf[NOISE_HALF_WINDOW].Re = 0.0f;
+		fftBuf[NOISE_HALF_WINDOW].Im = 0.0f;
+
+		ifft(fftBuf, NOISE_HALF_WINDOW_L + 1);
+
+		Window winToMerge;
+		winToMerge.Allocate((float)NOISE_HALF_WINDOW);
+		for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
+		{
+			winToMerge.SetSample((int)i, (float)fftBuf[i].Re);
+			if (i > 0)
+				winToMerge.SetSample(-(int)i, (float)fftBuf[NOISE_HALF_WINDOW * 2 - i].Re);
+		}
+		winToMerge.MergeToBuffer(dstBuf, (float)pos_final);
+
+		delete[] fftBuf;
+
+		noiseBufPos = NOISE_HALF_WINDOW / 2 - noiseBufPos;	
+
+	}
+}
+

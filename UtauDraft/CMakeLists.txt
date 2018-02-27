@@ -4,12 +4,15 @@ find_package(PythonLibs 3 REQUIRED)
 
 set(SOURCES
 UtauDraft.cpp
+UtauDraft_PSOLA.cpp
+UtauDraft_HNM.cpp
 OtoMap.cpp
 FrqData.cpp
 PrefixMap.cpp
 )
 
 set(HEADERS 
+UtauDraft.h
 OtoMap.h
 FrqData.h
 PrefixMap.h

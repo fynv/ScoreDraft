@@ -5,6 +5,7 @@ typedef struct
 	double Re;
 	double Im;
 }DComp;
+double DCEnergy(const DComp* c);
 double DCAbs(const DComp*);
 double DCAng(const DComp*);
 void DCSetAA(DComp*,double,double);

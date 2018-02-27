@@ -1,6 +1,12 @@
 #include <math.h>
 #include "stdio.h"
 #include "complex.h"
+
+double DCEnergy(const DComp* c)
+{
+	return c->Im*c->Im + c->Re*c->Re;
+}
+
 double DCAbs(const DComp* c)
 {
 	return sqrt(c->Im*c->Im+c->Re*c->Re);
