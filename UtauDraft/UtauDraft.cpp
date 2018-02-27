@@ -55,7 +55,7 @@ bool UtauDraft::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin,
 
 UtauDraft::UtauDraft()
 {
-	m_method = HNM;
+	m_method = PSOLA;
 	m_transition = 0.1f;
 	m_rap_distortion = 1.0f;
 	m_gender = 0.0f;
