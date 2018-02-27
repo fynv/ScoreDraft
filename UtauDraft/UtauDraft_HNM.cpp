@@ -65,7 +65,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 	class Filter : public SymmetricWindow::FFTCallBack
 	{
 	public:
-		unsigned char* voiced;
+		unsigned max_voiced;
 		float win1_len;
 		ParameterSet *param;
 
@@ -78,21 +78,17 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			float voicedEngerySum = 0.0f;
 			float voicedCount = 0.0f;
 
-			for (unsigned i = 1; i < fftLen / 2; i++)
+			for (unsigned i = max_voiced + 1; i < fftLen / 2; i++)
 			{
-				if (voiced[i] == 0)
-				{
-					float engery = (float)DCEnergy(&fftBuf[i]);
-					float amplitude = sqrtf(engery);
+				float amplitude = (float)DCAbs(&fftBuf[i]);
 
-					if ((float)i < win1_len)
-						win1.m_data[i] = amplitude;
+				if ((float)i < win1_len)
+					win1.m_data[i] = amplitude;
 
-					fftBuf[i].Re = 0.0f;
-					fftBuf[i].Im = 0.0f;
-					fftBuf[fftLen - i].Re = 0.0f;
-					fftBuf[fftLen - i].Im = 0.0f;
-				}
+				fftBuf[i].Re = 0.0f;
+				fftBuf[i].Im = 0.0f;
+				fftBuf[fftLen - i].Re = 0.0f;
+				fftBuf[fftLen - i].Im = 0.0f;
 			}
 
 			SymmetricWindow_Axis win2;
@@ -130,62 +126,65 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 		unsigned paramId = (unsigned)fPeriodCount;
 		if (paramId >= parameters.size())
 		{
-			float halfWinlen = 3.0f / srcSampleFreq;
-			Window capture;
-			capture.CreateFromBuffer(source, (float)srcPos, halfWinlen);
+			unsigned maxVoiced = 0;
 
-			unsigned l;
-			unsigned potHalfWinLen;
-			calcPOT((unsigned)ceilf(halfWinlen), potHalfWinLen, l);
-
-			Window Scaled;
-			Scaled.Scale(capture, (float)potHalfWinLen);
-
-			DComp* fftBuf = new DComp[potHalfWinLen];
-			memset(fftBuf, 0, sizeof(DComp)*potHalfWinLen);
-
-			for (unsigned i = 0; i < potHalfWinLen; i++)
 			{
-				float v = Scaled.GetSample((int)i) + Scaled.GetSample((int)i - (int)potHalfWinLen);
-				fftBuf[i].Re = v;
-			}
-			fft(fftBuf, l);
+				float halfWinlen = 3.0f / srcSampleFreq;
+				Window capture;
+				capture.CreateFromBuffer(source, (float)srcPos, halfWinlen);
 
-			unsigned char voiced[410];
-			memset(voiced, 0, potHalfWinLen / 6);
+				unsigned l;
+				unsigned potHalfWinLen;
+				calcPOT((unsigned)ceilf(halfWinlen), potHalfWinLen, l);
 
-			for (unsigned i = 3; i < potHalfWinLen / 2; i += 3)
-			{
-				double absv0 = DCAbs(&fftBuf[i]);
-				double absv1 = DCAbs(&fftBuf[i - 1]);
-				double absv2 = DCAbs(&fftBuf[i + 1]);
+				Window Scaled;
+				Scaled.Scale(capture, (float)potHalfWinLen);
 
-				double rate = absv0 / (absv0 + absv1 + absv2);
+				DComp* fftBuf = new DComp[potHalfWinLen];
+				memset(fftBuf, 0, sizeof(DComp)*potHalfWinLen);
 
-				if (rate > 0.6)
+				for (unsigned i = 0; i < potHalfWinLen; i++)
 				{
-					voiced[i / 3] = 1;
+					float v = Scaled.GetSample((int)i) + Scaled.GetSample((int)i - (int)potHalfWinLen);
+					fftBuf[i].Re = v;
 				}
-			}
+				fft(fftBuf, l);
 
-			for (unsigned i = potHalfWinLen / 6 - 2; i > 1; i--)
-			{
-				if (voiced[i] + voiced[i - 1] + voiced[i + 1] > 1)
+				unsigned char voiced_cache[3] = { 0, 0, 0 };
+				unsigned char cache_pos = 0;
+
+				for (unsigned i = 3; i < potHalfWinLen / 2; i += 3)
 				{
-					for (unsigned j = 1; j <= i; j++)
+					double absv0 = DCAbs(&fftBuf[i]);
+					double absv1 = DCAbs(&fftBuf[i - 1]);
+					double absv2 = DCAbs(&fftBuf[i + 1]);
+
+					double rate = absv0 / (absv0 + absv1 + absv2);
+
+					if (rate > 0.6)
 					{
-						voiced[j] = 1;
+						voiced_cache[cache_pos] = 1;
 					}
-					break;
+					else
+					{
+						voiced_cache[cache_pos] = 0;
+					}
+
+					cache_pos = (cache_pos + 1) % 3;
+
+					if (voiced_cache[0] + voiced_cache[1] + voiced_cache[2] > 1)
+					{
+						maxVoiced = i / 3;
+					}
+
 				}
 
+				delete[] fftBuf;
 			}
-
-			delete[] fftBuf;
 
 			ParameterSet paramSet;
 
-			filter.voiced = voiced;
+			filter.max_voiced = maxVoiced;
 			filter.win1_len = 0.5f / srcSampleFreq / powf(2.0f, _gender);
 			filter.param = &paramSet;
 
@@ -193,6 +192,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			Window srcWin;
 			srcWin.CreateFromBuffer(source, (float)srcPos, srcHalfWinWidth);
 
+			unsigned l;
 			unsigned fftLen;
 			calcPOT((unsigned)ceilf(srcHalfWinWidth), fftLen, l);
 
@@ -251,63 +251,65 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			unsigned paramId = (unsigned)fPeriodCount;
 			if (paramId >= parameters_next.size())
 			{
-				float halfWinlen = 3.0f / srcSampleFreq;
-				Window capture;
-				capture.CreateFromBuffer(source_next, (float)srcPos, halfWinlen);
+				unsigned maxVoiced = 0;
 
-				unsigned l;
-				unsigned potHalfWinLen;
-				calcPOT((unsigned)ceilf(halfWinlen), potHalfWinLen, l);
-
-				Window Scaled;
-				Scaled.Scale(capture, (float)potHalfWinLen);
-
-				DComp* fftBuf = new DComp[potHalfWinLen];
-				memset(fftBuf, 0, sizeof(DComp)*potHalfWinLen);
-
-				for (unsigned i = 0; i < potHalfWinLen; i++)
 				{
-					float v = Scaled.GetSample((int)i) + Scaled.GetSample((int)i - (int)potHalfWinLen);
-					fftBuf[i].Re = v;
-				}
+					float halfWinlen = 3.0f / srcSampleFreq;
+					Window capture;
+					capture.CreateFromBuffer(source_next, (float)srcPos, halfWinlen);
 
-				fft(fftBuf, l);
+					unsigned l;
+					unsigned potHalfWinLen;
+					calcPOT((unsigned)ceilf(halfWinlen), potHalfWinLen, l);
 
-				unsigned char voiced[410];
-				memset(voiced, 0, potHalfWinLen / 6);
+					Window Scaled;
+					Scaled.Scale(capture, (float)potHalfWinLen);
 
-				for (unsigned i = 3; i < potHalfWinLen / 2; i += 3)
-				{
-					double absv0 = DCAbs(&fftBuf[i]);
-					double absv1 = DCAbs(&fftBuf[i - 1]);
-					double absv2 = DCAbs(&fftBuf[i + 1]);
+					DComp* fftBuf = new DComp[potHalfWinLen];
+					memset(fftBuf, 0, sizeof(DComp)*potHalfWinLen);
 
-					double rate = absv0 / (absv0 + absv1 + absv2);
-
-					if (rate > 0.6)
+					for (unsigned i = 0; i < potHalfWinLen; i++)
 					{
-						voiced[i / 3] = 1;
+						float v = Scaled.GetSample((int)i) + Scaled.GetSample((int)i - (int)potHalfWinLen);
+						fftBuf[i].Re = v;
 					}
-				}
 
-				for (unsigned i = potHalfWinLen / 6 - 2; i > 1; i--)
-				{
-					if (voiced[i] + voiced[i - 1] + voiced[i + 1] > 1)
+					fft(fftBuf, l);
+
+					unsigned char voiced_cache[3] = { 0, 0, 0 };
+					unsigned char cache_pos = 0;
+
+					for (unsigned i = 3; i < potHalfWinLen / 2; i += 3)
 					{
-						for (unsigned j = 1; j <= i; j++)
+						double absv0 = DCAbs(&fftBuf[i]);
+						double absv1 = DCAbs(&fftBuf[i - 1]);
+						double absv2 = DCAbs(&fftBuf[i + 1]);
+
+						double rate = absv0 / (absv0 + absv1 + absv2);
+
+						if (rate > 0.6)
 						{
-							voiced[j] = 1;
+							voiced_cache[cache_pos] = 1;
 						}
-						break;
+						else
+						{
+							voiced_cache[cache_pos] = 0;
+						}
+
+						cache_pos = (cache_pos + 1) % 3;
+
+						if (voiced_cache[0] + voiced_cache[1] + voiced_cache[2] > 1)
+						{
+							maxVoiced = i / 3;
+						}
 					}
 
+					delete[] fftBuf;
 				}
-
-				delete[] fftBuf;
 
 				ParameterSet paramSet;
 
-				filter.voiced = voiced;
+				filter.max_voiced = maxVoiced;
 				filter.win1_len = 0.5f / srcSampleFreq / powf(2.0f, _gender);
 				filter.param = &paramSet;
 
@@ -315,6 +317,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				Window srcWin;
 				srcWin.CreateFromBuffer(source_next, (float)srcPos, srcHalfWinWidth);
 
+				unsigned l;
 				unsigned fftLen;
 				calcPOT((unsigned)ceilf(srcHalfWinWidth), fftLen, l);
 
