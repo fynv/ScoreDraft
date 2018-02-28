@@ -81,12 +81,14 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				float voicedEngerySum = 0.0f;
 				float voicedCount = 0.0f;
 
+				float rate1 = win1_len / (fftLen / 2);
+
 				for (unsigned i = max_voiced + 1; i < fftLen / 2; i++)
 				{
 					float amplitude = (float)DCAbs(&fftBuf[i]);
 
 					if ((float)i < win1_len)
-						win1.m_data[i] = amplitude;
+						win1.m_data[i] = amplitude*rate1;
 
 					fftBuf[i].Re = 0.0f;
 					fftBuf[i].Im = 0.0f;
@@ -97,7 +99,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				SymmetricWindow_Axis win2;
 				win2.Scale(win1, (float)(NOISE_HALF_WINDOW));
 
-				float rate = sqrtf((float)(NOISE_HALF_WINDOW) / (float)fftLen);
+				float rate = sqrtf((float)(NOISE_HALF_WINDOW) / win1_len);
 				for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
 				{
 					param->m_noiseAmps[i] = win2.m_data[i]*rate;

@@ -10,7 +10,10 @@
 #include <ReadWav.h>
 #include <WriteWav.h>
 #include "fft.h"
-
+#include <stdlib.h>
+#include <memory.h>
+#include <cmath>
+#include <float.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
