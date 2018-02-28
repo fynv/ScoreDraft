@@ -49,7 +49,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 	tempBuf.m_data.resize(uTempLen);
 	tempBuf.SetZero();
 
-#define NOISE_HALF_WINDOW_L 9
+#define NOISE_HALF_WINDOW_L 8
 #define NOISE_HALF_WINDOW (1<<NOISE_HALF_WINDOW_L)
 
 	class ParameterSet
@@ -57,7 +57,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 	public:
 		float m_pos;
 		SymmetricWindow m_win;
-		float m_noiseAmps[NOISE_HALF_WINDOW / 2 + 1];
+		float m_noiseAmps[NOISE_HALF_WINDOW + 1];
 	};
 
 	std::vector<ParameterSet> parameters;
@@ -92,13 +92,13 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			}
 
 			SymmetricWindow_Axis win2;
-			win2.Scale(win1, (float)(NOISE_HALF_WINDOW / 2));
+			win2.Scale(win1, (float)(NOISE_HALF_WINDOW));
 
-			for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2; i++)
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
 			{
 				param->m_noiseAmps[i] = win2.m_data[i];
 			}
-			param->m_noiseAmps[NOISE_HALF_WINDOW / 2] = 0.0f;
+			param->m_noiseAmps[NOISE_HALF_WINDOW] = 0.0f;
 		}
 	} filter;
 
@@ -493,21 +493,11 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 	delete[] stretchingMap;
 	
-	float noiseBuf[NOISE_HALF_WINDOW];
-	memset(noiseBuf, 0, sizeof(float)*NOISE_HALF_WINDOW);
-	unsigned noiseBufPos = 0;
-
-	float noiseDev = 1.0f / sqrtf((float)(NOISE_HALF_WINDOW / 2));
-
 	paramId0 = 0;
 	paramId0_next = 0;
 
-	for (pos_final = 0; pos_final < uSumLen; pos_final += NOISE_HALF_WINDOW / 2)
+	for (pos_final = 0; pos_final < uSumLen; pos_final += NOISE_HALF_WINDOW)
 	{
-		for (unsigned i = noiseBufPos; i < noiseBufPos + NOISE_HALF_WINDOW / 2; i++)
-		{
-			noiseBuf[i] = randGauss(noiseDev);
-		}
 		float fParamPos = (float)pos_final / float(uSumLen);
 
 		bool in_transition = hasNextNote && _transition > 0.0f && _transition < 1.0f && fParamPos >= transitionStart;
@@ -543,7 +533,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			k = (fParamPos - param0.m_pos) / (param1.m_pos - param0.m_pos);
 		}
 
-		float l_noiseAmps[NOISE_HALF_WINDOW / 2 + 1];
+		float l_noiseAmps[NOISE_HALF_WINDOW + 1];
 		float* dest_noiseAmps = l_noiseAmps;
 
 		if (paramId0 == paramId1)
@@ -552,12 +542,12 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 		}
 		else
 		{
-			for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2 + 1; i++)
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW + 1; i++)
 				l_noiseAmps[i] = (1.0f - k)*param0.m_noiseAmps[i] + k* param1.m_noiseAmps[i];
 		}
 
 		float* final_dest_noiseAmps = dest_noiseAmps;
-		float l_noiseAmps_transit[NOISE_HALF_WINDOW / 2 + 1];
+		float l_noiseAmps_transit[NOISE_HALF_WINDOW + 1];
 
 		if (in_transition)
 		{
@@ -572,7 +562,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				k = (fParamPos - param0_next.m_pos) / (param1_next.m_pos - param0_next.m_pos);
 			}
 
-			float l_noiseAmps_next[NOISE_HALF_WINDOW / 2 + 1];
+			float l_noiseAmps_next[NOISE_HALF_WINDOW + 1];
 			float* dest_noiseAmps_next = l_noiseAmps_next;
 
 			if (paramId0_next == paramId1_next)
@@ -581,7 +571,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			}
 			else
 			{
-				for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2 + 1; i++)
+				for (unsigned i = 0; i < NOISE_HALF_WINDOW + 1; i++)
 					l_noiseAmps_next[i] = (1.0f - k)*param0_next.m_noiseAmps[i] + k* param1_next.m_noiseAmps[i];
 			}
 
@@ -590,46 +580,24 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
 			final_dest_noiseAmps = l_noiseAmps_transit;
 
-			for (unsigned i = 0; i < NOISE_HALF_WINDOW / 2 + 1; i++)
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW + 1; i++)
 				l_noiseAmps_transit[i] = (1.0f - k2)*dest_noiseAmps[i] + k2* dest_noiseAmps_next[i];
 		}
 
 		DComp* fftBuf = new DComp[NOISE_HALF_WINDOW * 2];
-		memset(fftBuf, 0, sizeof(DComp)*NOISE_HALF_WINDOW * 2);
-		for (unsigned i = 0; i< NOISE_HALF_WINDOW / 2; i++)
+
+		fftBuf[0].Re = 0.0;
+		fftBuf[0].Im = 0.0;
+		
+		for (unsigned i = 1; i < NOISE_HALF_WINDOW; i++)
 		{
-			float window = (cosf((float)i * (float)PI / ((float)NOISE_HALF_WINDOW*0.5f)) + 1.0f)*0.5f;
-			float v = noiseBuf[i + noiseBufPos];
-			fftBuf[i].Re = v*window;
-			if (i > 0)
-			{
-				v = noiseBuf[(noiseBufPos + NOISE_HALF_WINDOW - i) % NOISE_HALF_WINDOW];
-				fftBuf[NOISE_HALF_WINDOW * 2 - i].Re = v*window;
-			}
-		}
+			double angle = (double)rand01()*PI*2.0;
+			DCSetAA(&fftBuf[i], 1.0, angle);
+			fftBuf[i].Re *= final_dest_noiseAmps[i];
+			fftBuf[i].Im *= final_dest_noiseAmps[i];
 
-		fft(fftBuf, NOISE_HALF_WINDOW_L + 1);
-
-		for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
-		{
-			float mult;
-			if (i % 2 == 0)
-			{
-				mult = final_dest_noiseAmps[i / 2];
-			}
-			else
-			{
-				mult = 0.5f*(final_dest_noiseAmps[i / 2] + final_dest_noiseAmps[i / 2 + 1]);
-			}
-
-			fftBuf[i].Re *= mult;
-			fftBuf[i].Im *= mult;
-
-			if (i > 0)
-			{
-				fftBuf[NOISE_HALF_WINDOW * 2 - i].Re *= mult;
-				fftBuf[NOISE_HALF_WINDOW * 2 - i].Im *= mult;
-			}
+			fftBuf[NOISE_HALF_WINDOW * 2 - i].Re = fftBuf[i].Re;
+			fftBuf[NOISE_HALF_WINDOW * 2 - i].Im = fftBuf[i].Im;
 		}
 		fftBuf[NOISE_HALF_WINDOW].Re = 0.0f;
 		fftBuf[NOISE_HALF_WINDOW].Im = 0.0f;
@@ -640,15 +608,14 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 		winToMerge.Allocate((float)NOISE_HALF_WINDOW);
 		for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
 		{
-			winToMerge.SetSample((int)i, (float)fftBuf[i].Re);
+			float window = (cosf((float)i * (float)PI / ((float)NOISE_HALF_WINDOW)) + 1.0f)*0.5f;
+			winToMerge.SetSample((int)i, (float)fftBuf[i].Re*window);
 			if (i > 0)
-				winToMerge.SetSample(-(int)i, (float)fftBuf[NOISE_HALF_WINDOW * 2 - i].Re);
+				winToMerge.SetSample(-(int)i, (float)fftBuf[NOISE_HALF_WINDOW * 2 - i].Re*window);
 		}
 		winToMerge.MergeToBuffer(dstBuf, (float)pos_final);
 
 		delete[] fftBuf;
-
-		noiseBufPos = NOISE_HALF_WINDOW / 2 - noiseBufPos;	
 
 	}
 }
