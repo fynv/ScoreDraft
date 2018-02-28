@@ -97,9 +97,10 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				SymmetricWindow_Axis win2;
 				win2.Scale(win1, (float)(NOISE_HALF_WINDOW));
 
+				float rate = (float)(NOISE_HALF_WINDOW) / (float)fftLen;
 				for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
 				{
-					param->m_noiseAmps[i] = win2.m_data[i];
+					param->m_noiseAmps[i] = win2.m_data[i]*rate;
 				}
 				param->m_noiseAmps[NOISE_HALF_WINDOW] = 0.0f;
 			}
