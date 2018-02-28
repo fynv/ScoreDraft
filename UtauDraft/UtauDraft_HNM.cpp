@@ -65,40 +65,48 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 	class Filter : public SymmetricWindow::FFTCallBack
 	{
 	public:
+		bool haveNoise;
 		unsigned max_voiced;
 		float win1_len;
 		ParameterSet *param;
 
 		virtual void process(DComp* fftBuf, unsigned l)
 		{
-			unsigned fftLen = 1 << l;
-			SymmetricWindow_Axis win1;
-			win1.Allocate(win1_len);
-
-			float voicedEngerySum = 0.0f;
-			float voicedCount = 0.0f;
-
-			for (unsigned i = max_voiced + 1; i < fftLen / 2; i++)
+			if (haveNoise)
 			{
-				float amplitude = (float)DCAbs(&fftBuf[i]);
+				unsigned fftLen = 1 << l;
+				SymmetricWindow_Axis win1;
+				win1.Allocate(win1_len);
 
-				if ((float)i < win1_len)
-					win1.m_data[i] = amplitude;
+				float voicedEngerySum = 0.0f;
+				float voicedCount = 0.0f;
 
-				fftBuf[i].Re = 0.0f;
-				fftBuf[i].Im = 0.0f;
-				fftBuf[fftLen - i].Re = 0.0f;
-				fftBuf[fftLen - i].Im = 0.0f;
+				for (unsigned i = max_voiced + 1; i < fftLen / 2; i++)
+				{
+					float amplitude = (float)DCAbs(&fftBuf[i]);
+
+					if ((float)i < win1_len)
+						win1.m_data[i] = amplitude;
+
+					fftBuf[i].Re = 0.0f;
+					fftBuf[i].Im = 0.0f;
+					fftBuf[fftLen - i].Re = 0.0f;
+					fftBuf[fftLen - i].Im = 0.0f;
+				}
+
+				SymmetricWindow_Axis win2;
+				win2.Scale(win1, (float)(NOISE_HALF_WINDOW));
+
+				for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
+				{
+					param->m_noiseAmps[i] = win2.m_data[i];
+				}
+				param->m_noiseAmps[NOISE_HALF_WINDOW] = 0.0f;
 			}
-
-			SymmetricWindow_Axis win2;
-			win2.Scale(win1, (float)(NOISE_HALF_WINDOW));
-
-			for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
+			else
 			{
-				param->m_noiseAmps[i] = win2.m_data[i];
+				memset(param->m_noiseAmps, 0, sizeof(float)*NOISE_HALF_WINDOW);
 			}
-			param->m_noiseAmps[NOISE_HALF_WINDOW] = 0.0f;
 		}
 	} filter;
 
@@ -126,8 +134,10 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 		unsigned paramId = (unsigned)fPeriodCount;
 		if (paramId >= parameters.size())
 		{
+			bool isVowel = (float)srcPos >= fixed_end;
 			unsigned maxVoiced = 0;
 
+			if (!isVowel)
 			{
 				float halfWinlen = 3.0f / srcSampleFreq;
 				Window capture;
@@ -161,7 +171,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 					double rate = absv0 / (absv0 + absv1 + absv2);
 
-					if (rate > 0.6)
+					if (rate > 0.7)
 					{
 						voiced_cache[cache_pos] = 1;
 					}
@@ -184,6 +194,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 			ParameterSet paramSet;
 
+			filter.haveNoise = !isVowel;
 			filter.max_voiced = maxVoiced;
 			filter.win1_len = 0.5f / srcSampleFreq / powf(2.0f, _gender);
 			filter.param = &paramSet;
@@ -287,7 +298,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 						double rate = absv0 / (absv0 + absv1 + absv2);
 
-						if (rate > 0.6)
+						if (rate > 0.7)
 						{
 							voiced_cache[cache_pos] = 1;
 						}
@@ -309,6 +320,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 				ParameterSet paramSet;
 
+				filter.haveNoise = true;
 				filter.max_voiced = maxVoiced;
 				filter.win1_len = 0.5f / srcSampleFreq / powf(2.0f, _gender);
 				filter.param = &paramSet;
@@ -584,38 +596,52 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				l_noiseAmps_transit[i] = (1.0f - k2)*dest_noiseAmps[i] + k2* dest_noiseAmps_next[i];
 		}
 
-		DComp* fftBuf = new DComp[NOISE_HALF_WINDOW * 2];
-
-		fftBuf[0].Re = 0.0;
-		fftBuf[0].Im = 0.0;
-		
+		bool haveNoise = false;
 		for (unsigned i = 1; i < NOISE_HALF_WINDOW; i++)
 		{
-			double angle = (double)rand01()*PI*2.0;
-			DCSetAA(&fftBuf[i], 1.0, angle);
-			fftBuf[i].Re *= final_dest_noiseAmps[i];
-			fftBuf[i].Im *= final_dest_noiseAmps[i];
-
-			fftBuf[NOISE_HALF_WINDOW * 2 - i].Re = fftBuf[i].Re;
-			fftBuf[NOISE_HALF_WINDOW * 2 - i].Im = fftBuf[i].Im;
+			if (final_dest_noiseAmps[i] > 0.0f)
+			{
+				haveNoise = true;
+				break;
+			}
 		}
-		fftBuf[NOISE_HALF_WINDOW].Re = 0.0f;
-		fftBuf[NOISE_HALF_WINDOW].Im = 0.0f;
 
-		ifft(fftBuf, NOISE_HALF_WINDOW_L + 1);
-
-		Window winToMerge;
-		winToMerge.Allocate((float)NOISE_HALF_WINDOW);
-		for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
+		if (haveNoise)
 		{
-			float window = (cosf((float)i * (float)PI / ((float)NOISE_HALF_WINDOW)) + 1.0f)*0.5f;
-			winToMerge.SetSample((int)i, (float)fftBuf[i].Re*window);
-			if (i > 0)
-				winToMerge.SetSample(-(int)i, (float)fftBuf[NOISE_HALF_WINDOW * 2 - i].Re*window);
-		}
-		winToMerge.MergeToBuffer(dstBuf, (float)pos_final);
 
-		delete[] fftBuf;
+			DComp* fftBuf = new DComp[NOISE_HALF_WINDOW * 2];
+
+			fftBuf[0].Re = 0.0;
+			fftBuf[0].Im = 0.0;
+
+			for (unsigned i = 1; i < NOISE_HALF_WINDOW; i++)
+			{
+				double angle = (double)rand01()*PI*2.0;
+				DCSetAA(&fftBuf[i], 1.0, angle);
+				fftBuf[i].Re *= final_dest_noiseAmps[i];
+				fftBuf[i].Im *= final_dest_noiseAmps[i];
+
+				fftBuf[NOISE_HALF_WINDOW * 2 - i].Re = fftBuf[i].Re;
+				fftBuf[NOISE_HALF_WINDOW * 2 - i].Im = fftBuf[i].Im;
+			}
+			fftBuf[NOISE_HALF_WINDOW].Re = 0.0f;
+			fftBuf[NOISE_HALF_WINDOW].Im = 0.0f;
+
+			ifft(fftBuf, NOISE_HALF_WINDOW_L + 1);
+
+			Window winToMerge;
+			winToMerge.Allocate((float)NOISE_HALF_WINDOW);
+			for (unsigned i = 0; i < NOISE_HALF_WINDOW; i++)
+			{
+				float window = (cosf((float)i * (float)PI / ((float)NOISE_HALF_WINDOW)) + 1.0f)*0.5f;
+				winToMerge.SetSample((int)i, (float)fftBuf[i].Re*window);
+				if (i > 0)
+					winToMerge.SetSample(-(int)i, (float)fftBuf[NOISE_HALF_WINDOW * 2 - i].Re*window);
+			}
+			winToMerge.MergeToBuffer(dstBuf, (float)pos_final);
+
+			delete[] fftBuf;
+		}
 
 	}
 }
