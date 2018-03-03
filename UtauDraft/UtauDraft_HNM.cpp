@@ -511,9 +511,9 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 	paramId0 = 0;
 	paramId0_next = 0;
 
-	for (pos_final = 0; pos_final < uSumLen; pos_final += NOISE_HALF_WINDOW)
+	for (float f_pos_final = 0.0f; f_pos_final - (float)NOISE_HALF_WINDOW < uSumLen; f_pos_final += (float)NOISE_HALF_WINDOW)
 	{
-		float fParamPos = (float)pos_final / float(uSumLen);
+		float fParamPos = f_pos_final / float(uSumLen);
 
 		bool in_transition = hasNextNote && _transition > 0.0f && _transition < 1.0f && fParamPos >= transitionStart;
 
@@ -641,7 +641,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				if (i > 0)
 					winToMerge.SetSample(-(int)i, (float)fftBuf[NOISE_HALF_WINDOW * 2 - i].Re*window);
 			}
-			winToMerge.MergeToBuffer(dstBuf, (float)pos_final);
+			winToMerge.MergeToBuffer(dstBuf, f_pos_final);
 
 			delete[] fftBuf;
 		}
