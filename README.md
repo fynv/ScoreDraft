@@ -454,14 +454,14 @@ The converter function should have the following form:
 
 	def LyricConverterFunc(LyricForEachSyllable):
 		...
-		return [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]
+		return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
 
 ```
 
 The argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string, which is the input lyric of a syllable.
 
 The converter function should convert 1 input lyric into 1 or more lyrics to split the duration of the original syllable. A weight value should be provided to indicate the ratio
-or duration of the converted note.
+or duration of the converted note. A bool value "isVowel" need to be provided to indicate whether it contains the vowel part of the syllable.
 
 Examples of converter functions can be found in CVVCChineseConverter.py, TsuroVCVConverter.py and JPVCVConverter.py.
 

@@ -42,7 +42,7 @@ def JPVCVConverter(LyricForEachSyllable):
 		v='-'
 		if i>0:
 			v= vowels[i-1]
-		ret+=[(v+' '+LyricForEachSyllable[i], 1.0)]
+		ret+=[(v+' '+LyricForEachSyllable[i], 1.0, True)]
 	return ret
 
 

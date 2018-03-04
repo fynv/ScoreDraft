@@ -91,6 +91,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 				SingingPieceInternal _piece;
 				_piece.lyric = lyric;
 				_piece.notes = noteParams;
+				_piece.isVowel = true;
 				NoteBuffer noteBuf;
 				noteBuf.m_sampleRate = (float)buffer.Rate();
 				noteBuf.m_cursorDelta = totalDuration;
@@ -129,6 +130,7 @@ void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned 
 		SingingPieceInternal _piece;
 		_piece.lyric = lyric;
 		_piece.notes = noteParams;
+		_piece.isVowel = true;
 		NoteBuffer noteBuf;
 		noteBuf.m_sampleRate = (float)buffer.Rate();
 		noteBuf.m_cursorDelta = totalDuration;
@@ -166,6 +168,7 @@ void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned temp
 	_piece.fNumOfSamples = fNumOfSamples;
 	_piece.sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
 	_piece.sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
+	_piece.isVowel = true;
 
 	NoteBuffer noteBuf;
 	noteBuf.m_sampleRate = (float)buffer.Rate();
@@ -205,6 +208,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 						SingingPieceInternal_Deferred _piece;
 						_piece->lyric = lyric;
 						_piece->notes = noteParams;
+						_piece->isVowel = true;
 						pieceList.push_back(_piece);
 					}
 					NoteBuffer noteBuf;
@@ -244,6 +248,7 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 			SingingPieceInternal_Deferred _piece;
 			_piece->lyric = lyric;
 			_piece->notes = noteParams;
+			_piece->isVowel = true;
 			pieceList.push_back(_piece);
 		}		
 	}
@@ -305,7 +310,7 @@ void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces
 			_piece->fNumOfSamples = fNumOfSamples;
 			_piece->sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
 			_piece->sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
-
+			_piece->isVowel = true;
 			totalDuration += fNumOfSamples;
 
 			pieceList.push_back(_piece);

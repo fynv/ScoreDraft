@@ -138,7 +138,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 		unsigned paramId = (unsigned)fPeriodCount;
 		if (paramId >= parameters.size())
 		{
-			bool isVowel = (float)srcPos >= fixed_end || (float)srcPos<overlap_pos;
+			bool isVowel = _isVowel &&((float)srcPos >= fixed_end || (float)srcPos<overlap_pos);
 			unsigned maxVoiced = 0;
 
 			if (!isVowel)
@@ -195,7 +195,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 				delete[] fftBuf;
 			}
-			if ((float)srcPos >= preutter_pos && maxVoiced < lastmaxVoiced)
+			if (_isVowel && (float)srcPos >= preutter_pos && maxVoiced < lastmaxVoiced)
 				maxVoiced = lastmaxVoiced;
 
 			lastmaxVoiced = maxVoiced;
@@ -271,7 +271,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			unsigned paramId = (unsigned)fPeriodCount;
 			if (paramId >= parameters_next.size())
 			{
-				bool isVowel =(float)srcPos<overlap_pos_next;
+				bool isVowel = _isVowel && (float)srcPos<overlap_pos_next;
 				unsigned maxVoiced = 0;
 
 				if (!isVowel)
@@ -328,7 +328,7 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 
 					delete[] fftBuf;
 				}
-				if ((float)srcPos >= preutter_pos_next && maxVoiced < lastmaxVoiced)
+				if (_isVowel && (float)srcPos >= preutter_pos_next && maxVoiced < lastmaxVoiced)
 					maxVoiced = lastmaxVoiced;
 
 				lastmaxVoiced = maxVoiced;

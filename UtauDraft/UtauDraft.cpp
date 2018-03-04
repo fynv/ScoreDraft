@@ -311,7 +311,7 @@ void UtauDraft::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList,
 			lyric_next = pieceList[j + 1]->lyric.data();
 		}
 
-		_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0);
+		_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0, piece.isVowel);
 
 		noteBufPos += uSumLen;
 			
@@ -407,7 +407,7 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 			lyric_next = pieceList[j + 1]->lyric.data();
 		}
 
-		_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0);
+		_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0, piece.isVowel);
 
 		noteBufPos += uSumLen;
 	}
@@ -465,9 +465,10 @@ SingingPieceInternalList UtauDraft::_convertLyric_singing(SingingPieceInternalLi
 
 		std::vector<std::string> lyrics;
 		std::vector<float> weights;
+		std::vector<bool> isVowels;
 
 		float sum_weight = 0.0f;
-		for (unsigned j = 0; j < count; j+=2)
+		for (unsigned j = 0; j < count; j+=3)
 		{
 			PyObject *byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple, j), m_lyric_charset.data(), 0);
 			std::string lyric = PyBytes_AS_STRING(byteCode);
@@ -481,6 +482,13 @@ SingingPieceInternalList UtauDraft::_convertLyric_singing(SingingPieceInternalLi
 			weights.push_back(weight);
 				
 			sum_weight += weight;
+
+			bool isVowel = true;
+			if (j + 2 < count)
+			{
+				isVowel =(bool)PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2));
+			}
+			isVowels.push_back(isVowel);
 		}	
 
 		SingingPieceInternal_Deferred piece = pieceList[i];
@@ -500,9 +508,12 @@ SingingPieceInternalList UtauDraft::_convertLyric_singing(SingingPieceInternalLi
 		{
 			float weight = weights[j] / sum_weight;
 			float endPos = startPos + weight* totalNumSamples;
+
+			bool isVowel = isVowels[j];
 				
 			SingingPieceInternal_Deferred newPiece;
 			newPiece->lyric = lyrics[j];
+			newPiece->isVowel = isVowel;
 
 			while (endPos > noteStartPos || newPiece->notes.size()==0)
 			{
@@ -553,9 +564,10 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 
 		std::vector<std::string> lyrics;
 		std::vector<float> weights;
+		std::vector<bool> isVowels;
 
 		float sum_weight = 0.0f;
-		for (unsigned j = 0; j < count; j += 2)
+		for (unsigned j = 0; j < count; j +=3)
 		{
 			PyObject *byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple, j), m_lyric_charset.data(), 0);
 			std::string lyric = PyBytes_AS_STRING(byteCode);
@@ -569,6 +581,13 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 			weights.push_back(weight);
 
 			sum_weight += weight;
+
+			bool isVowel = true;
+			if (j + 2 < count)
+			{
+				isVowel = (bool)PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2));
+			}
+			isVowels.push_back(isVowel);
 		}
 
 		const RapPieceInternal& inputPiece = *inputList[i];
@@ -576,10 +595,12 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 		for (unsigned j = 0; j < lyrics.size(); j++)
 		{
 			float weight = weights[j] / sum_weight;
+			bool isVowel = isVowels[j];
 
 			RapPieceInternal_Deferred outputPiece;
 			outputPiece->fNumOfSamples = weight* inputPiece.fNumOfSamples;
 			outputPiece->lyric = lyrics[j];
+			outputPiece->isVowel = isVowel;
 			outputPiece->sampleFreq1 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
 			k += weight;
 			outputPiece->sampleFreq2 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
@@ -619,9 +640,10 @@ float UtauDraft::getFirstNoteHeadSamples(const char* lyric)
 
 }
 
-void UtauDraft::_generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote)
+void UtauDraft::_generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote, bool isVowel)
 {
 	GenWaveStruct gws;
+	gws._isVowel = isVowel;
 	gws._transition = m_transition;
 	gws._gender = m_gender;
 	gws.uSumLen = uSumLen;
@@ -963,8 +985,9 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 		"\tThe 'LyricConverterFunc' has the following form:\n"
 		"\tdef LyricConverterFunc(LyricForEachSyllable):\n"
 		"\t\t...\n"
-		"\t\treturn [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]\n"
+		"\t\treturn [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]\n"
 		"\tThe argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string\n"
-		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable.\n"
+		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable,\n"
+		"\tplus a bool value indicating whether it is the vowel part of the syllable.\n"
 		"\t'''\n");
 }

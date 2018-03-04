@@ -162,7 +162,7 @@ def TTEnglishConverter(inList):
 		weight=0.1
 		if outItem[2]:
 			weight=0.4
-		syllable+=(outItem[0], weight)
+		syllable+=(outItem[0], weight, outItem[2])
 
 	ret+=[syllable]
 

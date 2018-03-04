@@ -421,13 +421,13 @@ UTAU 的音源可以直接放在"UTAUVoice"目录下。"UTAUVoice"的每个子�
 
 	def LyricConverterFunc(LyricForEachSyllable):
 		...
-		return [(lyric1ForSyllable1, weight11, lyric2ForSyllable1, weight21...  ),(lyric1ForSyllable2, weight12, lyric2ForSyllable2, weight22...), ...]
+		return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
 
 ```
 
 输入参数'LyricForEachSyllable' 是歌唱片段中输入的歌词列表 [lyric1, lyric2, ...], 每个歌词
-对应一个音节。拆词函数将每个输入歌词转换为1个或多个歌词，来瓜分原歌词的时值。输出的时候，要个每个
-分解后的歌词设置一个权重，以指示分解后的歌词在原歌词的时值中所占的比例。
+对应一个音节。拆词函数将每个输入歌词转换为1个或多个歌词，来瓜分原歌词的时值。输出的时候，要给每个
+分解后的歌词设置一个权重，以指示分解后的歌词在原歌词的时值中所占的比例。另外还需要提供一个bool值isVowel只是分离出来的这个部分是否包含原音节的元音部分。
 
 目前已经实现了若干拆词函数的实例，可以直接使用它们，也可以在实现其他拆词函数是作为参考。详见：
 CVVCChineseConverter.py, TsuroVCVConverter.py 和 JPVCVConverter.py.

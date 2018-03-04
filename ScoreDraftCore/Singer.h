@@ -22,6 +22,8 @@ struct SingingPieceInternal
 {
 	std::string lyric;
 	std::vector<SingerNoteParams> notes;
+
+	bool isVowel;
 };
 
 typedef Deferred<SingingPieceInternal> SingingPieceInternal_Deferred;
@@ -33,6 +35,8 @@ struct RapPieceInternal
 	float fNumOfSamples;
 	float sampleFreq1;
 	float sampleFreq2;
+
+	bool isVowel;
 };
 
 typedef Deferred<RapPieceInternal> RapPieceInternal_Deferred;

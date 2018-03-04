@@ -41,6 +41,7 @@ public:
 private:
 	struct GenWaveStruct
 	{
+		bool _isVowel;
 		float _transition;
 		float _gender;
 
@@ -82,7 +83,7 @@ private:
 	SingingPieceInternalList _convertLyric_singing(SingingPieceInternalList pieceList);
 	RapPieceInternalList _convertLyric_rap(const RapPieceInternalList& inputList);
 	float getFirstNoteHeadSamples(const char* lyric);
-	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote);
+	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote, bool isVowel);
 
 	OtoMap* m_OtoMap;
 

@@ -88,10 +88,10 @@ def XiaYYConverter(LyricForEachSyllable):
 			lyric=CV[i-1][1]+" "+lyric
 		if i<len(LyricForEachSyllable)-1 and CV[i+1][0]!='':
 			if (CV[i][1]=="w" or CV[i][1]=="y") and	(CV[i+1][0]=="w" or CV[i+1][0]=="y"):
-				ret+=[(lyric,1.0)]
+				ret+=[(lyric,1.0,True)]
 			else:
-				ret+=[(lyric,0.875, CV[i][1]+" "+CV[i+1][0], 0.125)]
+				ret+=[(lyric,0.875,True, CV[i][1]+" "+CV[i+1][0], 0.125,False)]
 		else:
-			ret+=[(lyric,1.0)]
+			ret+=[(lyric,1.0,True)]
 	return ret
 
