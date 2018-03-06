@@ -486,7 +486,7 @@ SingingPieceInternalList UtauDraft::_convertLyric_singing(SingingPieceInternalLi
 			bool isVowel = true;
 			if (j + 2 < count)
 			{
-				isVowel =(bool)PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2));
+				isVowel = PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2)) !=0 ;
 			}
 			isVowels.push_back(isVowel);
 		}	
@@ -585,7 +585,7 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 			bool isVowel = true;
 			if (j + 2 < count)
 			{
-				isVowel = (bool)PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2));
+				isVowel = PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2)) != 0;
 			}
 			isVowels.push_back(isVowel);
 		}

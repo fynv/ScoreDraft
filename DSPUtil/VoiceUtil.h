@@ -24,6 +24,21 @@
 #endif
 
 
+inline float rand01()
+{
+	float f = (float)rand() / (float)RAND_MAX;
+	if (f < 0.0000001f) f = 0.0000001f;
+	if (f > 0.9999999f) f = 0.9999999f;
+	return f;
+}
+
+inline float randGauss(float sd)
+{
+	return sd*sqrtf(-2.0f*logf(rand01()))*cosf(rand01()*(float)PI);
+}
+
+
+
 namespace VoiceUtil
 {
 	inline void calcPOT(unsigned lenIn, unsigned& lenOut, unsigned& l)
@@ -102,6 +117,7 @@ namespace VoiceUtil
 		writer.WriteSamples(buf.m_data.data(), numSamples, volume);
 	}
 
+	class AmpSpectrum;
 	class Window
 	{
 	public:
@@ -272,7 +288,205 @@ namespace VoiceUtil
 			}
 		}
 
+		inline void CreateFromAmpSpec_noise(const AmpSpectrum& src, float targetHalfWidth=-1.0f);
+
 	};
+
+	class AmpSpectrum
+	{
+	public:
+		float m_halfWidth;
+		std::vector<float> m_data;
+
+		void Allocate(float halfWidth)
+		{
+			m_halfWidth = halfWidth;
+			unsigned specLen = (unsigned)ceilf(m_halfWidth*0.5f);
+			m_data.resize(specLen);
+
+			SetZero();
+		}
+
+		void SetZero()
+		{
+			memset(m_data.data(), 0, sizeof(float)*m_data.size());
+		}
+
+		bool NonZero()
+		{
+			for (unsigned i = 1; i < (unsigned)m_data.size(); i++)
+				if (m_data[i] != 0.0f) return true;
+			return false;
+		}
+
+		void CreateFromWindow(const Window& src)
+		{
+			m_halfWidth = src.m_halfWidth;
+			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
+			unsigned l = 0;
+			unsigned fftLen = 1;
+			while (fftLen < u_srcHalfWidth)
+			{
+				l++;
+				fftLen <<= 1;
+			}
+			float fLen = (float)fftLen;
+
+			Window l_scaled;
+			const Window* scaled = &l_scaled;
+			if (src.m_halfWidth == fLen)
+			{
+				scaled = &src;
+			}
+			else
+			{
+				l_scaled.Scale(src, fLen);
+			}
+
+			DComp* fftBuf = new DComp[fftLen];
+			memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				fftBuf[i].Re = (double)scaled->GetSample((int)i) + (double)scaled->GetSample((int)i - (int)fftLen);
+			}
+
+			fft(fftBuf, l);
+
+			float rate = m_halfWidth / fLen;
+			m_data.resize((unsigned)ceilf(m_halfWidth*0.5f));
+			for (unsigned i = 0; i < (unsigned)m_data.size(); i++)
+			{
+				if (i >= fftLen)
+					m_data[i] = 0.0f;
+				else
+					m_data[i] = (float)DCAbs(&fftBuf[i])*rate;
+			}
+		}
+
+		void Interpolate(const AmpSpectrum& spec0, const AmpSpectrum& spec1, float k, float targetHalfWidth)
+		{
+			m_halfWidth = targetHalfWidth;
+			unsigned specLen = (unsigned)ceilf(m_halfWidth*0.5f);
+			m_data.resize(specLen);
+
+			for (unsigned i = 0; i <specLen; i++)
+			{
+				float v0 = spec0.GetSample(i);
+				float v1 = spec1.GetSample(i);
+				m_data[i]= (1.0f - k) *v0 + k* v1;
+			}
+		}
+
+
+		float GetSample(int i) const
+		{
+			if (i < 0) i = 0;
+			if (i >= (int)m_data.size()) i = (int)m_data.size() - 1;
+			return m_data[i];
+		}
+
+		void Scale(const AmpSpectrum& src, float targetHalfWidth)
+		{
+			m_halfWidth = targetHalfWidth;
+			unsigned specLen = (unsigned)ceilf(m_halfWidth*0.5f);
+			m_data.resize(specLen);
+
+			float rate = src.m_halfWidth / targetHalfWidth;
+			float mulRate = sqrtf(targetHalfWidth / src.m_halfWidth);
+			bool interpolation = rate < 1.0f;
+			for (unsigned i = 0; i < specLen; i++)
+			{
+				float destValue;
+				float srcPos = (float)i*rate;
+				if (interpolation)
+				{
+					int ipos1 = (int)floorf(srcPos);
+					float frac = srcPos - (float)ipos1;
+					int ipos2 = ipos1 + 1;
+					int ipos0 = ipos1 - 1;
+					int ipos3 = ipos1 + 2;
+
+					float p0 = src.GetSample(ipos0);
+					float p1 = src.GetSample(ipos1);
+					float p2 = src.GetSample(ipos2);
+					float p3 = src.GetSample(ipos3);
+
+					destValue = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+						(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+						(-0.5f*p0 + 0.5f*p2)*frac + p1;
+				}
+				else
+				{
+					int ipos1 = (int)ceilf(srcPos - rate*0.5f);
+					int ipos2 = (int)floorf(srcPos + rate*0.5f);
+
+					float sum = 0.0f;
+					for (int ipos = ipos1; ipos <= ipos2; ipos++)
+					{
+						sum += src.GetSample(ipos);
+					}
+					destValue = sum / (float)(ipos2 - ipos1 + 1);
+
+				}
+
+				m_data[i] = destValue*mulRate;
+
+			}
+		}
+
+	};
+
+	void Window::CreateFromAmpSpec_noise(const AmpSpectrum& src, float targetHalfWidth)
+	{
+		unsigned l = 0;
+		unsigned fftLen = 1;
+		while ((float)fftLen < src.m_halfWidth)
+		{
+			l++;
+			fftLen <<= 1;
+		}
+
+		DComp* fftBuf = new DComp[fftLen];
+		memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+		float rate = (float)fftLen / src.m_halfWidth;
+
+		for (unsigned i = 1; i < (unsigned)src.m_data.size(); i++)
+		{
+			if (i < fftLen / 2)
+			{
+				float angle = (float)rand01()*(float)PI*2.0f;
+				float re = src.m_data[i] * cosf(angle) * rate;
+				float im = src.m_data[i] * sinf(angle) * rate;
+
+				fftBuf[i].Re = (double)re;
+				fftBuf[i].Im = (double)im;
+
+				fftBuf[fftLen - i].Re = (double)re;
+				fftBuf[fftLen - i].Im = -(double)im;
+				
+			}
+		}
+
+		ifft(fftBuf, l);
+
+		Window tempWin;
+		tempWin.m_halfWidth = (float)fftLen;
+		tempWin.m_data.resize(fftLen * 2);
+
+		for (unsigned i = 0; i < fftLen; i++)
+		{
+			float window = (cosf((float)i * (float)PI / tempWin.m_halfWidth) + 1.0f)*0.5f;
+			tempWin.m_data[i] = window*(float)fftBuf[i].Re;
+			if (i>0)
+				tempWin.m_data[fftLen * 2 - i] = window*(float)fftBuf[fftLen - i].Re;
+		}
+		delete[] fftBuf;
+
+		this->Scale(tempWin, targetHalfWidth>0.0f ? targetHalfWidth: src.m_halfWidth);
+
+	}
 
 	class SymmetricWindow_Base : public Window
 	{
@@ -493,6 +707,48 @@ namespace VoiceUtil
 			}
 		}
 
+		void CreateFromAmpSpec(const AmpSpectrum& src, float targetHalfWidth=-1.0f)
+		{
+			unsigned l = 0;
+			unsigned fftLen = 1;
+			while ((float)fftLen < src.m_halfWidth)
+			{
+				l++;
+				fftLen <<= 1;
+			}
+
+			DComp* fftBuf = new DComp[fftLen];
+			memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+			float rate = (float)fftLen / src.m_halfWidth;
+
+			for (unsigned i = 0; i < (unsigned)src.m_data.size(); i++)
+			{
+				if (i < fftLen / 2)
+				{
+					fftBuf[i].Re = src.m_data[i] * rate;
+					if (i>0)
+						fftBuf[fftLen - i].Re = src.m_data[i] * rate;
+				}
+			}
+
+			ifft(fftBuf, l);
+
+			SymmetricWindow_Axis tempWin;
+			tempWin.m_halfWidth = (float)fftLen;
+			tempWin.m_data.resize(fftLen);
+
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				float window = (cosf((float)i * (float)PI / tempWin.m_halfWidth) + 1.0f)*0.5f;
+				tempWin.m_data[i] = window*(float)fftBuf[i].Re;
+			}
+			delete[] fftBuf;
+
+			this->Scale(tempWin, targetHalfWidth>0.0f ? targetHalfWidth: src.m_halfWidth);
+
+		}
+
 	};
 
 
@@ -632,6 +888,47 @@ namespace VoiceUtil
 				float window = (cosf((float)i * (float)PI / targetHalfWidth) + 1.0f)*0.5f;
 				m_data[i] *= amplitude*window;
 			}
+		}
+
+		void CreateFromAmpSpec(const AmpSpectrum& src, float targetHalfWidth = -1.0f)
+		{
+			unsigned l = 0;
+			unsigned fftLen = 1;
+			while ((float)fftLen < src.m_halfWidth)
+			{
+				l++;
+				fftLen <<= 1;
+			}
+
+			DComp* fftBuf = new DComp[fftLen];
+			memset(fftBuf, 0, sizeof(DComp)*fftLen);
+
+			float rate = (float)fftLen / src.m_halfWidth;
+
+			for (unsigned i = 1; i < (unsigned)src.m_data.size(); i++)
+			{
+				if (i < fftLen / 2)
+				{
+					fftBuf[i].Im = src.m_data[i] * rate;
+					fftBuf[fftLen - i].Im = -src.m_data[i] * rate;
+				}
+			}
+
+			ifft(fftBuf, l);
+
+			SymmetricWindow_Center tempWin;
+			tempWin.m_halfWidth = (float)fftLen;
+			tempWin.m_data.resize(fftLen);
+
+			for (unsigned i = 0; i < fftLen; i++)
+			{
+				float window = (cosf((float)i * (float)PI / tempWin.m_halfWidth) + 1.0f)*0.5f;
+				tempWin.m_data[i] = window*(float)fftBuf[i].Re;
+			}
+			delete[] fftBuf;
+
+			this->Scale(tempWin, targetHalfWidth>0.0f ? targetHalfWidth:src.m_halfWidth);
+
 		}
 
 	};
