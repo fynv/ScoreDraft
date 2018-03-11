@@ -11,7 +11,7 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 {
 	float pos = startPosition;
 
-	int pitchShift = (int)(logf(RefFreq / 261.626f)*12.0f / logf(2.0f) +0.5f);
+	int pitchShift = (int)floorf(logf(RefFreq / 261.626f)*12.0f / logf(2.0f) + 0.5f);
 
 	size_t piece_count = PyList_Size(seq_py);
 	for (size_t i = 0; i < piece_count; i++)
@@ -124,7 +124,217 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyOb
 			pos += fduration;
 		}
 	}
+}
 
+void VisSinging::CreateFromSingingPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const SingingPiece& piece)
+{
+	this->singerId = singerId;
+	this->lyric = piece.m_lyric;
+	this->start = pos;
+
+	float totalLen = 0.0f;
+	for (unsigned i = 0; i < (unsigned)piece.m_notes.size(); i++)
+	{
+		unsigned uDuration = piece.m_notes[i].m_duration;
+		float fduration = (float)(uDuration * 60) / (float)(tempo * 48);
+		totalLen += fduration;
+	}
+	this->end = pos + totalLen;
+
+	float pitchPerSec = 50.0f;
+	float secPerPitchSample = 1.0f / pitchPerSec;
+
+	unsigned pitchLen = (unsigned)ceilf(totalLen*pitchPerSec);
+	this->pitch.resize(pitchLen);
+	unsigned pitchPos = 0;
+	float fPitchPos = 0.0f;
+	float nextPitchPos=0.0f;
+	for (unsigned i = 0; i < (unsigned)piece.m_notes.size(); i++)
+	{
+		unsigned uDuration = piece.m_notes[i].m_duration;
+		float fduration = (float)(uDuration * 60) / (float)(tempo * 48);
+		nextPitchPos += fduration;
+		for (; fPitchPos < nextPitchPos && pitchPos<pitchLen; fPitchPos += secPerPitchSample, pitchPos++)
+		{
+			pitch[pitchPos] = piece.m_notes[i].m_freq_rel;
+		}
+	}
+
+	// smoothing
+	float* temp = new float[pitchLen];
+	temp[0] = pitch[0];
+	temp[pitchLen - 1] = pitch[pitchLen - 1];
+	for (unsigned i = 1; i < pitchLen - 1; i++)
+	{
+		temp[i] = 0.25f*(pitch[i - 1] + pitch[i + 1]) + 0.5f*pitch[i];
+	}
+
+	for (unsigned i = 0; i < pitchLen; i++)
+	{
+		pitch[i] = logf(temp[i])*12.0f / logf(2.0f) + pitchShift;
+	}
+
+	delete[] temp;
+}
+
+void VisSinging::CreateFromRapPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const RapPiece& piece)
+{
+	this->singerId = singerId;
+	this->lyric = piece.m_lyric;
+	this->start = pos;
+	float totalLen = (float)(piece.m_duration * 60) / (float)(tempo * 48);
+	this->end = pos + totalLen;
+
+	float pitchPerSec = 50.0f;
+	float secPerPitchSample = 1.0f / pitchPerSec;
+	unsigned pitchLen = (unsigned)ceilf(totalLen*pitchPerSec);
+	this->pitch.resize(pitchLen);
+
+	for (unsigned i = 0; i < pitchLen; i++)
+	{
+		float k = (float)i / (float)(pitchLen - 1);
+		pitch[i] = (1.0f - k)*piece.m_freq1 + k*piece.m_freq2;
+	}
+
+	// smoothing
+	float* temp = new float[pitchLen];
+	temp[0] = pitch[0];
+	temp[pitchLen - 1] = pitch[pitchLen - 1];
+	for (unsigned i = 1; i < pitchLen - 1; i++)
+	{
+		temp[i] = 0.25f*(pitch[i - 1] + pitch[i + 1]) + 0.5f*pitch[i];
+	}
+
+	for (unsigned i = 0; i < pitchLen; i++)
+	{
+		pitch[i] = logf(temp[i])*12.0f / logf(2.0f) + pitchShift;
+	}
+
+	delete[] temp;
+}
+
+
+void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObject *seq_py, unsigned tempo, float RefFreq)
+{
+	float pos = startPosition;
+	float pitchShift = floorf(logf(RefFreq / 261.626f)*12.0f / logf(2.0f) + 0.5f);
+
+	size_t piece_count = PyList_Size(seq_py);
+
+	for (size_t i = 0; i < piece_count; i++)
+	{
+		PyObject *item = PyList_GetItem(seq_py, i);
+		if (PyObject_TypeCheck(item, &PyTuple_Type))
+		{
+			PyObject *_item = PyTuple_GetItem(item, 0);
+			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
+			{
+				size_t tupleSize = PyTuple_Size(item);
+
+				size_t j = 0;
+				while (j < tupleSize)
+				{
+					_item = PyTuple_GetItem(item, j);
+					std::string lyric = _PyUnicode_AsString(_item);
+					j++;
+
+					_item = PyTuple_GetItem(item, j);
+					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
+					{
+						SingingPiece piece;
+						piece.m_lyric = lyric;
+
+						float totalDuration = 0.0f;
+
+						for (; j<tupleSize; j++)
+						{
+							_item = PyTuple_GetItem(item, j);
+							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;
+
+							Note note;
+							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
+							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+							
+							float fduration = (float)(note.m_duration * 60) / (float)(tempo * 48);
+
+							if (note.m_freq_rel>0.0f)
+							{
+								piece.m_notes.push_back(note);
+								totalDuration += fduration;
+							}
+							else
+							{
+								if (piece.m_notes.size() > 0)
+								{
+									VisSinging singing;
+									singing.CreateFromSingingPiece(singerId, pos, pitchShift, tempo, piece);
+									m_singings.push_back(singing);
+
+									piece.m_notes.clear();
+									pos += totalDuration;
+									totalDuration = 0.0f;
+								}
+								pos += fduration;
+							}
+						}
+						if (piece.m_notes.size() > 0)
+						{
+							VisSinging singing;
+							singing.CreateFromSingingPiece(singerId, pos, pitchShift, tempo, piece);
+							m_singings.push_back(singing);
+							pos += totalDuration;
+						}
+			
+					}
+					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
+					{
+						RapPiece piece;
+						piece.m_lyric = lyric;
+						piece.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						j++;
+						piece.m_freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						j++;
+						piece.m_freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						j++;
+
+						float fduration = (float)(piece.m_duration * 60) / (float)(tempo * 48);
+						if (piece.m_freq1 > 0.0 && piece.m_freq2 > 0.0)
+						{
+							VisSinging singing;
+							singing.CreateFromRapPiece(singerId, pos, pitchShift, tempo, piece);
+							m_singings.push_back(singing);
+						}
+						pos += fduration;
+					}
+
+				}
+
+			}
+			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
+			{
+				SingingPiece piece;
+				piece.m_lyric = "";
+
+				Note note;
+				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+
+				piece.m_notes.push_back(note);
+
+				float fduration = (float)(note.m_duration * 60) / (float)(tempo * 48);
+
+				if (note.m_freq_rel > 0.0f)
+				{
+					VisSinging singing;
+					singing.CreateFromSingingPiece(singerId, pos, pitchShift, tempo,piece);
+					m_singings.push_back(singing);
+				}
+
+				pos += fduration;
+			}
+
+		}
+	}
 }
 
 void Visualizer::Play(unsigned bufferId) const
@@ -200,6 +410,22 @@ static PyObject* ProcessBeatSeq(PyObject *args)
 
 }
 
+
+static PyObject* ProcessSingingSeq(PyObject *args)
+{
+	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	unsigned singerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
+	float startPosition = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+	PyObject *seq_py = PyTuple_GetItem(args, 3);
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
+	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 5));
+
+	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
+	visualizer->ProcessSingingSeq(singerId, startPosition, seq_py, tempo, RefFreq);
+
+	return PyLong_FromUnsignedLong(0);
+}
+
 static PyObject* Play(PyObject *args)
 {
 	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
@@ -220,6 +446,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 	pyScoreDraft->RegisterInterfaceExtension("MeteorDelVisualizer", DelVisualizer, "visualizerId", "visualizerId");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessNoteSeq", ProcessNoteSeq, "visualizerId, instrument, startPos, seq, tempo, refFreq", "visualizerId, instrument.id, startPos, seq, tempo, refFreq");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessBeatSeq", ProcessBeatSeq, "visualizerId, percList, startPos, seq, tempo", "visualizerId, ObjectToId(percList), startPos, seq, tempo");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessSingingSeq", ProcessSingingSeq, "visualizerId, singer, startPos, seq, tempo, refFreq", "visualizerId, singer.id, startPos, seq, tempo, refFreq");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorPlay", Play, "visualizerId, buffer", "visualizerId, buffer.id");
 }
 

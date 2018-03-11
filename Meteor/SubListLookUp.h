@@ -37,6 +37,7 @@ public:
 		m_interval = interval;
 		m_minStart = FLT_MAX;
 		m_maxEnd = -FLT_MAX;
+		if (fullList.size()==0) return;
 		for (unsigned i = 0; i < (unsigned) fullList.size(); i++)
 		{
 			if (fullList[i].start < m_minStart) m_minStart = fullList[i].start;

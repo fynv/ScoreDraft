@@ -50,6 +50,9 @@ private:
 	ColorMap m_PercColorMap;
 	std::vector<Pos2D> m_beats_centers;
 
+	SubLists<VisSinging> m_singing_sublists;
+	ColorMap m_SingerColorMap;
+
 	float m_refTime;
 	QTime m_timer;
 
@@ -68,6 +71,8 @@ private:
 
 	float m_percussion_flash_size_factor;
 	float m_percussion_flash_limit;
+
+	float m_singing_half_width;
 };
 
 

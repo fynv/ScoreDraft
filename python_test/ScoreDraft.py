@@ -364,6 +364,9 @@ class Document:
 	def setTrackVolume(self, bufferIndex, volume):
 		self.bufferList[bufferIndex].setVolume(volume)
 
+	def setTrackPan(self, bufferIndex, pan):
+		self.bufferList[bufferIndex].setPan(pan)
+
 	def playNoteSeq(self, seq, instrument, bufferIndex=-1):
 		'''
 		Play a note sequence in the context of a document.

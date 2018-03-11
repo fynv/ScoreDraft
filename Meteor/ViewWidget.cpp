@@ -37,6 +37,8 @@ ViewWidget::ViewWidget(QWidget* parent)
 	m_percussion_flash_size_factor = 0.15f;
 	m_percussion_flash_limit = 0.3f;
 
+	m_singing_half_width = 8.0f;
+
 }
 
 ViewWidget::~ViewWidget()
@@ -51,7 +53,7 @@ void ViewWidget::SetData(const Visualizer* data)
 	{
 		m_notes_sublists.SetData(data->GetNotes(), 3.0f);
 		m_beats_sublists.SetData(data->GetBeats(), 3.0f);
-
+		m_singing_sublists.SetData(data->GetSingings(), 3.0f);
 		_buildColorMap();
 	}
 }
@@ -82,17 +84,6 @@ void ViewWidget::_buildColorMap()
 	if (m_data == nullptr) return;
 
 	unsigned bankRef = 0;
-	const std::vector<VisNote>&  notes = m_data->GetNotes();
-	for (unsigned i = 0; i < (unsigned)notes.size(); i++)
-	{
-		unsigned inst = notes[i].instrumentId;
-		if (m_InstColorMap.find(inst) == m_InstColorMap.end())
-		{
-			m_InstColorMap[inst] = s_ColorBank[bankRef];
-			bankRef++;
-			if (bankRef >= 15) bankRef = 0;
-		}
-	}
 	const std::vector<VisBeat>&  beats = m_data->GetBeats();
 	m_beats_centers.clear();
 	for (unsigned i = 0; i < (unsigned)beats.size(); i++)
@@ -109,6 +100,30 @@ void ViewWidget::_buildColorMap()
 		float y = rand01();
 
 		m_beats_centers.push_back({ x, y });
+	}
+
+	const std::vector<VisSinging>&  singings = m_data->GetSingings();
+	for (unsigned i = 0; i < (unsigned)singings.size(); i++)
+	{
+		unsigned singer = singings[i].singerId;
+		if (m_SingerColorMap.find(singer) == m_SingerColorMap.end())
+		{
+			m_SingerColorMap[singer] = s_ColorBank[bankRef];
+			bankRef++;
+			if (bankRef >= 15) bankRef = 0;
+		}
+	}
+
+	const std::vector<VisNote>&  notes = m_data->GetNotes();
+	for (unsigned i = 0; i < (unsigned)notes.size(); i++)
+	{
+		unsigned inst = notes[i].instrumentId;
+		if (m_InstColorMap.find(inst) == m_InstColorMap.end())
+		{
+			m_InstColorMap[inst] = s_ColorBank[bankRef];
+			bankRef++;
+			if (bankRef >= 15) bankRef = 0;
+		}
 	}
 }
 
@@ -234,6 +249,7 @@ void ViewWidget::paintGL()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 	//notes
+	if (m_notes_sublists.m_subLists.size()>0)
 	{
 		std::set<const VisNote*> visiableNotes;
 
@@ -290,6 +306,7 @@ void ViewWidget::paintGL()
 	}
 
 	// beats
+	if (m_beats_sublists.m_subLists.size()>0)
 	{
 		unsigned beat_intervalId = m_beats_sublists.GetIntervalId(note_inTime);
 
@@ -321,6 +338,70 @@ void ViewWidget::paintGL()
 	}
 
 
+	// singing
+	if (m_singing_sublists.m_subLists.size()>0)
+	{
+		unsigned singing_intervalId = m_singing_sublists.GetIntervalId(note_inTime);
+		unsigned singing_intervalId_min = m_singing_sublists.GetIntervalId(note_outTime);
+
+		std::set<const VisSinging*> visiableNotes;
+
+		for (unsigned i = singing_intervalId_min; i <= singing_intervalId; i++)
+		{
+			const SubList<VisSinging>& subList = m_singing_sublists.m_subLists[i];
+			for (unsigned j = 0; j < (unsigned)subList.size(); j++)
+			{
+				const VisSinging& note = *subList[j];
+				if (note.start<note_inTime && note.end> note_outTime)
+					visiableNotes.insert(&note);
+			}
+		}
+
+		float pixelPerPitch = m_whiteKeyWidth*7.0f / 12.0f;
+
+		glBegin(GL_QUADS);
+
+		std::set<const VisSinging*>::iterator iter;
+		for (iter = visiableNotes.begin(); iter != visiableNotes.end(); iter++)
+		{
+			float startY = ((*iter)->start - note_inTime) / -m_showTime* ((float)m_h - m_whiteKeyHeight) + m_whiteKeyHeight;
+			float endY = ((*iter)->end - note_inTime) / -m_showTime* ((float)m_h - m_whiteKeyHeight) + m_whiteKeyHeight;
+
+			unsigned singerId = (*iter)->singerId;
+			unsigned char* color = m_SingerColorMap[singerId];
+
+			const float* pitches = &(*iter)->pitch[0];
+			unsigned num_pitches = (unsigned) (*iter)->pitch.size();
+
+			for (unsigned i = 0; i < num_pitches - 1; i++)
+			{
+				float x1 = pitches[i] * pixelPerPitch + (float)m_w*0.5f;
+				float x2 = pitches[i + 1] * pixelPerPitch + (float)m_w*0.5f;
+				
+				float k1 = (float)i / (float)(num_pitches - 1);
+				float y1 = startY*(1.0f - k1) + endY*k1;
+
+				float k2 = (float) (i+1) / (float)(num_pitches - 1);
+				float y2 = startY*(1.0f - k2) + endY*k2;
+
+				glColor4ub(color[0], color[1], color[2], (unsigned char)((1.0f - k1)*255.0f));
+				glVertex2f(x1 - m_singing_half_width, y1);
+				glVertex2f(x1 + m_singing_half_width, y1);
+				glVertex2f(x2 + m_singing_half_width, y2);
+				glVertex2f(x2 - m_singing_half_width, y2);
+
+			}
+
+			float x = pitches[0] * pixelPerPitch + (float)m_w*0.5f;
+			std::string lyric = (*iter)->lyric;
+			//painter.setPen(Qt::white);
+			//painter.drawText(QPoint((int)x, (int)(m_h - startY)), QString::fromUtf8(lyric.data(), lyric.length()));
+
+		}
+		
+		glEnd();
+	}
+
 	/// draw keyboard
 	glDisable(GL_BLEND);
 
@@ -340,6 +421,7 @@ void ViewWidget::paintGL()
 	memset(pressed, 0, sizeof(bool)* numKeys);
 
 	// notes
+	if (m_notes_sublists.m_subLists.size()>0)
 	{
 		const SubList<VisNote>& subList = m_notes_sublists.m_subLists[note_intervalId];
 		for (unsigned i = 0; i < (unsigned)subList.size(); i++)
@@ -395,6 +477,51 @@ void ViewWidget::paintGL()
 	delete[] pressed;
 
 	painter.endNativePainting();
+
+	// singing
+	if (m_singing_sublists.m_subLists.size()>0)
+	{
+		unsigned singing_intervalId = m_singing_sublists.GetIntervalId(note_inTime);
+		unsigned singing_intervalId_min = m_singing_sublists.GetIntervalId(note_outTime);
+
+		std::set<const VisSinging*> visiableNotes;
+
+		for (unsigned i = singing_intervalId_min; i <= singing_intervalId; i++)
+		{
+			const SubList<VisSinging>& subList = m_singing_sublists.m_subLists[i];
+			for (unsigned j = 0; j < (unsigned)subList.size(); j++)
+			{
+				const VisSinging& note = *subList[j];
+				if (note.start<note_inTime && note.start> note_outTime)
+					visiableNotes.insert(&note);
+			}
+		}
+
+		float pixelPerPitch = m_whiteKeyWidth*7.0f / 12.0f;
+
+		QFont font = painter.font();
+		font.setPointSize(font.pointSize() * 2);
+		painter.setFont(font);
+
+		painter.drawText(QPoint(-100,-100), QString("dummy"));
+
+		std::set<const VisSinging*>::iterator iter;
+		for (iter = visiableNotes.begin(); iter != visiableNotes.end(); iter++)
+		{
+			float startY = ((*iter)->start - note_inTime) / -m_showTime* ((float)m_h - m_whiteKeyHeight) + m_whiteKeyHeight;
+		
+			unsigned singerId = (*iter)->singerId;
+			unsigned char* color = m_SingerColorMap[singerId];
+
+			float x = (*iter)->pitch[0] * pixelPerPitch + (float)m_w*0.5f+m_singing_half_width;
+			std::string lyric = (*iter)->lyric;
+
+			painter.setPen(QColor(color[0], color[1], color[2]));
+			painter.drawText(QPoint((int)x, m_h - 1 - (int)startY), QString::fromUtf8(lyric.data(), lyric.length()));
+
+		}
+	}
+
 	painter.end();
 
 	update();

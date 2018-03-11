@@ -32,11 +32,14 @@ class Document:
 	def setTrackVolume(self, bufferIndex, volume):
 		self.bufferList[bufferIndex].setVolume(volume)
 
+	def setTrackPan(self, bufferIndex, pan):
+		self.bufferList[bufferIndex].setPan(pan)
+
 	def playNoteSeq(self, seq, instrument, bufferIndex=-1):
 		if bufferIndex==-1:
 			bufferIndex= self.newBuf()		
 		buf=self.bufferList[bufferIndex]
-		ScoreDraft.MeteorProcessNoteSeq(self.visualizerId, instrument, buf.getCursor(), seq, self.tempo, self.refFreq)
+		ScoreDraft.MeteorProcessNoteSeq(self.visualizerId, instrument, buf.getCursor()/44100.0, seq, self.tempo, self.refFreq)
 		instrument.play(buf, seq, self.tempo, self.refFreq)
 		return bufferIndex	
 
@@ -44,7 +47,7 @@ class Document:
 		if bufferIndex==-1:
 			bufferIndex= self.newBuf()		
 		buf=self.bufferList[bufferIndex]	
-		ScoreDraft.MeteorProcessBeatSeq(self.visualizerId, percList, buf.getCursor(), seq, self.tempo)	
+		ScoreDraft.MeteorProcessBeatSeq(self.visualizerId, percList, buf.getCursor()/44100.0, seq, self.tempo)	
 		ScoreDraft.Percussion.play(percList, buf, seq, self.tempo)
 		return bufferIndex
 
@@ -52,6 +55,7 @@ class Document:
 		if bufferIndex==-1:
 			bufferIndex= self.newBuf()		
 		buf=self.bufferList[bufferIndex]
+		ScoreDraft.MeteorProcessSingingSeq(self.visualizerId, singer, buf.getCursor()/44100.0, seq, self.tempo, self.refFreq)
 		singer.sing( buf, seq, self.tempo, self.refFreq)
 		return bufferIndex
 
