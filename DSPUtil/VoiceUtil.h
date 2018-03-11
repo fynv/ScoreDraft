@@ -362,6 +362,7 @@ namespace VoiceUtil
 				else
 					m_data[i] = (float)DCAbs(&fftBuf[i])*rate;
 			}
+			delete[] fftBuf;
 		}
 
 		void Interpolate(const AmpSpectrum& spec0, const AmpSpectrum& spec1, float k, float targetHalfWidth)
