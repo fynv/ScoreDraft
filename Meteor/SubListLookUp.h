@@ -8,6 +8,7 @@ template<class T>
 class SubList : public std::vector<const T*>
 {
 public:
+	std::vector<unsigned> indices;
 	float m_start;
 	float m_end;
 };
@@ -55,6 +56,7 @@ public:
 			for (unsigned j = startInterval; j <= endInterval; j++)
 			{
 				m_subLists[j].push_back(&fullList[i]);
+				m_subLists[j].indices.push_back(i);
 			}
 
 		}

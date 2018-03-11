@@ -12,6 +12,11 @@
 
 typedef std::map<unsigned, unsigned char*> ColorMap;
 
+struct Pos2D
+{
+	float x;
+	float y;
+};
 
 class ViewWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -31,6 +36,7 @@ protected:
 private:
 	void _buildColorMap();
 	void _draw_key(float left, float right, float bottom, float top, float lineWidth, bool black = false);
+	void _draw_flash(float centerx, float centery, float radius, unsigned char color[3], float alpha);
 
 	static unsigned char s_ColorBank[15][3];
 
@@ -38,7 +44,11 @@ private:
 	const Visualizer* m_data;
 
 	SubLists<VisNote> m_notes_sublists;
-	ColorMap m_colorMap;
+	ColorMap m_InstColorMap;
+
+	SubLists<VisBeat> m_beats_sublists;
+	ColorMap m_PercColorMap;
+	std::vector<Pos2D> m_beats_centers;
 
 	float m_refTime;
 	QTime m_timer;
@@ -55,6 +65,9 @@ private:
 
 	float m_showTime;
 	float m_meteorHalfWidth;
+
+	float m_percussion_flash_size_factor;
+	float m_percussion_flash_limit;
 };
 
 

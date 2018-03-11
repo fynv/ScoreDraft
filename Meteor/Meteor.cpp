@@ -98,6 +98,35 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 	}		
 }
 
+void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyObject *seq_py, unsigned tempo)
+{
+	float pos = startPosition;
+	size_t beat_count = PyList_Size(seq_py);
+	for (size_t i = 0; i < beat_count; i++)
+	{
+		PyObject *item = PyList_GetItem(seq_py, i);
+		int percId = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+
+		PyObject *operation = PyTuple_GetItem(item, 1);
+		if (PyObject_TypeCheck(operation, &PyLong_Type))
+		{
+			int duration = (int)PyLong_AsLong(operation);
+			float fduration = (float)(duration * 60) / (float)(tempo * 48);
+
+			if (percId >= 0)
+			{
+				VisBeat beat;
+				beat.percId = percId;
+				beat.start = pos;
+				beat.end = pos + fduration;
+				m_beats.push_back(beat);
+			}
+			pos += fduration;
+		}
+	}
+
+}
+
 void Visualizer::Play(unsigned bufferId) const
 {
 	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
@@ -148,6 +177,29 @@ static PyObject* ProcessNoteSeq(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyObject* ProcessBeatSeq(PyObject *args)
+{
+	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	PyObject *percId_list = PyTuple_GetItem(args, 1);
+	float startPosition = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+	PyObject *seq_py = PyTuple_GetItem(args, 3);
+	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
+
+	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
+
+	size_t perc_count = PyList_Size(percId_list);
+	unsigned *percIdList = new unsigned[perc_count];
+	for (size_t i = 0; i < perc_count; i++)
+		percIdList[i]= (unsigned)PyLong_AsUnsignedLong(PyList_GetItem(percId_list, i));
+
+	visualizer->ProcessBeatSeq(percIdList, startPosition, seq_py, tempo);
+	
+	delete[] percIdList;
+
+	return PyLong_FromUnsignedLong(0);
+
+}
+
 static PyObject* Play(PyObject *args)
 {
 	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
@@ -167,6 +219,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 	pyScoreDraft->RegisterInterfaceExtension("MeteorInitVisualizer", InitVisualizer);
 	pyScoreDraft->RegisterInterfaceExtension("MeteorDelVisualizer", DelVisualizer, "visualizerId", "visualizerId");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessNoteSeq", ProcessNoteSeq, "visualizerId, instrument, startPos, seq, tempo, refFreq", "visualizerId, instrument.id, startPos, seq, tempo, refFreq");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessBeatSeq", ProcessBeatSeq, "visualizerId, percList, startPos, seq, tempo", "visualizerId, ObjectToId(percList), startPos, seq, tempo");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorPlay", Play, "visualizerId, buffer", "visualizerId, buffer.id");
 }
 

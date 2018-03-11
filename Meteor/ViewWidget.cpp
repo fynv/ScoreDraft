@@ -2,6 +2,20 @@
 #include "ViewWidget.h"
 #include <QPainter>
 #include <set>
+#include <cmath>
+#include <float.h>
+
+
+#define PI 3.1415926535897932384626433832795
+
+inline float rand01()
+{
+	float f = (float)rand() / (float)RAND_MAX;
+	if (f < 0.0000001f) f = 0.0000001f;
+	if (f > 0.9999999f) f = 0.9999999f;
+	return f;
+}
+
 
 ViewWidget::ViewWidget(QWidget* parent)
 	: QOpenGLWidget(parent),
@@ -20,6 +34,9 @@ ViewWidget::ViewWidget(QWidget* parent)
 	m_showTime = 1.0f;
 	m_meteorHalfWidth = 5.0f;
 
+	m_percussion_flash_size_factor = 0.15f;
+	m_percussion_flash_limit = 0.3f;
+
 }
 
 ViewWidget::~ViewWidget()
@@ -33,6 +50,8 @@ void ViewWidget::SetData(const Visualizer* data)
 	if (data != nullptr)
 	{
 		m_notes_sublists.SetData(data->GetNotes(), 3.0f);
+		m_beats_sublists.SetData(data->GetBeats(), 3.0f);
+
 		_buildColorMap();
 	}
 }
@@ -67,12 +86,29 @@ void ViewWidget::_buildColorMap()
 	for (unsigned i = 0; i < (unsigned)notes.size(); i++)
 	{
 		unsigned inst = notes[i].instrumentId;
-		if (m_colorMap.find(inst) == m_colorMap.end())
+		if (m_InstColorMap.find(inst) == m_InstColorMap.end())
 		{
-			m_colorMap[inst] = s_ColorBank[bankRef];
+			m_InstColorMap[inst] = s_ColorBank[bankRef];
 			bankRef++;
 			if (bankRef >= 15) bankRef = 0;
 		}
+	}
+	const std::vector<VisBeat>&  beats = m_data->GetBeats();
+	m_beats_centers.clear();
+	for (unsigned i = 0; i < (unsigned)beats.size(); i++)
+	{
+		unsigned perc = beats[i].percId;
+		if (m_PercColorMap.find(perc) == m_PercColorMap.end())
+		{
+			m_PercColorMap[perc] = s_ColorBank[bankRef];
+			bankRef++;
+			if (bankRef >= 15) bankRef = 0;
+		}
+
+		float x = rand01();
+		float y = rand01();
+
+		m_beats_centers.push_back({ x, y });
 	}
 }
 
@@ -141,6 +177,32 @@ void ViewWidget::_draw_key(float left, float right, float bottom, float top, flo
 
 }
 
+void ViewWidget::_draw_flash(float centerx, float centery, float radius, unsigned char color[3], float alpha)
+{
+	unsigned div = 36;
+	unsigned char uAlpha = (unsigned char)(alpha*255.0f);
+
+	glBegin(GL_TRIANGLES);
+	for (unsigned i = 0; i < div; i++)
+	{
+		float theta1 = (float)i / (float)div * 2.0f*(float)PI;
+		float theta2 = (float)(i+1) / (float)div * 2.0f*(float)PI;
+
+		float x1 = centerx + cosf(theta1)*radius;
+		float y1 = centery + sinf(theta1)*radius;
+
+		float x2 = centerx + cosf(theta2)*radius;
+		float y2 = centery + sinf(theta2)*radius;
+
+		glColor4ub(color[0], color[1], color[2], uAlpha);
+		glVertex2f(centerx, centery);
+		glColor4ub(color[0], color[1], color[2], 0);
+		glVertex2f(x1, y1);
+		glVertex2f(x2, y2);
+	}
+
+	glEnd();
+}
 
 void ViewWidget::paintGL()
 {
@@ -169,7 +231,7 @@ void ViewWidget::paintGL()
 
 	/// draw meteors
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 	//notes
 	{
@@ -177,7 +239,7 @@ void ViewWidget::paintGL()
 
 		for (unsigned i = note_intervalId_min; i <= note_intervalId; i++)
 		{
-			const std::vector<const VisNote*>& subList = m_notes_sublists.m_subLists[i];
+			const SubList<VisNote>& subList = m_notes_sublists.m_subLists[i];
 			for (unsigned j = 0; j < (unsigned)subList.size(); j++)
 			{
 				const VisNote& note = *subList[j];
@@ -197,7 +259,7 @@ void ViewWidget::paintGL()
 			float endY = ((*iter)->end - note_inTime) / -m_showTime* ((float)m_h - m_whiteKeyHeight) + m_whiteKeyHeight;
 
 			unsigned instId = (*iter)->instrumentId;
-			unsigned char* color = m_colorMap[instId];
+			unsigned char* color = m_InstColorMap[instId];
 
 			int pitch = (*iter)->pitch;
 			int octave = 0;
@@ -226,6 +288,39 @@ void ViewWidget::paintGL()
 
 		glEnd();
 	}
+
+	// beats
+	{
+		unsigned beat_intervalId = m_beats_sublists.GetIntervalId(note_inTime);
+
+		const SubList<VisBeat>& subList = m_beats_sublists.m_subLists[beat_intervalId];
+		for (unsigned i = 0; i < (unsigned)subList.size(); i++)
+		{
+			const VisBeat& beat = *subList[i];
+			
+			float start = beat.start;
+			float end = beat.end;
+
+			// limting percussion flash time
+			if (end - start > m_percussion_flash_limit)
+				end = start + m_percussion_flash_limit;
+
+			if (note_inTime >= start && note_inTime <= end)
+			{
+				unsigned beatIndex = subList.indices[i];
+
+				float centerx = m_beats_centers[beatIndex].x*m_w;
+				float centery = m_beats_centers[beatIndex].y*(m_h - m_whiteKeyHeight) + m_whiteKeyHeight;
+				float radius = m_w*m_percussion_flash_size_factor;
+
+				unsigned char* color = m_PercColorMap[beat.percId];
+				float alpha = (end - note_inTime) / (end - start);
+				_draw_flash(centerx, centery, radius, color, alpha);
+			}
+		}
+	}
+
+
 	/// draw keyboard
 	glDisable(GL_BLEND);
 
@@ -246,7 +341,7 @@ void ViewWidget::paintGL()
 
 	// notes
 	{
-		const std::vector<const VisNote*>& subList = m_notes_sublists.m_subLists[note_intervalId];
+		const SubList<VisNote>& subList = m_notes_sublists.m_subLists[note_intervalId];
 		for (unsigned i = 0; i < (unsigned)subList.size(); i++)
 		{
 			float start = subList[i]->start;
