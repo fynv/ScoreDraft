@@ -492,17 +492,18 @@ namespace VoiceUtil
 	class SymmetricWindow_Base : public Window
 	{
 	public:
+		bool NonZero()
+		{
+			for (unsigned i = 0; i < (unsigned)m_data.size(); i++)
+				if (m_data[i] != 0.0f) return true;
+			return false;
+		}
+
 		virtual unsigned GetHalfWidthOfData() const
 		{
 			unsigned u_halfWidth = (unsigned)m_data.size();
 			return u_halfWidth;
 		}
-
-		class FFTCallBack
-		{
-		public:
-			virtual void process(DComp* fftBuf, unsigned l) = 0;
-		};
 
 		virtual void Scale(const SymmetricWindow_Base& src, float targetHalfWidth)
 		{
@@ -599,7 +600,7 @@ namespace VoiceUtil
 			}
 		}
 
-		void CreateFromAsymmetricWindow(const Window& src, FFTCallBack* processor=nullptr)
+		void CreateFromAsymmetricWindow(const Window& src)
 		{
 			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
 	
@@ -620,10 +621,6 @@ namespace VoiceUtil
 			}
 
 			fft(fftBuf, l);
-			if (processor != nullptr)
-			{
-				processor->process(fftBuf, l);
-			}
 
 			fftBuf[0].Re = 0.0f;
 			fftBuf[0].Im = 0.0f;
@@ -783,7 +780,7 @@ namespace VoiceUtil
 			}
 		}
 
-		void CreateFromAsymmetricWindow(const Window& src, FFTCallBack* processor = nullptr)
+		void CreateFromAsymmetricWindow(const Window& src)
 		{
 			unsigned u_srcHalfWidth = src.GetHalfWidthOfData();
 
@@ -804,10 +801,6 @@ namespace VoiceUtil
 			}
 
 			fft(fftBuf, l);
-			if (processor != nullptr)
-			{
-				processor->process(fftBuf, l);
-			}
 
 			fftBuf[0].Re = 0.0f;
 			fftBuf[0].Im = 0.0f;

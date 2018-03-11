@@ -23,6 +23,7 @@ public:
 	{
 		PSOLA,
 		HNM,
+		HNM2,
 	};
 
 	void SetOtoMap(OtoMap* otoMap);
@@ -75,6 +76,7 @@ private:
 
 		void _generateWave_PSOLA();
 		void _generateWave_HNM();
+		void _generateWave_HNM2();
 
 	};
 
