@@ -18,6 +18,14 @@ FrqData.h
 PrefixMap.h
 )
 
+set(PYTHON
+CVVCChineseConverter.py
+JPVCVConverter.py
+TsuroVCVConverter.py
+TTEnglishConverter.py
+XiaYYConverter.py
+)
+
 set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
@@ -49,6 +57,5 @@ add_library (UtauDraft SHARED ${SOURCES} ${HEADERS})
 target_link_libraries(UtauDraft ${LINK_LIBS})
 
 install(TARGETS UtauDraft DESTINATION Extensions)
-
-
+install(FILES ${PYTHON} DESTINATION .)
 

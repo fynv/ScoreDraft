@@ -80,8 +80,7 @@ QtPCMPlayer::QtPCMPlayer(QLocalServer* server) : m_server(server)
 
 QtPCMPlayer::~QtPCMPlayer()
 {
-	delete m_audioOutput;
-	delete m_Feeder;
+	m_audioOutput->stop();
 	delete m_BufferQueue;
 }
 

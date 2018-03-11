@@ -13,14 +13,11 @@ WinWavWriter.h
 )
 
 set(PYTHON
-CVVCChineseConverter.py
-JPVCVConverter.py
 print_generated_code.py
 print_generated_code_summary.py
 ScoreDraft.py
 ScoreDraftNotes.py
 ScoreDraftRapChinese.py
-TsuroVCVConverter.py
 )
 
 set (INCLUDE_DIR

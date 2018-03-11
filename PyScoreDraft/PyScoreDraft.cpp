@@ -492,13 +492,14 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
 					{
 						int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
-						j++; // at freq1
-						j++; // at freq2
-						j++; // at next
 						Note note;
 						note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j + 1));
 						note.m_duration = duration;
 						instrument->PlayNote(*buffer, note, tempo, RefFreq);
+
+						j++; // at freq1
+						j++; // at freq2
+						j++; // at next
 					}
 				}
 			}
@@ -822,7 +823,7 @@ static PyObject* TellDuration(PyObject *self, PyObject *args)
 
 }
 
-static PyMethodDef PyScoreDraftMethods[] = {
+static PyMethodDef s_PyScoreDraftMethods[] = {
 	{
 		"ScanExtensions",
 		ScanExtensions,
@@ -1000,13 +1001,19 @@ static PyMethodDef PyScoreDraftMethods[] = {
 	{ NULL, NULL, 0, NULL }
 };
 
+PyScoreDraft::PyScoreDraft()
+{
+	m_logger = nullptr; 
+	m_PyScoreDraftMethods = s_PyScoreDraftMethods;
+}
+
 static struct PyModuleDef cModPyDem =
 {
 	PyModuleDef_HEAD_INIT,
 	"PyScoreDraft_module", /* name of module */
 	"",          /* module documentation, may be NULL */
 	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-	PyScoreDraftMethods
+	s_PyScoreDraftMethods
 }; 
 
 PyMODINIT_FUNC PyInit_PyScoreDraft(void) {

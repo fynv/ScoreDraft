@@ -113,10 +113,12 @@ public:
 	virtual void PrintLine(const char* line) const = 0;
 };
 
+struct PyMethodDef;
+
 class PyScoreDraft
 {
 public:
-	PyScoreDraft() { m_logger = nullptr; }
+	PyScoreDraft();
 	void SetLogger(const Logger* logger)
 	{
 		m_logger = logger;
@@ -282,6 +284,11 @@ public:
 		return m_TrackBufferMap[id];
 	}
 
+	PyMethodDef* GetPyScoreDraftMethods()
+	{
+		return m_PyScoreDraftMethods;
+	}
+
 private:
 	const Logger* m_logger;
 
@@ -295,6 +302,8 @@ private:
 	InstrumentMap m_InstrumentMap;
 	PercussionMap m_PercussionMap;
 	SingerMap m_SingerMap;
+
+	PyMethodDef* m_PyScoreDraftMethods;
 	
 };
 
