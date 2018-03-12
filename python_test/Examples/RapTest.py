@@ -7,6 +7,8 @@ import ScoreDraft
 from ScoreDraftNotes import *
 from ScoreDraftRapChinese import *
 from tang300 import poems
+import Meteor
+
 
 #SetRapBaseFreq(1.5)
 
@@ -58,28 +60,10 @@ for i in range(int(len(poem[1])/divider)):
 	seq+=[line,BL(48)]
 '''
 
+doc=Meteor.Document()
+doc.setTempo(120)
 
-buf=ScoreDraft.TrackBuffer()
+doc.sing(seq, ScoreDraft.GePing_UTAU())
 
-
-GePing= ScoreDraft.GePing_UTAU()
-GePing.sing(buf, seq, 120)
-
-'''
-import CVVCChineseConverter
-singer = ScoreDraft.YuMo_UTAU()
-ScoreDraft.UtauDraftSetLyricConverter(singer, CVVCChineseConverter.CVVCChineseConverter)
-singer.sing(buf, seq, 120)
-'''
-
-
-'''
-import XiaYYConverter
-singer = ScoreDraft.XiaYY_UTAU()
-ScoreDraft.UtauDraftSetLyricConverter(singer, XiaYYConverter.XiaYYConverter)
-singer.sing(buf, seq, 120)
-'''
-
-#ScoreDraft.QPlayTrackBuffer(buf)
-
-ScoreDraft.WriteTrackBufferToWav(buf, "rap.wav")
+doc.meteor()
+doc.mixDown('rap.wav')
