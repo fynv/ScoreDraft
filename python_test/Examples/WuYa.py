@@ -4,11 +4,44 @@ import sys
 sys.path+=['../']
 
 import ScoreDraft
-from ScoreDraftNotes import *
+#from ScoreDraftNotes import *
 import Meteor
 
+Freqs=[1.0, 9.0/8.0, 81.0/64.0, 4.0/3.0, 3.0/2.0, 27.0/16.0, 243.0/128.0]
+
+def note(octave, freq, duration):
+	return (freq*(2.0**(octave-5.0)), duration)
+
+def do(octave=5, duration=48):
+	return note(octave,Freqs[0],duration)
+
+def re(octave=5, duration=48):
+	return note(octave,Freqs[1],duration)
+
+def mi(octave=5, duration=48):
+	return note(octave,Freqs[2],duration)
+
+def fa(octave=5, duration=48):
+	return note(octave,Freqs[3],duration)
+
+def so(octave=5, duration=48):
+	return note(octave,Freqs[4],duration)
+
+def la(octave=5, duration=48):
+	return note(octave,Freqs[5],duration)
+
+def ti(octave=5, duration=48):
+	return note(octave,Freqs[6],duration)
+
+def BL(duration=48):
+	return (-1.0, duration)
+
+def BK(duration=48):
+	return (-1.0, -duration)
+
 FreqsC=Freqs[:]
-FreqsF=[f*Freqs[5] for f in Freqs]
+# FreqsF=[f*Freqs[5] for f in Freqs]
+FreqsF=[f*Freqs[3] for f in Freqs]
 
 Freqs[:]=FreqsF
 
