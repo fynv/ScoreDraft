@@ -70,31 +70,6 @@ void Percussion::PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo
 	return;
 }
 
-void Percussion::PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionList, const BeatSequence& seq, unsigned tempo)
-{
-	int i;
-	int prog = 0;
-	for (i = 0; i<(int)seq.size(); i++)
-	{
-		int newprog = (i + 1) * 10 / (int)seq.size();
-		if (newprog>prog)
-		{
-			printf("-");
-			prog = newprog;
-		}
-		const Beat& beat = seq[i];
-	
-		if (beat.m_PercId >= 0)
-			percussionList[beat.m_PercId]->PlayBeat(buffer, beat.m_duration, tempo);
-		else if (beat.m_duration >= 0)
-			PlaySilence(buffer, beat.m_duration, tempo);
-		else
-			PlayBackspace(buffer, -beat.m_duration, tempo);
-	}
-	printf("\n");
-}
-
-
 bool Percussion::Tune(const char* cmd)
 {
 	char command[1024];

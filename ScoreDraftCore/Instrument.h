@@ -12,7 +12,6 @@ public:
 	~Instrument();
 
 	void PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo=80,float RefFreq=261.626f);
-	void PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigned tempo=80,float RefFreq=261.626f);
 
 	virtual bool Tune(const char* cmd);
 	

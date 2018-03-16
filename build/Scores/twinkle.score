@@ -1,4 +1,0 @@
-set twinkle1 = do5.48 do5.48 so5.48 so5.48 la5.48 la5.48 so5.96
-set twinkle2 = fa5.48 fa5.48 mi5.48 mi5.48 re5.48 re5.48 do5.96
-tempo 120
-track seq="twinkle1 twinkle2"

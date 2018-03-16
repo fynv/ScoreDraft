@@ -73,24 +73,6 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 		
 }
 
-void Instrument::PlayNotes(TrackBuffer& buffer, const NoteSequence& seq, unsigned tempo, float RefFreq)
-{
-	int i;
-	int prog=0;
-	for (i=0;i<(int)seq.size();i++)
-	{
-		int newprog = (i + 1) * 10 / (int)seq.size();
-		if (newprog>prog)
-		{
-			printf("-");
-			prog=newprog;
-		}
-			
-		PlayNote(buffer,seq[i],tempo,RefFreq);
-	}
-	printf("\n");
-}
-
 bool Instrument::Tune(const char* cmd)
 {
 	char command[1024];

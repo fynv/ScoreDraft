@@ -19,7 +19,6 @@ public:
 	void PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo = 80);
 	static void PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo = 80);
 	static void PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo = 80);
-	static void PlayBeats(TrackBuffer& buffer, Percussion_deferred* percussionList, const BeatSequence& seq, unsigned tempo = 80);
 
 	virtual bool Tune(const char* cmd);
 

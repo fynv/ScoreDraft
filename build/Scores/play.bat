@@ -1,1 +1,0 @@
-..\ScoreDraft\release\ScoreDraft -play %1
