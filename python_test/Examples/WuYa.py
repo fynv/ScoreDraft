@@ -302,6 +302,58 @@ seq_b+=[la(2,36),la(2,12),la(2,24),la(2,24),la(2,12),la(2,12),la(2,12),la(2,12),
 seq_p+=[dong(36), dong(12),dong(24),dong(24), cha(12),cha(12),cha(12),cha(12),cha(24),cha(24)]
 
 
+line= ("san", re(6,24), "yue", do(6,48), "li", re(6,24), "tao", mi(6,36), so(6,12), "hua", mi(6,24), la(5,24))
+seq_pi+=[la(4,96),BK(96), re(5,72), do(5,12),re(5,12), la(4,96), BK(96), mi(5,36), so(5,12), mi(5,24),la(4,24)]
+seq_gm+=Repeat(Chord([(la,3), (re,4), (mi,4), (la,4) ], 24),8)
+seq_b+=Repeat([la(2,24),la(2,48),la(2,24)],2)
+seq_p+=Repeat([dong(),cha()],2)
+
+line+=("hong", re(6,24), "you", do(6,48), "si", re(6,24), "hai", mi(6,24), do(6,12), re(6,12), mi(6,24), BL(24))
+seq += [line]
+seq_pi+=[la(4,96),BK(96), re(5,72), do(5,12),re(5,12), la(4,96), BK(96), mi(5,24), do(5,12), re(5,12),mi(5,48)]
+seq_gm+=Repeat(Chord([(la,3), (re,4), (mi,4), (la,4) ], 24),8)
+seq_b+=Repeat([la(2,24),la(2,48),la(2,24)],2)
+seq_p+=Repeat([dong(),cha()],2)
+
+line= ("si", mi(6,12), so(6,12), "yue", la(6,48), "jian", do(7,24), "pu", la(6, 48), "tao", so(6,24), mi(6,24))
+seq_pi+=[re(5,96), BK(96), la(5,72), so(5,12), so(5,12), re(5,96), BK(96), so(5,24),mi(5,24),re(5,24),mi(5,24)]
+seq_gm+=Repeat(Chord([(re,4), (so,4), (la,4), (re,5) ], 24),8)
+seq_b+=Repeat([re(3,24),re(3,48),re(3,24)],2)
+seq_p+=Repeat([dong(),cha()],2)
+
+line+= ("jia", la(6,24), "you", mi(6,48), "shang", re(6,12), mi(6,12), "cai", do(6,24), BL(24))
+seq += [line]
+line=("si", do(6,12), re(6,12), "yue", mi(6,12), so(6,12))
+seq_pi+=[la(4,96),BK(96), re(5,36), mi(5,12),re(5,24), do(5,24), la(4,12),do(5,12),la(4,12),so(4,12),la(4,48)]
+seq_gm+=Repeat(Chord([(la,3), (re,4), (mi,4), (la,4) ], 24),8)
+seq_b+=Repeat([la(2,24),la(2,48),la(2,24)],2)
+seq_p+=Repeat([dong(),cha()],2)
+
+line+=("jian", mi(6,48), "pu", re(6,24), "tao", do(6,24),"jia", la(5,24), "you", do(6,48), "shang", la(5,12), do(6,12))
+seq_pi+=[la(4,96),BK(96), mi(5,72), re(5,12),do(5,12), la(4,24),do(5,48),do(4,24)]
+seq_gm+=Repeat(Chord([(la,3), (re,4), (mi,4), (la,4) ], 24),8)
+seq_b+=Repeat([la(2,24),la(2,48),la(2,24)],2)
+seq_p+=Repeat([dong(),cha()],2)
+
+line+=("cai", la(5,96), BL(96))
+seq += [line]
+seq_g+=[BL(ScoreDraft.TellDuration(seq_gm)-ScoreDraft.TellDuration(seq_g))]
+seq_g+=[BL(144), do(6,12), re(6,12), mi(6,12), so(6,12)]
+seq_pi+=Repeat(Chord([(la,4), (re,5), (mi,5)],24)+Chord([(la,4), (re,5), (mi,5)],12)+Chord([(la,4), (re,5), (mi,5)],12)+Chord([(la,4), (re,5), (mi,5)],24)+Chord([(la,4), (re,5), (mi,5)],24),2)
+seq_gm+=Repeat(Chord([(la,3), (re,4), (mi,4), (la,4) ], 24),8)
+seq_b+=[la(2,36),la(2,12),la(2,24),la(2,24),la(2,12),la(2,12),la(2,12),la(2,12),la(2,24),la(2,24)]
+seq_p+=[dong(36), dong(12),dong(24),dong(24), cha(12),cha(12),cha(12),cha(12),cha(24),cha(24)]
+
+seq_g+=[mi(6,48), re(6,24), do(6,24), la(5,24), do(6,48), la(5,12), do(6,12)]
+seq_pi+=[la(4,96),BK(96), mi(5,72), re(5,12),do(5,12), la(4,24),do(5,48),do(4,24)]
+seq_gm+=Repeat(Chord([(la,3), (re,4), (mi,4), (la,4) ], 24),8)
+seq_b+=Repeat([la(2,24),la(2,48),la(2,24)],2)
+
+seq_g+=[la(5,96)]
+seq_pi+=Chord([(la,4), (re,5), (mi,5)],96)
+seq_gm+=Chord([(la,3), (re,4), (mi,4), (la,4) ], 96)
+seq_b+=[la(2,96)]
+
 doc.sing(seq, Ayaka, track)
 doc.playNoteSeq(seq_gm, GuitarMute, track_gm)
 doc.playNoteSeq(seq_g,Guitar, track_g)
