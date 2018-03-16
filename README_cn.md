@@ -453,7 +453,7 @@ QtPCMPlayer 可以用来可视化音轨当中的PCM数据。
 
 Meteor 可以用来可视化前面介绍过的各种序列，同时播放混合好的音轨。使用Meteor最简单的方法是"import Meteor". Meteor.py
 中包含"Document"类的另一个定义，该定义包含ScoreDraft.Document中的所有接口，外加一个额外的方法 Meteor.Document.meteor(chn=-1). 如果你在旧的项目中使用ScoreDraft.Document，你只需要用Meteor.Document来替换它，然后在代码最后调用doc.meteor()
-可视化器将会被激活。与 QPlayTrackBuffer()不同，doc.meteor()是同步调用，代码回暂停执行，知道播放结束。
+可视化器将会被激活。与 QPlayTrackBuffer()不同，doc.meteor()是同步调用，代码会暂停执行，直到播放结束。
 
 ![alt text](https://raw.githubusercontent.com/fynv/ScoreDraft/master/Meteor.png)
 
