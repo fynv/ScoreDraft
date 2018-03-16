@@ -465,13 +465,42 @@ or duration of the converted note. A bool value "isVowel" need to be provided to
 
 Examples of converter functions can be found in CVVCChineseConverter.py, TsuroVCVConverter.py and JPVCVConverter.py.
 
+## Visualization
+
+ScoreDraft now contains 2 Qt5 based visualization extensions. 
+
+### QtPCMPlayer
+
+QtPCMPlayer can be used to visualize PCM data in track-buffers.
+2 interfaces are provided:
+* ScoreDraft.QPlayTrackBuffer(buf): playback a track-buffer, where "buf" is the TrackBuffer object to be played.
+* ScoreDraft.QPlayGetRemainingTime(): returns the remaining time in seconds
+
+Note that QPlayTrackBuffer() is an asynchorized call, which means that it will return immediately to execute 
+the succeeding Python code after the playback is started. You can continue to submit more track-buffers to be 
+played-back. The track-buffers will be queued and played-back consecutively.
+
+![alt text](https://raw.githubusercontent.com/fynv/ScoreDraft/master/QtPCMPlayer.png)
+
+### Meteor
+
+Meteor can be used to visualize all kinds of sequences while playing-back the mixed track.
+The easiest way to use Meteor is to "import Meteor". Meteor.py contains an alternative definition of the
+"Document" class. The definition contains all interface as the one defined in ScoreDraft.py, plus an extra 
+method Meteor.Document.meteor(chn=-1). If you are using ScoreDraft.Document in your old project, you just
+need to use Meteor.Document to replace it, and call doc.meteor() at the end of the code, the visualizer 
+will thus be activated. Unlike QPlayTrackBuffer(), doc.meteor() is a synchronized call. The execution will
+be blocked until the end of play-back.
+
+![alt text](https://raw.githubusercontent.com/fynv/ScoreDraft/master/Meteor.png)
+
 # About building
 
 To build ScoreDraft from source-code, you need to install:
 
 * CMake 3.0+
 * Python3
-* Qt5 (Needed for by "QtPCMPlayer“ extension. You can remove it from /CMakeLists.txt if you don't need it. Then you don't need Qt5)
+* Qt5 (Needed by "QtPCMPlayer“ and "Meteor" extensions. You can remove them from /CMakeLists.txt if you don't need them. Then you don't need Qt5)
 
 Run CMake to generate makefiles/project files for your system and build.
 You are recommanded to:

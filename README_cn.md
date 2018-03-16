@@ -432,13 +432,39 @@ UTAU 的音源可以直接放在"UTAUVoice"目录下。"UTAUVoice"的每个子�
 目前已经实现了若干拆词函数的实例，可以直接使用它们，也可以在实现其他拆词函数是作为参考。详见：
 CVVCChineseConverter.py, TsuroVCVConverter.py 和 JPVCVConverter.py.
 
+##  可视化
+
+ScoreDraft 目前包含两个基于Qt5的可视化扩展。
+
+### QtPCMPlayer
+
+QtPCMPlayer 可以用来可视化音轨当中的PCM数据。
+该扩展提供了两个接口函数：
+
+* ScoreDraft.QPlayTrackBuffer(buf): 播放一个音轨buf, buf是一个 TrackBuffer 类型的对象
+* ScoreDraft.QPlayGetRemainingTime(): 返回播放剩余时间，单位是秒
+
+需要注意 QPlayTrackBuffer() 是一个异步调用，这意味着这个函数在启动音频播放之后会立刻返回Python代码执行。
+此时你可以继续提交新的播放。所有提交的音轨会组成队列依次执行。
+
+![alt text](https://raw.githubusercontent.com/fynv/ScoreDraft/master/QtPCMPlayer.png)
+
+### Meteor
+
+Meteor 可以用来可视化前面介绍过的各种序列，同时播放混合好的音轨。使用Meteor最简单的方法是"import Meteor". Meteor.py
+中包含"Document"类的另一个定义，该定义包含ScoreDraft.Document中的所有接口，外加一个额外的方法 Meteor.Document.meteor(chn=-1). 如果你在旧的项目中使用ScoreDraft.Document，你只需要用Meteor.Document来替换它，然后在代码最后调用doc.meteor()
+可视化器将会被激活。与 QPlayTrackBuffer()不同，doc.meteor()是同步调用，代码回暂停执行，知道播放结束。
+
+![alt text](https://raw.githubusercontent.com/fynv/ScoreDraft/master/Meteor.png)
+
+
 # 关于编译
 
 如果要自己编译ScoreDraft, 用户需要首先安装:
 
 * CMake 3.0+
 * Python3
-* Qt5 (这个只是"QtPCMPlayer"需要，如果您不需要，您可以把它从/CMakeLists.txt中移除，这样就可以不安装Qt5了）
+* Qt5 (这个只在可视化扩展"QtPCMPlayer"和"Meteor"中需要，如果您不需要这些扩展，您可以把它们从/CMakeLists.txt中移除，这样就可以不安装Qt5了）
 
 运行 CMake 来为您的编译器生成makefiles或project files，然后即可编译。
 
