@@ -147,10 +147,10 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM2()
 				for (unsigned i = maxVoiced + 1; i < (unsigned)harmSpec.m_data.size(); i++)
 				{
 					float amplitude = harmSpec.m_data[i];
+					harmSpec.m_data[i] = 0.0f;
 					if (i < (unsigned)paramSet.NoiseSpectrum.m_data.size())
 					{
-						paramSet.NoiseSpectrum.m_data[i] = harmSpec.m_data[i];
-						harmSpec.m_data[i] = 0.0f;
+						paramSet.NoiseSpectrum.m_data[i] = amplitude;
 					}
 				}
 			}
@@ -263,10 +263,10 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM2()
 					for (unsigned i = maxVoiced + 1; i < (unsigned)harmSpec.m_data.size(); i++)
 					{
 						float amplitude = harmSpec.m_data[i];
+						harmSpec.m_data[i] = 0.0f;
 						if (i < (unsigned)paramSet.NoiseSpectrum.m_data.size())
 						{
-							paramSet.NoiseSpectrum.m_data[i] = harmSpec.m_data[i];
-							harmSpec.m_data[i] = 0.0f;
+							paramSet.NoiseSpectrum.m_data[i] = amplitude;
 						}
 					}
 				}
