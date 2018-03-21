@@ -961,7 +961,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 #if HAVE_CUDA
 	int count;
 	cudaGetDeviceCount(&count);
-	if (count > 0)
+	if (count > 0 && cudaGetLastError()==0)
 	{
 		cudaFree(nullptr);
 		if (cudaGetLastError() == 0) use_cuda = true;
