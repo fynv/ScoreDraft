@@ -42,9 +42,18 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 
 	std::vector<SymmetricWindowWithPosition> windows;
 	float fPeriodCount = 0.0f;
-	float logicalPos = firstNote ? (-overlap_pos*headerWeight) : (-preutter_pos* fixed_Weight);
 
-	for (unsigned srcPos = 0; srcPos < source.m_data.size(); srcPos++)
+	float fStartPos = firstNote ? overlap_pos : preutter_pos;
+	float logicalPos = 0.0f;
+
+	if (fStartPos < 0.0f)
+	{
+		logicalPos += (-fStartPos)*(firstNote ? headerWeight : fixed_Weight);
+		fStartPos = 0.0f;
+	}
+	unsigned startPos = (unsigned)fStartPos;
+
+	for (unsigned srcPos = startPos; srcPos < source.m_data.size(); srcPos++)
 	{
 		float srcSampleFreq;
 		float srcFreqPos = (srcbegin + (float)srcPos) / (float)frq.m_window_interval;
