@@ -1,5 +1,12 @@
 #include "UtauDraft.h"
 
+#ifndef HAVE_CUDA
+void UtauDraft::GenWaveStruct::_generateWave_CUDA_HNM()
+{
+	_generateWave_HNM();
+}
+#endif
+
 void UtauDraft::GenWaveStruct::_generateWave_HNM()
 {
 	float minSampleFreq;

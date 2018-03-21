@@ -53,9 +53,9 @@ bool UtauDraft::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin,
 }
 
 
-UtauDraft::UtauDraft()
+UtauDraft::UtauDraft(bool useCUDA)
 {
-	m_method = HNM;
+	m_method = useCUDA ? CUDA_HNM : HNM;
 	m_transition = 0.1f;
 	m_rap_distortion = 1.0f;
 	m_gender = 0.0f;
@@ -771,10 +771,20 @@ void UtauDraft::_generateWave(const char* lyric, const char* lyric_next, unsigne
 	case HNM:
 		gws._generateWave_HNM();
 		break;
+	case CUDA_HNM:
+		gws._generateWave_CUDA_HNM();
+		break;
 	}
 
 	memcpy(noteBuf->m_data + noteBufPos, &dstBuf.m_data[0], sizeof(float)*uSumLen);
 }
+
+class UtauDraftDeferred : public Singer_deferred
+{
+public:
+	UtauDraftDeferred(bool useCUDA = false) : Singer_deferred(new UtauDraft(useCUDA)){}
+	UtauDraftDeferred::UtauDraftDeferred(const UtauDraftDeferred & in) : Singer_deferred(in){}
+};
 
 class UtauDraftInitializer : public SingerInitializer
 {
@@ -893,12 +903,22 @@ public:
 				fclose(fp_charset);
 			}
 		}
-		Singer_deferred singer = Singer_deferred::Instance<UtauDraft>();
+		UtauDraftDeferred singer(m_use_cuda);
 		singer.DownCast<UtauDraft>()->SetOtoMap(&m_OtoMap);
 		singer.DownCast<UtauDraft>()->SetCharset(m_charset.data());
 		if (m_PrefixMap.size() > 0)
 			singer.DownCast<UtauDraft>()->SetPrefixMap(&m_PrefixMap);
 		return singer;
+	}
+
+	UtauDraftInitializer()
+	{
+		m_use_cuda = false;
+	}
+
+	void setUseCuda(bool use = true)
+	{
+		m_use_cuda = use;
 	}
 
 private:
@@ -908,6 +928,8 @@ private:
 	std::string m_name;
 	std::string m_root;
 	std::string m_charecter_txt;
+
+	bool m_use_cuda;
 };
 
 static PyScoreDraft* s_PyScoreDraft;
@@ -929,7 +951,9 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 	s_PyScoreDraft = pyScoreDraft;
 
 	static std::vector<UtauDraftInitializer> s_initializers;
-
+#if HAVE_CUDA
+	static std::vector<UtauDraftInitializer> s_initializers_cuda;
+#endif
 
 #ifdef _WIN32
 	WIN32_FIND_DATAA ffd;
@@ -948,6 +972,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 			UtauDraftInitializer initializer;
 			initializer.SetName(root, ffd.cFileName);
 			s_initializers.push_back(initializer);
+#if HAVE_CUDA
+			initializer.setUseCuda();
+			s_initializers_cuda.push_back(initializer);
+#endif
 		}
 
 	} while (FindNextFile(hFind, &ffd) != 0);
@@ -970,6 +998,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 					UtauDraftInitializer initializer;
 					initializer.SetName(root, entry->d_name);
 					s_initializers.push_back(initializer);
+#if HAVE_CUDA
+					initializer.setUseCuda();
+					s_initializers_cuda.push_back(initializer);
+#endif
 				}
 			}
 		}
@@ -977,7 +1009,12 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 #endif
 
 	for (unsigned i = 0; i < s_initializers.size(); i++)
-		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName()+"_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
+	{
+		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName() + "_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
+#if HAVE_CUDA
+		pyScoreDraft->RegisterSingerClass((s_initializers_cuda[i].GetDirName() + "_CUDA").data(), &s_initializers_cuda[i], s_initializers_cuda[i].GetComment().data());
+#endif
+	}
 
 	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetLyricConverter", UtauDraftSetLyricConverter, "singer, LyricConverterFunc", "singer.id, LyricConverterFunc",
 		"\t'''\n"

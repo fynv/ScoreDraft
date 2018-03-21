@@ -16,13 +16,14 @@ using namespace VoiceUtil;
 class UtauDraft : public Singer
 {
 public:
-	UtauDraft();
+	UtauDraft(bool useCUDA=false);
 	~UtauDraft();
 
 	enum Method
 	{
 		PSOLA,
 		HNM,
+		CUDA_HNM
 	};
 
 	void SetOtoMap(OtoMap* otoMap);
@@ -75,6 +76,7 @@ private:
 
 		void _generateWave_PSOLA();
 		void _generateWave_HNM();
+		void _generateWave_CUDA_HNM();
 
 	};
 
