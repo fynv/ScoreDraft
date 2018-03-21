@@ -55,7 +55,7 @@ bool UtauDraft::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin,
 
 UtauDraft::UtauDraft()
 {
-	m_method = HNM2;
+	m_method = HNM;
 	m_transition = 0.1f;
 	m_rap_distortion = 1.0f;
 	m_gender = 0.0f;
@@ -770,9 +770,6 @@ void UtauDraft::_generateWave(const char* lyric, const char* lyric_next, unsigne
 		break;
 	case HNM:
 		gws._generateWave_HNM();
-		break;
-	case HNM2:
-		gws._generateWave_HNM2();
 		break;
 	}
 

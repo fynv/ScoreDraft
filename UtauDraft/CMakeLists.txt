@@ -6,7 +6,6 @@ set(SOURCES
 UtauDraft.cpp
 UtauDraft_PSOLA.cpp
 UtauDraft_HNM.cpp
-UtauDraft_HNM2.cpp
 OtoMap.cpp
 FrqData.cpp
 PrefixMap.cpp

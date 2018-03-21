@@ -37,18 +37,18 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 	class ParameterSet
 	{
 	public:
-		AmpSpectrum HarmSpectrum;
+		SymmetricWindow HarmWindow;
 		AmpSpectrum NoiseSpectrum;
 
 		void Scale(const ParameterSet& src, float targetHalfWidth)
 		{
-			HarmSpectrum.Scale(src.HarmSpectrum, targetHalfWidth);
+			HarmWindow.Repitch_FormantPreserved(src.HarmWindow, targetHalfWidth);
 			NoiseSpectrum.Scale(src.NoiseSpectrum, targetHalfWidth);
 		}
 
 		void Interpolate(const ParameterSet& param0, const ParameterSet& param1, float k)
 		{
-			HarmSpectrum.Interpolate(param0.HarmSpectrum, param1.HarmSpectrum, k, param0.HarmSpectrum.m_halfWidth);
+			HarmWindow.Interpolate(param0.HarmWindow, param1.HarmWindow, k, param0.HarmWindow.m_halfWidth);
 			NoiseSpectrum.Interpolate(param0.NoiseSpectrum, param1.NoiseSpectrum, k, param0.NoiseSpectrum.m_halfWidth);
 		}
 	};
@@ -138,22 +138,23 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			Window srcWin;
 			srcWin.CreateFromBuffer(source, (float)srcPos, srcHalfWinWidth);
 
-			paramSet.HarmSpectrum.CreateFromWindow(srcWin);
-			paramSet.NoiseSpectrum.Allocate(paramSet.HarmSpectrum.m_halfWidth);
+			AmpSpectrum harmSpec;
+			harmSpec.CreateFromWindow(srcWin);
+			paramSet.NoiseSpectrum.Allocate(srcWin.m_halfWidth);
 
 			if (!isVowel)
 			{
-				for (unsigned i = maxVoiced + 1; i < (unsigned)paramSet.HarmSpectrum.m_data.size(); i++)
+				for (unsigned i = maxVoiced + 1; i < (unsigned)harmSpec.m_data.size(); i++)
 				{
-					float amplitude = paramSet.HarmSpectrum.m_data[i];
+					float amplitude = harmSpec.m_data[i];
+					harmSpec.m_data[i] = 0.0f;
 					if (i < (unsigned)paramSet.NoiseSpectrum.m_data.size())
 					{
-						paramSet.NoiseSpectrum.m_data[i] = paramSet.HarmSpectrum.m_data[i];
-						paramSet.HarmSpectrum.m_data[i] = 0.0f;
+						paramSet.NoiseSpectrum.m_data[i] = amplitude;
 					}
 				}
 			}
-
+			paramSet.HarmWindow.CreateFromAmpSpec(harmSpec);
 			paramSet.m_pos = logicalPos;
 			parameters.push_back(paramSet);
 		}
@@ -253,22 +254,23 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 				Window srcWin;
 				srcWin.CreateFromBuffer(source_next, (float)srcPos, srcHalfWinWidth);
 
-				paramSet.HarmSpectrum.CreateFromWindow(srcWin);
-				paramSet.NoiseSpectrum.Allocate(paramSet.HarmSpectrum.m_halfWidth);
+				AmpSpectrum harmSpec;
+				harmSpec.CreateFromWindow(srcWin);
+				paramSet.NoiseSpectrum.Allocate(srcWin.m_halfWidth);
 
 				if (!isVowel)
 				{
-					for (unsigned i = maxVoiced + 1; i < (unsigned)paramSet.HarmSpectrum.m_data.size(); i++)
+					for (unsigned i = maxVoiced + 1; i < (unsigned)harmSpec.m_data.size(); i++)
 					{
-						float amplitude = paramSet.HarmSpectrum.m_data[i];
+						float amplitude = harmSpec.m_data[i];
+						harmSpec.m_data[i] = 0.0f;
 						if (i < (unsigned)paramSet.NoiseSpectrum.m_data.size())
 						{
-							paramSet.NoiseSpectrum.m_data[i] = paramSet.HarmSpectrum.m_data[i];
-							paramSet.HarmSpectrum.m_data[i] = 0.0f;
+							paramSet.NoiseSpectrum.m_data[i] = amplitude;
 						}
 					}
 				}
-
+				paramSet.HarmWindow.CreateFromAmpSpec(harmSpec);
 				paramSet.m_pos = logicalPos;
 				parameters_next.push_back(paramSet);
 			}
@@ -392,11 +394,15 @@ void UtauDraft::GenWaveStruct::_generateWave_HNM()
 			l_paramTransit.Interpolate(*destParam, *destParam_next, k2);
 		}
 
-		if (finalDestParam->HarmSpectrum.NonZero())
+		if (finalDestParam->HarmWindow.NonZero())
 		{
-			SymmetricWindow destWin;
-			destWin.CreateFromAmpSpec(finalDestParam->HarmSpectrum, tempHalfWinLen);
-			destWin.MergeToBuffer(tempBuf, fTmpWinCenter);
+			SymmetricWindow l_destWin;
+			SymmetricWindow *destWin = &l_destWin;
+			if (finalDestParam->HarmWindow.m_halfWidth == tempHalfWinLen)
+				destWin = &finalDestParam->HarmWindow;
+			else
+				l_destWin.Scale(finalDestParam->HarmWindow, tempHalfWinLen);
+			destWin->MergeToBuffer(tempBuf, fTmpWinCenter);
 		}
 
 		if (finalDestParam->NoiseSpectrum.NonZero())
