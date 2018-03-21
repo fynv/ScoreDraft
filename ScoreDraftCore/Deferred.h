@@ -60,8 +60,7 @@ public:
 	template <class SubClass>
 	static Deferred<T> Instance()
 	{
-		SubClass* dummy=0;
-		return Deferred<T>(dummy);
+		return Deferred<T>(new SubClass);
 	}
 
 	template <class SubClass>
@@ -78,11 +77,6 @@ protected:
 	}
 
 private:
-	template <class SubClass>
-	Deferred(SubClass* t) : m(new Deferred<T>::Internal(t))
-	{
-		m->addRef();
-	}
 	class Internal : public RefCounted 
 	{
 	public:
@@ -95,12 +89,6 @@ private:
 		Internal(T* t)
 		{
 			this->t = t;
-		}
-	
-		template <class SubClass>
-		Internal(SubClass* dummy)
-		{
-			t = new SubClass;
 		}
 
 		~Internal()
