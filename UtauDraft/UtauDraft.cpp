@@ -951,8 +951,11 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 	s_PyScoreDraft = pyScoreDraft;
 
 	static std::vector<UtauDraftInitializer> s_initializers;
-#if HAVE_CUDA
 	static std::vector<UtauDraftInitializer> s_initializers_cuda;
+
+	bool use_cuda = false;
+#if HAVE_CUDA
+	use_cuda = true;
 #endif
 
 #ifdef _WIN32
@@ -972,10 +975,11 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 			UtauDraftInitializer initializer;
 			initializer.SetName(root, ffd.cFileName);
 			s_initializers.push_back(initializer);
-#if HAVE_CUDA
-			initializer.setUseCuda();
-			s_initializers_cuda.push_back(initializer);
-#endif
+			if (use_cuda)
+			{
+				initializer.setUseCuda();
+				s_initializers_cuda.push_back(initializer);
+			}
 		}
 
 	} while (FindNextFile(hFind, &ffd) != 0);
@@ -998,10 +1002,11 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 					UtauDraftInitializer initializer;
 					initializer.SetName(root, entry->d_name);
 					s_initializers.push_back(initializer);
-#if HAVE_CUDA
-					initializer.setUseCuda();
-					s_initializers_cuda.push_back(initializer);
-#endif
+					if (use_cuda)
+					{
+						initializer.setUseCuda();
+						s_initializers_cuda.push_back(initializer);
+					}
 				}
 			}
 		}
@@ -1011,9 +1016,10 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 	for (unsigned i = 0; i < s_initializers.size(); i++)
 	{
 		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName() + "_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
-#if HAVE_CUDA
+	}
+	for (unsigned i = 0; i < s_initializers_cuda.size(); i++)
+	{
 		pyScoreDraft->RegisterSingerClass((s_initializers_cuda[i].GetDirName() + "_CUDA").data(), &s_initializers_cuda[i], s_initializers_cuda[i].GetComment().data());
-#endif
 	}
 
 	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetLyricConverter", UtauDraftSetLyricConverter, "singer, LyricConverterFunc", "singer.id, LyricConverterFunc",
