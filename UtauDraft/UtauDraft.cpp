@@ -946,6 +946,10 @@ PyObject* UtauDraftSetLyricConverter(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+#if HAVE_CUDA
+#include <cuda_runtime.h>
+#endif
+
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	s_PyScoreDraft = pyScoreDraft;
@@ -955,7 +959,13 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 
 	bool use_cuda = false;
 #if HAVE_CUDA
-	use_cuda = true;
+	int count;
+	cudaGetDeviceCount(&count);
+	if (count > 0)
+	{
+		cudaFree(nullptr);
+		if (cudaGetLastError() == 0) use_cuda = true;
+	}
 #endif
 
 #ifdef _WIN32
