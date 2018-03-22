@@ -544,7 +544,7 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 		for (unsigned pos = 0; pos < uSumAllLen; pos++)
 		{
 			float v = noteBuf->m_data[pos];
-			v *= 10.0f;
+			v *= m_rap_distortion;
 			if (v > maxV) v = maxV;
 			if (v < -maxV) v = -maxV;
 			noteBuf->m_data[pos] = v;
