@@ -1,42 +1,10 @@
 #include <cuda_runtime.h>
 #include "SentenceGenerator_CUDA.h"
 
-struct SrcSampleInfo
-{
-	unsigned srcPos;
-	float srcSampleFreq;
-	float logicalPos;
-};
-
-struct SrcPieceInfo
-{
-	std::vector<SrcSampleInfo> SampleLocations;
-	std::vector<SrcSampleInfo> SampleLocations_next;
-	unsigned fixedBeginId;
-	unsigned fixedEndId;
-	unsigned fixedBeginId_next;
-	unsigned fixedEndId_next;
-};
-
-struct CUDASrcPieceInfo
-{
-	SrcSampleInfo* d_SampleLocations;
-	SrcSampleInfo* d_SampleLocations_next;
-	unsigned fixedBeginId;
-	unsigned fixedEndId;
-	unsigned fixedBeginId_next;
-	unsigned fixedEndId_next;
-};
-
-struct CUDASrcBuf
-{
-	unsigned bufSize;
-	float* d_buf;
-};
-
 template <class T>
 class CUDAList
 {
+public:
 	unsigned count;
 	T* d_data;
 
@@ -59,15 +27,99 @@ class CUDAList
 		cudaMalloc(&d_data, sizeof(T)*count);
 	}
 
-	void Fill(T* cpuData)
+	void Fill(const T* cpuData)
 	{
-		cudaMemcpy(d_data, cpuData, sizeof(T)*count);
+		cudaMemcpy(d_data, cpuData, sizeof(T)*count, cudaMemcpyHostToDevice);
 	}
 
-	void AllocateFill(unsigned count, T* cpuData)
+	void AllocateFill(unsigned count, const T* cpuData)
 	{
 		Allocate(count);
 		Fill(cpuData);
+	}
+
+	void AllocateFill(const std::vector<T>& cpuData)
+	{
+		Allocate((unsigned)cpuData.size());
+		Fill(cpuData.data());
+	}
+};
+
+template <class T>
+class ImagedCUDAList
+{
+public:
+	std::vector<T> cpuList;
+	CUDAList<T> gpuList;
+
+	void SyncCPUToGPU()
+	{
+		gpuList.AllocateFill(cpuList);
+	}
+};
+
+typedef CUDAList<float> CUDASrcBuf;
+
+class CUDASrcBufList : public ImagedCUDAList<CUDASrcBuf>
+{
+public:
+	void AllocateFill(const std::vector<SourceInfo>& sourceInfoList)
+	{
+		cpuList.resize(sourceInfoList.size());
+		for (unsigned i = 0; i < (unsigned)sourceInfoList.size(); i++)
+		{
+			cpuList[i].AllocateFill(sourceInfoList[i].source.m_data);
+		}
+
+		SyncCPUToGPU();
+	}
+
+};
+
+
+struct SrcSampleInfo
+{
+	unsigned srcPos;
+	float srcSampleFreq;
+	float logicalPos;
+};
+
+struct SrcPieceInfo
+{
+	std::vector<SrcSampleInfo> SampleLocations;
+	std::vector<SrcSampleInfo> SampleLocations_next;
+	unsigned fixedBeginId;
+	unsigned fixedEndId;
+	unsigned fixedBeginId_next;
+	unsigned fixedEndId_next;
+};
+
+struct CUDASrcPieceInfo
+{
+	CUDAList<SrcSampleInfo> SampleLocations;
+	CUDAList<SrcSampleInfo> SampleLocations_next;
+	unsigned fixedBeginId;
+	unsigned fixedEndId;
+	unsigned fixedBeginId_next;
+	unsigned fixedEndId_next;
+};
+
+class CUDASrcPieceInfoList : public ImagedCUDAList<CUDASrcPieceInfo>
+{
+public:
+	void AllocateFill(const std::vector<SrcPieceInfo>& srcPieceList)
+	{
+		cpuList.resize(srcPieceList.size());
+		for (unsigned i = 0; i < (unsigned)srcPieceList.size(); i++)
+		{
+			cpuList[i].fixedBeginId = srcPieceList[i].fixedBeginId;
+			cpuList[i].fixedBeginId_next = srcPieceList[i].fixedBeginId_next;
+			cpuList[i].fixedEndId = srcPieceList[i].fixedEndId;
+			cpuList[i].fixedEndId_next = srcPieceList[i].fixedEndId_next;
+			cpuList[i].SampleLocations.AllocateFill(srcPieceList[i].SampleLocations);
+			cpuList[i].SampleLocations_next.AllocateFill(srcPieceList[i].SampleLocations_next);
+		}
+		SyncCPUToGPU();
 	}
 };
 
@@ -79,27 +131,13 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	for (unsigned i = 0; i < numPieces; i++)
 		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i])) return;	
 
-	std::vector<CUDASrcBuf> cuSourceBufs;
-	cuSourceBufs.resize(numPieces);
-
-	for (unsigned i = 0; i < numPieces; i++)
-	{
-		cuSourceBufs[i].bufSize = (unsigned)srcInfos[i].source.m_data.size();
-		cudaMalloc(&cuSourceBufs[i].d_buf, cuSourceBufs[i].bufSize*sizeof(float));
-		cudaMemcpy(cuSourceBufs[i].d_buf, srcInfos[i].source.m_data.data(), cuSourceBufs[i].bufSize*sizeof(float), cudaMemcpyHostToDevice);
-	}
-
-	CUDASrcBuf* d_cuSourceBufs;
-	cudaMalloc(&d_cuSourceBufs, sizeof(CUDASrcBuf)*numPieces);
-	cudaMemcpy(d_cuSourceBufs, cuSourceBufs.data(), sizeof(CUDASrcBuf)*numPieces, cudaMemcpyHostToDevice);
+	CUDASrcBufList cuSourceBufs;
+	cuSourceBufs.AllocateFill(srcInfos);
 
 	SourceInfo _dummyNext;
 
 	std::vector<SrcPieceInfo> SrcPieceInfos;
 	SrcPieceInfos.resize(numPieces);
-
-	std::vector<CUDASrcPieceInfo> cuSrcPieceInfos;
-	cuSrcPieceInfos.resize(numPieces);
 
 	float max_srcHalfWinWidth = 0.0f;
 	float max_freqDetectHalfWinWidth = 0.0f;
@@ -264,37 +302,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 				logicalPos += srcDerInfo.fixed_Weight;
 			}
 		}
-
-		cuSrcPieceInfos[i].fixedBeginId = srcPieceInfo.fixedBeginId;
-		cuSrcPieceInfos[i].fixedEndId = srcPieceInfo.fixedEndId;
-		cuSrcPieceInfos[i].fixedBeginId_next = srcPieceInfo.fixedBeginId_next;
-		cuSrcPieceInfos[i].fixedEndId_next = srcPieceInfo.fixedEndId_next;
-
-		cudaMalloc(&cuSrcPieceInfos[i].d_SampleLocations, srcPieceInfo.SampleLocations.size()*sizeof(SrcSampleInfo));
-		cudaMemcpy(cuSrcPieceInfos[i].d_SampleLocations, srcPieceInfo.SampleLocations.data(), srcPieceInfo.SampleLocations.size()*sizeof(SrcSampleInfo), cudaMemcpyHostToDevice);
-
-		cudaMalloc(&cuSrcPieceInfos[i].d_SampleLocations_next, srcPieceInfo.SampleLocations_next.size()*sizeof(SrcSampleInfo));
-		cudaMemcpy(cuSrcPieceInfos[i].d_SampleLocations_next, srcPieceInfo.SampleLocations_next.data(), srcPieceInfo.SampleLocations_next.size()*sizeof(SrcSampleInfo), cudaMemcpyHostToDevice);
-
 	}
-
-	CUDASrcPieceInfo *d_cuSrcPieceInfos;
-	cudaMalloc(&d_cuSrcPieceInfos, sizeof(CUDASrcPieceInfo)*cuSrcPieceInfos.size());
-	cudaMemcpy(d_cuSrcPieceInfos, cuSrcPieceInfos.data(), sizeof(CUDASrcPieceInfo)*cuSrcPieceInfos.size(), cudaMemcpyHostToDevice);
-
 	
-	cudaFree(d_cuSrcPieceInfos);
-	for (unsigned i = 0; i < numPieces; i++)
-	{
-		cudaFree(cuSrcPieceInfos[i].d_SampleLocations);
-		cudaFree(cuSrcPieceInfos[i].d_SampleLocations_next);
-	}
-
-	cudaFree(d_cuSourceBufs);	
-	for (unsigned i = 0; i < numPieces; i++)
-	{
-		cudaFree(cuSourceBufs[i].d_buf);
-	}
-
+	CUDASrcPieceInfoList cuSrcPieceInfos;
+	cuSrcPieceInfos.AllocateFill(SrcPieceInfos);	
 
 }
