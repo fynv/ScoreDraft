@@ -1,6 +1,6 @@
-#include "UtauDraft.h"
+#include "SentenceGenerator_PSOLA.h"
 
-void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
+void SentenceGenerator_PSOLA::GeneratePiece(bool isVowel, unsigned uSumLen, const float* freqMap, float& phase, Buffer& dstBuf, bool firstNote, bool hasNextNote, const SourceInfo& srcInfo, const SourceInfo& srcInfo_next, const SourceDerivedInfo& srcDerInfo)
 {
 	float minSampleFreq;
 
@@ -30,7 +30,7 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 	unsigned uTempLen = (unsigned)ceilf(tempLen);
 
 	Buffer tempBuf;
-	tempBuf.m_sampleRate = source.m_sampleRate;
+	tempBuf.m_sampleRate = srcInfo.source.m_sampleRate;
 	tempBuf.m_data.resize(uTempLen);
 	tempBuf.SetZero();
 
@@ -43,31 +43,31 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 	std::vector<SymmetricWindowWithPosition> windows;
 	float fPeriodCount = 0.0f;
 
-	float fStartPos = firstNote ? overlap_pos : preutter_pos;
+	float fStartPos = firstNote ? srcDerInfo.overlap_pos : srcDerInfo.preutter_pos;
 	float logicalPos = 0.0f;
 
 	if (fStartPos < 0.0f)
 	{
-		logicalPos += (-fStartPos)*(firstNote ? headerWeight : fixed_Weight);
+		logicalPos += (-fStartPos)*(firstNote ? srcDerInfo.headerWeight : srcDerInfo.fixed_Weight);
 		fStartPos = 0.0f;
 	}
 	unsigned startPos = (unsigned)fStartPos;
 
-	for (unsigned srcPos = startPos; srcPos < source.m_data.size(); srcPos++)
+	for (unsigned srcPos = startPos; srcPos < srcInfo.source.m_data.size(); srcPos++)
 	{
 		float srcSampleFreq;
-		float srcFreqPos = (srcbegin + (float)srcPos) / (float)frq.m_window_interval;
+		float srcFreqPos = (srcInfo.srcbegin + (float)srcPos) / (float)srcInfo.frq.m_window_interval;
 		unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 		float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-		float freq1 = (float)frq[uSrcFreqPos].freq;
-		if (freq1 <= 55.0f) freq1 = (float)frq.m_key_freq;
+		float freq1 = (float)srcInfo.frq[uSrcFreqPos].freq;
+		if (freq1 <= 55.0f) freq1 = (float)srcInfo.frq.m_key_freq;
 
-		float freq2 = (float)frq[uSrcFreqPos + 1].freq;
-		if (freq2 <= 55.0f) freq2 = (float)frq.m_key_freq;
+		float freq2 = (float)srcInfo.frq[uSrcFreqPos + 1].freq;
+		if (freq2 <= 55.0f) freq2 = (float)srcInfo.frq.m_key_freq;
 
-		float sampleFreq1 = freq1 / (float)source.m_sampleRate;
-		float sampleFreq2 = freq2 / (float)source.m_sampleRate;
+		float sampleFreq1 = freq1 / (float)srcInfo.source.m_sampleRate;
+		float sampleFreq2 = freq2 / (float)srcInfo.source.m_sampleRate;
 
 		srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
 
@@ -76,7 +76,7 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 		{
 			float srcHalfWinWidth = 1.0f / srcSampleFreq;
 			Window srcWin;
-			srcWin.CreateFromBuffer(source, (float)srcPos, srcHalfWinWidth);
+			srcWin.CreateFromBuffer(srcInfo.source, (float)srcPos, srcHalfWinWidth);
 
 			SymmetricWindowWithPosition symWin;
 			symWin.CreateFromAsymmetricWindow(srcWin);
@@ -87,17 +87,17 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 		}
 		fPeriodCount += srcSampleFreq;
 
-		if (firstNote && (float)srcPos < preutter_pos)
+		if (firstNote && (float)srcPos < srcDerInfo.preutter_pos)
 		{
-			logicalPos += headerWeight;
+			logicalPos += srcDerInfo.headerWeight;
 		}
-		else if ((float)srcPos < fixed_end)
+		else if ((float)srcPos < srcDerInfo.fixed_end)
 		{
-			logicalPos += fixed_Weight;
+			logicalPos += srcDerInfo.fixed_Weight;
 		}
 		else
 		{
-			logicalPos += vowel_Weight;
+			logicalPos += srcDerInfo.vowel_Weight;
 		}
 	}
 
@@ -106,23 +106,23 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 	if (hasNextNote)
 	{
 		float fPeriodCount = 0.0f;
-		float logicalPos = 1.0f - preutter_pos_next*fixed_Weight;
+		float logicalPos = 1.0f - srcDerInfo.preutter_pos_next*srcDerInfo.fixed_Weight;
 
-		for (unsigned srcPos = 0; (float)srcPos < preutter_pos_next; srcPos++)
+		for (unsigned srcPos = 0; (float)srcPos <srcDerInfo.preutter_pos_next; srcPos++)
 		{
 			float srcSampleFreq;
-			float srcFreqPos = (nextbegin + (float)srcPos) / (float)frq_next.m_window_interval;
+			float srcFreqPos = (srcInfo_next.srcbegin + (float)srcPos) / (float)srcInfo_next.frq.m_window_interval;
 			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-			float freq1 = (float)frq_next[uSrcFreqPos].freq;
-			if (freq1 <= 55.0f) freq1 = (float)frq_next.m_key_freq;
+			float freq1 = (float)srcInfo_next.frq[uSrcFreqPos].freq;
+			if (freq1 <= 55.0f) freq1 = (float)srcInfo_next.frq.m_key_freq;
 
-			float freq2 = (float)frq_next[uSrcFreqPos + 1].freq;
-			if (freq2 <= 55.0f) freq2 = (float)frq_next.m_key_freq;
+			float freq2 = (float)srcInfo_next.frq[uSrcFreqPos + 1].freq;
+			if (freq2 <= 55.0f) freq2 = (float)srcInfo_next.frq.m_key_freq;
 
-			float sampleFreq1 = freq1 / (float)source_next.m_sampleRate;
-			float sampleFreq2 = freq2 / (float)source_next.m_sampleRate;
+			float sampleFreq1 = freq1 / (float)srcInfo_next.source.m_sampleRate;
+			float sampleFreq2 = freq2 / (float)srcInfo_next.source.m_sampleRate;
 
 			srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
 
@@ -131,7 +131,7 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 			{
 				float srcHalfWinWidth = 1.0f / srcSampleFreq;
 				Window srcWin;
-				srcWin.CreateFromBuffer(source_next, (float)srcPos, srcHalfWinWidth);
+				srcWin.CreateFromBuffer(srcInfo_next.source, (float)srcPos, srcHalfWinWidth);
 
 				SymmetricWindowWithPosition symWin;
 				symWin.CreateFromAsymmetricWindow(srcWin);
@@ -140,7 +140,7 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 				windows_next.push_back(symWin);
 			}
 			fPeriodCount += srcSampleFreq;
-			logicalPos += fixed_Weight;
+			logicalPos += srcDerInfo.fixed_Weight;
 		}
 	}
 
@@ -152,11 +152,10 @@ void UtauDraft::GenWaveStruct::_generateWave_PSOLA()
 	unsigned winId0_next = 0;
 	unsigned pos_final = 0;
 
-	float& phase = *_phase;
 	while (phase > -1.0f) phase -= 1.0f;
 
 	float fTmpWinCenter;
-	float transitionEnd = 1.0f - (preutter_pos_next - overlap_pos_next)*fixed_Weight;
+	float transitionEnd = 1.0f - (srcDerInfo.preutter_pos_next - srcDerInfo.overlap_pos_next)*srcDerInfo.fixed_Weight;
 	float transitionStart = transitionEnd* (1.0f - _transition);
 
 	for (fTmpWinCenter = phase*tempHalfWinLen; fTmpWinCenter - tempHalfWinLen <= tempLen; fTmpWinCenter += tempHalfWinLen)

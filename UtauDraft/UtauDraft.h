@@ -13,18 +13,55 @@ using namespace VoiceUtil;
 #include "FrqData.h"
 #include "OtoMap.h"
 
+struct SourceInfo
+{
+	VoiceLocation loc;
+	FrqData frq;
+	Buffer source;
+	float srcbegin;
+	float srcend;
+};
+
+class UtauSourceFetcher
+{
+public:
+	OtoMap* m_OtoMap;
+	std::string m_defaultLyric;
+
+	bool FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) const;
+	static bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end);
+
+};
+
+struct SourceDerivedInfo
+{
+	float overlap_pos;
+	float preutter_pos;
+	float fixed_end;
+	float overlap_pos_next;
+	float preutter_pos_next;
+	float vowel_Weight;
+	float fixed_Weight;
+	float headerWeight;
+
+	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc);
+};
+
+class SentenceGenerator
+{
+public:
+	float _transition;
+	float _gender;
+
+	virtual void GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf) = 0;
+
+};
+
 class UtauDraft : public Singer
 {
 public:
 	UtauDraft(bool useCUDA=false);
 	~UtauDraft();
-
-	enum Method
-	{
-		PSOLA,
-		HNM,
-		CUDA_HNM
-	};
 
 	void SetOtoMap(OtoMap* otoMap);
 	void SetPrefixMap(PrefixMap* prefixMap);
@@ -40,52 +77,13 @@ public:
 
 
 private:
-	struct GenWaveStruct
-	{
-		bool _isVowel;
-		float _transition;
-		float _gender;
-
-		unsigned uSumLen;
-		float* freqMap;
-		float* _phase;	
-
-		Buffer dstBuf;
-
-		bool firstNote;
-		bool hasNextNote;		
-
-		FrqData frq;
-		Buffer source;
-		float srcbegin;
-
-		FrqData frq_next;
-		Buffer source_next;
-		float nextbegin;
-
-		float overlap_pos;
-		float preutter_pos;
-		float fixed_end;
-
-		float overlap_pos_next;
-		float preutter_pos_next;
-
-		float vowel_Weight;
-		float fixed_Weight;
-		float headerWeight;
-
-		void _generateWave_PSOLA();
-		void _generateWave_HNM();
-		void _generateWave_CUDA_HNM();
-
-	};
-
-	static bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end);
 	static void _floatBufSmooth(float* buf, unsigned size);
 	SingingPieceInternalList _convertLyric_singing(SingingPieceInternalList pieceList);
 	RapPieceInternalList _convertLyric_rap(const RapPieceInternalList& inputList);
 	float getFirstNoteHeadSamples(const char* lyric);
-	void _generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote, bool isVowel);
+
+	SentenceGenerator* createSentenceGenerator();
+	void releasSentenceGenerator(SentenceGenerator* sg) { delete sg; }
 
 	OtoMap* m_OtoMap;
 
@@ -98,7 +96,7 @@ private:
 	bool m_use_prefix_map;
 	PrefixMap* m_PrefixMap;
 
-	Method m_method;
+	bool m_use_CUDA;
 };
 
 #endif

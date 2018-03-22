@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-set (USE_CUDA true)
+set (USE_CUDA false)
 
 if (USE_CUDA) 
 find_package(CUDA REQUIRED)
@@ -10,11 +10,12 @@ find_package(PythonLibs 3 REQUIRED)
 
 set(SOURCES
 UtauDraft.cpp
-UtauDraft_PSOLA.cpp
-UtauDraft_HNM.cpp
 OtoMap.cpp
 FrqData.cpp
 PrefixMap.cpp
+SentenceGenerator_CPU.cpp
+SentenceGenerator_PSOLA.cpp
+SentenceGenerator_HNM.cpp
 )
 
 set(HEADERS 
@@ -22,6 +23,9 @@ UtauDraft.h
 OtoMap.h
 FrqData.h
 PrefixMap.h
+SentenceGenerator_CPU.h
+SentenceGenerator_PSOLA.h
+SentenceGenerator_HNM.h
 )
 
 set(PYTHON
@@ -61,11 +65,12 @@ endif()
 if (USE_CUDA) 
 
 set(SOURCES ${SOURCES}
-UtauDraft_HNM_CUDA.cpp
+SentenceGenerator_CUDA.cpp
 HNM.cu
 )
 
 set(HEADERS ${HEADERS}
+SentenceGenerator_CUDA.h
 helper_math.h
 VoiceUtil.cuh
 fft.cuh
