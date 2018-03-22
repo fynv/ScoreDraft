@@ -34,6 +34,43 @@ struct CUDASrcBuf
 	float* d_buf;
 };
 
+template <class T>
+class CUDAList
+{
+	unsigned count;
+	T* d_data;
+
+	CUDAList()
+	{
+		d_data = nullptr;
+	}
+
+	~CUDAList()
+	{
+		if (d_data)
+			cudaFree(d_data);
+	}
+
+	void Allocate(unsigned count)
+	{
+		this->count = count;
+		if (d_data)
+			cudaFree(d_data);
+		cudaMalloc(&d_data, sizeof(T)*count);
+	}
+
+	void Fill(T* cpuData)
+	{
+		cudaMemcpy(d_data, cpuData, sizeof(T)*count);
+	}
+
+	void AllocateFill(unsigned count, T* cpuData)
+	{
+		Allocate(count);
+		Fill(cpuData);
+	}
+};
+
 void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
 	std::vector<SourceInfo> srcInfos;
