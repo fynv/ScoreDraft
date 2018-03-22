@@ -34,7 +34,8 @@ public:
 
 	void Fill(const T* cpuData)
 	{
-		cudaMemcpy(d_data, cpuData, sizeof(T)*count, cudaMemcpyHostToDevice);
+		if (count>0)
+			cudaMemcpy(d_data, cpuData, sizeof(T)*count, cudaMemcpyHostToDevice);
 	}
 
 	void AllocateFill(unsigned count, const T* cpuData)
