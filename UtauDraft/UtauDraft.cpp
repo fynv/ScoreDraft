@@ -18,14 +18,8 @@
 
 #include "PrefixMap.h"
 #include "UtauDraft.h"
-#include "SentenceGenerator_PSOLA.h"
-#include "SentenceGenerator_HNM.h"
 
-#ifdef HAVE_CUDA
-#include "SentenceGenerator_CUDA.h"
-#endif
-
-bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end)
+bool UtauDraft::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end)
 {
 	Buffer whole;
 	float maxV;
@@ -39,7 +33,7 @@ bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float
 
 	unsigned uBegin = (unsigned)floorf(begin);
 	unsigned uEnd = (unsigned)floorf(end);
-
+	
 	buf.m_sampleRate = whole.m_sampleRate;
 	buf.m_data.resize(uEnd - uBegin);
 
@@ -54,97 +48,14 @@ bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float
 	{
 		buf.m_data[i - uBegin] = whole.m_data[i] * acc;
 	}
-
+	
 	return true;
 }
 
-bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) const
-{
-	if (m_OtoMap->find(lyric) == m_OtoMap->end())
-	{
-		printf("missied lyic: %s\n", lyric);
-		lyric = m_defaultLyric.data();
-		if (m_OtoMap->find(lyric) == m_OtoMap->end())
-			return false;
-	}
-
-	VoiceLocation& loc = srcInfo.loc;
-	FrqData& frq = srcInfo.frq;
-	Buffer& source = srcInfo.source;
-	float& srcbegin = srcInfo.srcbegin;
-	float& srcend = srcInfo.srcend;
-
-	{
-		loc = (*m_OtoMap)[lyric];
-
-		char frq_path[2048];
-		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
-		memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
-
-		if (!frq.ReadFromFile(frq_path))
-		{
-			printf("%s not found.\n", frq_path);
-			return false;
-		}
-
-		if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend))
-		{
-			printf("%s not found.\n", loc.filename.data());
-			return false;
-		}
-	}
-
-	return true;
-}
-
-void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc)
-{
-	float total_len = curSrc.srcend - curSrc.srcbegin;
-	overlap_pos = curSrc.loc.overlap* (float)curSrc.source.m_sampleRate*0.001f;
-	preutter_pos = curSrc.loc.preutterance * (float)curSrc.source.m_sampleRate*0.001f;
-	if (preutter_pos < overlap_pos) preutter_pos = overlap_pos;
-
-	float note_head = preutter_pos - overlap_pos;
-	float sumLenWithoutHead = firstNote ? (float)uSumLen - note_head : (float)uSumLen;
-
-	float note_len = total_len - preutter_pos;
-	fixed_end = curSrc.loc.consonant* (float)curSrc.source.m_sampleRate*0.001f;
-	float fixed_len = fixed_end - preutter_pos;
-	float vowel_len = note_len - fixed_len;
-
-	if (hasNext)
-	{
-		overlap_pos_next = nextSrc.loc.overlap* (float)nextSrc.source.m_sampleRate*0.001f;
-		preutter_pos_next = nextSrc.loc.preutterance * (float)nextSrc.source.m_sampleRate*0.001f;
-		if (preutter_pos_next < overlap_pos_next) preutter_pos_next = overlap_pos_next;
-
-		fixed_len += preutter_pos_next - overlap_pos_next;
-		note_len = vowel_len + fixed_len;
-	}
-
-	float k = 1.0f;
-	if (sumLenWithoutHead > note_len)
-	{
-		float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
-		if (k2 < k) k = k2;
-	}
-	vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
-	fixed_Weight = k* vowel_Weight;
-
-	if (firstNote)
-	{
-		vowel_Weight *= sumLenWithoutHead / (float)uSumLen;
-		fixed_Weight *= sumLenWithoutHead / (float)uSumLen;
-
-		headerWeight = 1.0f / (float)uSumLen;
-	}
-
-};
 
 UtauDraft::UtauDraft(bool useCUDA)
 {
-	m_use_CUDA = useCUDA;
-
+	m_method = useCUDA ? CUDA_HNM : HNM;
 	m_transition = 0.1f;
 	m_rap_distortion = 1.0f;
 	m_gender = 0.0f;
@@ -226,25 +137,6 @@ bool UtauDraft::Tune(const char* cmd)
 		}
 	}
 	return false;
-}
-
-SentenceGenerator* UtauDraft::createSentenceGenerator()
-{
-	SentenceGenerator* sg;
-
-#ifdef HAVE_CUDA
-	if (m_use_CUDA)
-	{
-		sg = new SentenceGenerator_CUDA;
-	}
-	else
-#endif
-	{
-		sg = new SentenceGenerator_HNM;
-	}
-	sg->_gender = m_gender;
-	sg->_transition = m_transition;
-	return sg;
 }
 
 void UtauDraft::GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
@@ -344,8 +236,7 @@ void UtauDraft::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList,
 
 	}
 
-	std::vector<unsigned> lens;
-	lens.resize(pieceList.size());
+	unsigned *lens = new unsigned[pieceList.size()];
 	float sumAllLen=0.0f;
 	unsigned uSumAllLen;
 
@@ -403,27 +294,28 @@ void UtauDraft::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList,
 
 	_floatBufSmooth(freqAllMap, uSumAllLen);
 
-	unsigned numPieces = (unsigned)pieceList.size();
-	std::vector<std::string> lyrics;
-	std::vector<unsigned> isVowel;
+	noteBufPos = 0;
+	float phase = 0.0f;
 
-	lyrics.resize(numPieces);
-	isVowel.resize(numPieces);
-
-	for (unsigned j = 0; j < numPieces; j++)
+	for (unsigned j = 0; j < pieceList.size(); j++)
 	{
 		SingingPieceInternal& piece = *pieceList[j];
-		lyrics[j] = piece.lyric;
-		isVowel[j] = piece.isVowel?1:0;
+			
+		unsigned uSumLen = lens[j];
+		if (uSumLen == 0) continue;
+		float *freqMap = freqAllMap + noteBufPos;
+
+		const char* lyric_next = nullptr;
+		if (j < pieceList.size() - 1)
+		{
+			lyric_next = pieceList[j + 1]->lyric.data();
+		}
+
+		_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j==0, piece.isVowel);
+
+		noteBufPos += uSumLen;
+			
 	}
-
-	UtauSourceFetcher srcFetcher;
-	srcFetcher.m_OtoMap = m_OtoMap;
-	srcFetcher.m_defaultLyric = m_defaultLyric;
-
-	SentenceGenerator* sg = createSentenceGenerator();
-	sg->GenerateSentence(srcFetcher, numPieces, lyrics.data(), isVowel.data(), lens.data(), freqAllMap, noteBuf);
-	releasSentenceGenerator(sg);
 
 	delete[] freqAllMap;
 
@@ -434,6 +326,7 @@ void UtauDraft::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList,
 		float amplitude = 1.0f - expf(-x2*10.0f);
 		noteBuf->m_data[pos] *= amplitude;
 	}
+	delete[] lens;
 }
 
 void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
@@ -455,8 +348,7 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 		}
 	}
 
-	std::vector<unsigned> lens;
-	lens.resize(pieceList.size());
+	unsigned *lens = new unsigned[pieceList.size()];
 	float sumAllLen = 0.0f;
 	unsigned uSumAllLen;
 
@@ -498,27 +390,27 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 
 	_floatBufSmooth(freqAllMap, uSumAllLen);
 
-	unsigned numPieces = (unsigned)pieceList.size();
-	std::vector<std::string> lyrics;
-	std::vector<unsigned> isVowel;
+	noteBufPos = 0;
+	float phase = 0.0f;
 
-	lyrics.resize(numPieces);
-	isVowel.resize(numPieces);
-
-	for (unsigned j = 0; j < numPieces; j++)
+	for (unsigned j = 0; j < pieceList.size(); j++)
 	{
 		RapPieceInternal& piece = *pieceList[j];
-		lyrics[j] = piece.lyric;
-		isVowel[j] = piece.isVowel ? 1 : 0;
+		unsigned uSumLen = lens[j];
+		if (uSumLen == 0) continue;
+
+		float *freqMap = freqAllMap + noteBufPos;
+
+		const char* lyric_next = nullptr;
+		if (j < pieceList.size() - 1)
+		{
+			lyric_next = pieceList[j + 1]->lyric.data();
+		}
+
+		_generateWave(piece.lyric.data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0, piece.isVowel);
+
+		noteBufPos += uSumLen;
 	}
-
-	UtauSourceFetcher srcFetcher;
-	srcFetcher.m_OtoMap = m_OtoMap;
-	srcFetcher.m_defaultLyric = m_defaultLyric;
-
-	SentenceGenerator* sg = createSentenceGenerator();
-	sg->GenerateSentence(srcFetcher, numPieces, lyrics.data(), isVowel.data(), lens.data(), freqAllMap, noteBuf);
-	releasSentenceGenerator(sg);
 
 	delete[] freqAllMap;
 
@@ -530,6 +422,7 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 		noteBuf->m_data[pos] *= amplitude;
 	}
 
+	delete[] lens;
 
 	/// Distortion 
 	if (m_rap_distortion > 1.0f)
@@ -721,19 +614,169 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 
 float UtauDraft::getFirstNoteHeadSamples(const char* lyric)
 {
-	UtauSourceFetcher srcFetcher;
-	srcFetcher.m_OtoMap = m_OtoMap;
-	srcFetcher.m_defaultLyric = m_defaultLyric;
+	if (m_OtoMap->find(lyric) == m_OtoMap->end()) lyric = m_defaultLyric.data();
+	VoiceLocation loc;
+	FrqData frq;
+	Buffer source;
+	float srcbegin, srcend;
 
-	SourceInfo srcInfo;
-	srcFetcher.FetchSourceInfo(lyric, srcInfo);
+	{
+		loc = (*m_OtoMap)[lyric];
 
-	float overlap_pos = srcInfo.loc.overlap* (float)srcInfo.source.m_sampleRate*0.001f;
-	float preutter_pos = srcInfo.loc.preutterance * (float)srcInfo.source.m_sampleRate*0.001f;
+		char frq_path[2048];
+		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
+		memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+		frq.ReadFromFile(frq_path);
+
+		if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend)) return 0.0f;
+	}
+
+	float overlap_pos = loc.overlap* (float)source.m_sampleRate*0.001f;
+	float preutter_pos = loc.preutterance * (float)source.m_sampleRate*0.001f;
 	if (preutter_pos < overlap_pos) preutter_pos = overlap_pos;
 
 	return preutter_pos - overlap_pos;
 
+}
+
+void UtauDraft::_generateWave(const char* lyric, const char* lyric_next, unsigned uSumLen, float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote, bool isVowel)
+{
+	GenWaveStruct gws;
+	gws._isVowel = isVowel;
+	gws._transition = m_transition;
+	gws._gender = m_gender;
+	gws.uSumLen = uSumLen;
+	gws.freqMap = freqMap;
+	gws._phase = &phase;
+	gws.firstNote = firstNote;
+
+	bool& hasNextNote = gws.hasNextNote;
+	hasNextNote = lyric_next != nullptr;
+
+	if (m_OtoMap->find(lyric) == m_OtoMap->end())
+	{
+		printf("missied lyic: %s\n", lyric);
+		lyric = m_defaultLyric.data();
+	}
+
+	// Current sample
+	VoiceLocation loc;
+	FrqData& frq = gws.frq;
+	Buffer& source = gws.source;
+	float& srcbegin = gws.srcbegin;
+	float srcend;
+
+	{
+		loc = (*m_OtoMap)[lyric];
+
+		char frq_path[2048];
+		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
+		memcpy(frq_path + loc.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+		if (!frq.ReadFromFile(frq_path))
+		{
+			printf("%s not found.\n", frq_path);
+			return;
+		}
+
+		if (!ReadWavLocToBuffer(loc, source, srcbegin, srcend))
+		{
+			printf("%s not found.\n", loc.filename.data());
+			return;
+		}
+	}
+
+
+	//Next sample
+	VoiceLocation loc_next;
+	FrqData& frq_next = gws.frq_next;
+	Buffer& source_next = gws.source_next;
+	float& nextbegin = gws.nextbegin;
+	float nextend;
+
+	if (hasNextNote)
+	{
+		if (m_OtoMap->find(lyric_next) == m_OtoMap->end()) lyric_next = m_defaultLyric.data();
+		loc_next = (*m_OtoMap)[lyric_next];
+
+		char frq_path_next[2048];
+		memcpy(frq_path_next, loc_next.filename.data(), loc_next.filename.length() - 4);
+		memcpy(frq_path_next + loc_next.filename.length() - 4, "_wav.frq", strlen("_wav.frq") + 1);
+
+		frq_next.ReadFromFile(frq_path_next);
+
+		if (!ReadWavLocToBuffer(loc_next, source_next, nextbegin, nextend)) return;
+
+	}
+
+	float total_len = srcend - srcbegin;
+	float& overlap_pos = gws.overlap_pos;
+	overlap_pos = loc.overlap* (float)source.m_sampleRate*0.001f;
+	float& preutter_pos = gws.preutter_pos;
+	preutter_pos = loc.preutterance * (float)source.m_sampleRate*0.001f;
+	if (preutter_pos < overlap_pos) preutter_pos = overlap_pos;
+
+	float note_head = preutter_pos - overlap_pos;
+	float sumLenWithoutHead = firstNote ? (float)uSumLen - note_head : (float)uSumLen;
+
+	float note_len = total_len - preutter_pos;
+	float& fixed_end = gws.fixed_end;
+	fixed_end = loc.consonant* (float)source.m_sampleRate*0.001f;
+	float fixed_len = fixed_end - preutter_pos;
+	float vowel_len = note_len - fixed_len;
+
+	float& overlap_pos_next = gws.overlap_pos_next;
+	float& preutter_pos_next = gws.preutter_pos_next;
+	if (hasNextNote)
+	{
+		overlap_pos_next = loc_next.overlap* (float)source.m_sampleRate*0.001f;
+		preutter_pos_next = loc_next.preutterance * (float)source.m_sampleRate*0.001f;
+		if (preutter_pos_next < overlap_pos_next) preutter_pos_next = overlap_pos_next;
+
+		fixed_len += preutter_pos_next - overlap_pos_next;
+		note_len = vowel_len + fixed_len;
+	}
+
+
+	float k = 1.0f;
+	if (sumLenWithoutHead > note_len)
+	{
+		float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
+		if (k2 < k) k = k2;
+	}
+	float& vowel_Weight = gws.vowel_Weight;
+	vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
+	float& fixed_Weight = gws.fixed_Weight;
+	fixed_Weight = k* vowel_Weight;
+	float& headerWeight = gws.headerWeight;
+
+	if (firstNote)
+	{
+		vowel_Weight *= sumLenWithoutHead / (float)uSumLen;
+		fixed_Weight *= sumLenWithoutHead / (float)uSumLen;
+
+		headerWeight = 1.0f / (float)uSumLen;
+	}
+
+	Buffer& dstBuf = gws.dstBuf;
+	dstBuf.m_sampleRate = source.m_sampleRate;
+	dstBuf.m_data.resize(uSumLen);
+
+	switch (m_method)
+	{
+	case PSOLA:
+		gws._generateWave_PSOLA();
+		break;
+	case HNM:
+		gws._generateWave_HNM();
+		break;
+	case CUDA_HNM:
+		gws._generateWave_CUDA_HNM();
+		break;
+	}
+
+	memcpy(noteBuf->m_data + noteBufPos, &dstBuf.m_data[0], sizeof(float)*uSumLen);
 }
 
 class UtauDraftDeferred : public Singer_deferred

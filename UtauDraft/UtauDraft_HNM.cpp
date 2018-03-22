@@ -1,6 +1,13 @@
-#include "SentenceGenerator_HNM.h"
+#include "UtauDraft.h"
 
-void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const float* freqMap, float& phase, Buffer& dstBuf, bool firstNote, bool hasNextNote, const SourceInfo& srcInfo, const SourceInfo& srcInfo_next, const SourceDerivedInfo& srcDerInfo)
+#ifndef HAVE_CUDA
+void UtauDraft::GenWaveStruct::_generateWave_CUDA_HNM()
+{
+	_generateWave_HNM();
+}
+#endif
+
+void UtauDraft::GenWaveStruct::_generateWave_HNM()
 {
 	float minSampleFreq;
 
@@ -30,7 +37,7 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 	unsigned uTempLen = (unsigned)ceilf(tempLen);
 
 	Buffer tempBuf;
-	tempBuf.m_sampleRate = srcInfo.source.m_sampleRate;
+	tempBuf.m_sampleRate = source.m_sampleRate;
 	tempBuf.m_data.resize(uTempLen);
 	tempBuf.SetZero();
 
@@ -64,45 +71,45 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 	float fPeriodCount = 0.0f;
 	unsigned lastmaxVoiced = 0;
 
-	float fStartPos = firstNote ? srcDerInfo.overlap_pos : srcDerInfo.preutter_pos;
+	float fStartPos = firstNote ? overlap_pos : preutter_pos;
 	float logicalPos = 0.0f;
 
 	if (fStartPos < 0.0f)
 	{
-		logicalPos += (-fStartPos)*(firstNote ? srcDerInfo.headerWeight : srcDerInfo.fixed_Weight);
+		logicalPos += (-fStartPos)*(firstNote ? headerWeight : fixed_Weight);
 		fStartPos = 0.0f;
 	}
 	unsigned startPos = (unsigned)fStartPos;
 
-	for (unsigned srcPos = startPos; srcPos < srcInfo.source.m_data.size(); srcPos++)
+	for (unsigned srcPos = startPos; srcPos < source.m_data.size(); srcPos++)
 	{
 		float srcSampleFreq;
-		float srcFreqPos = (srcInfo.srcbegin + (float)srcPos) / (float)srcInfo.frq.m_window_interval;
+		float srcFreqPos = (srcbegin + (float)srcPos) / (float)frq.m_window_interval;
 		unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 		float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-		float freq1 = (float)srcInfo.frq[uSrcFreqPos].freq;
-		if (freq1 <= 55.0f) freq1 = (float)srcInfo.frq.m_key_freq;
+		float freq1 = (float)frq[uSrcFreqPos].freq;
+		if (freq1 <= 55.0f) freq1 = (float)frq.m_key_freq;
 
-		float freq2 = (float)srcInfo.frq[uSrcFreqPos + 1].freq;
-		if (freq2 <= 55.0f) freq2 = (float)srcInfo.frq.m_key_freq;
+		float freq2 = (float)frq[uSrcFreqPos + 1].freq;
+		if (freq2 <= 55.0f) freq2 = (float)frq.m_key_freq;
 
-		float sampleFreq1 = freq1 / (float)srcInfo.source.m_sampleRate;
-		float sampleFreq2 = freq2 / (float)srcInfo.source.m_sampleRate;
+		float sampleFreq1 = freq1 / (float)source.m_sampleRate;
+		float sampleFreq2 = freq2 / (float)source.m_sampleRate;
 
 		srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
 
 		unsigned paramId = (unsigned)fPeriodCount;
 		if (paramId >= parameters.size())
 		{
-			bool isVowel = _isVowel && ((float)srcPos >= srcDerInfo.fixed_end || (float)srcPos < srcDerInfo.overlap_pos);
+			bool isVowel = _isVowel && ((float)srcPos >= fixed_end || (float)srcPos < overlap_pos);
 			unsigned maxVoiced = 0;
 
 			if (!isVowel)
 			{
 				float halfWinlen = 3.0f / srcSampleFreq;
 				Window capture;
-				capture.CreateFromBuffer(srcInfo.source, (float)srcPos, halfWinlen);
+				capture.CreateFromBuffer(source, (float)srcPos, halfWinlen);
 
 				AmpSpectrum capSpec;
 				capSpec.CreateFromWindow(capture);
@@ -135,16 +142,16 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 					}
 				}
 			}
-			if (_isVowel && (float)srcPos >= srcDerInfo.preutter_pos && maxVoiced < lastmaxVoiced)
+			if (_isVowel && (float)srcPos >= preutter_pos && maxVoiced < lastmaxVoiced)
 				maxVoiced = lastmaxVoiced;
 
 			lastmaxVoiced = maxVoiced;
 
-			ParameterSetWithPos paramSet;
+			ParameterSetWithPos paramSet; 
 
 			float srcHalfWinWidth = 1.0f / srcSampleFreq;
 			Window srcWin;
-			srcWin.CreateFromBuffer(srcInfo.source, (float)srcPos, srcHalfWinWidth);
+			srcWin.CreateFromBuffer(source, (float)srcPos, srcHalfWinWidth);
 
 			AmpSpectrum harmSpec;
 			harmSpec.CreateFromWindow(srcWin);
@@ -168,17 +175,17 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 		}
 		fPeriodCount += srcSampleFreq;
 
-		if (firstNote && (float)srcPos < srcDerInfo.preutter_pos)
+		if (firstNote && (float)srcPos < preutter_pos)
 		{
-			logicalPos += srcDerInfo.headerWeight;
+			logicalPos += headerWeight;
 		}
-		else if ((float)srcPos < srcDerInfo.fixed_end)
+		else if ((float)srcPos < fixed_end)
 		{
-			logicalPos += srcDerInfo.fixed_Weight;
+			logicalPos += fixed_Weight;
 		}
 		else
 		{
-			logicalPos += srcDerInfo.vowel_Weight;
+			logicalPos += vowel_Weight;
 		}
 	}
 
@@ -187,38 +194,38 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 	if (hasNextNote)
 	{
 		float fPeriodCount = 0.0f;
-		float logicalPos = 1.0f - srcDerInfo.preutter_pos_next*srcDerInfo.fixed_Weight;
+		float logicalPos = 1.0f - preutter_pos_next*fixed_Weight;
 
 		unsigned lastmaxVoiced = 0;
-		for (unsigned srcPos = 0; (float)srcPos < srcDerInfo.preutter_pos_next; srcPos++)
+		for (unsigned srcPos = 0; (float)srcPos < preutter_pos_next; srcPos++)
 		{
 			float srcSampleFreq;
-			float srcFreqPos = (srcInfo_next.srcbegin + (float)srcPos) / (float)srcInfo_next.frq.m_window_interval;
+			float srcFreqPos = (nextbegin + (float)srcPos) / (float)frq_next.m_window_interval;
 			unsigned uSrcFreqPos = (unsigned)srcFreqPos;
 			float fracSrcFreqPos = srcFreqPos - (float)uSrcFreqPos;
 
-			float freq1 = (float)srcInfo_next.frq[uSrcFreqPos].freq;
-			if (freq1 <= 55.0f) freq1 = (float)srcInfo_next.frq.m_key_freq;
+			float freq1 = (float)frq_next[uSrcFreqPos].freq;
+			if (freq1 <= 55.0f) freq1 = (float)frq_next.m_key_freq;
 
-			float freq2 = (float)srcInfo_next.frq[uSrcFreqPos + 1].freq;
-			if (freq2 <= 55.0f) freq2 = (float)srcInfo_next.frq.m_key_freq;
+			float freq2 = (float)frq_next[uSrcFreqPos + 1].freq;
+			if (freq2 <= 55.0f) freq2 = (float)frq_next.m_key_freq;
 
-			float sampleFreq1 = freq1 / (float)srcInfo_next.source.m_sampleRate;
-			float sampleFreq2 = freq2 / (float)srcInfo_next.source.m_sampleRate;
+			float sampleFreq1 = freq1 / (float)source_next.m_sampleRate;
+			float sampleFreq2 = freq2 / (float)source_next.m_sampleRate;
 
 			srcSampleFreq = sampleFreq1*(1.0f - fracSrcFreqPos) + sampleFreq2*fracSrcFreqPos;
 
 			unsigned paramId = (unsigned)fPeriodCount;
 			if (paramId >= parameters_next.size())
 			{
-				bool isVowel = _isVowel && (float)srcPos < srcDerInfo.overlap_pos_next;
+				bool isVowel = _isVowel && (float)srcPos < overlap_pos_next;
 				unsigned maxVoiced = 0;
 
 				if (!isVowel)
 				{
 					float halfWinlen = 3.0f / srcSampleFreq;
 					Window capture;
-					capture.CreateFromBuffer(srcInfo_next.source, (float)srcPos, halfWinlen);
+					capture.CreateFromBuffer(source_next, (float)srcPos, halfWinlen);
 
 					AmpSpectrum capSpec;
 					capSpec.CreateFromWindow(capture);
@@ -251,7 +258,7 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 						}
 					}
 				}
-				if (_isVowel && (float)srcPos >= srcDerInfo.preutter_pos_next && maxVoiced < lastmaxVoiced)
+				if (_isVowel && (float)srcPos >= preutter_pos_next && maxVoiced < lastmaxVoiced)
 					maxVoiced = lastmaxVoiced;
 
 				lastmaxVoiced = maxVoiced;
@@ -260,7 +267,7 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 
 				float srcHalfWinWidth = 1.0f / srcSampleFreq;
 				Window srcWin;
-				srcWin.CreateFromBuffer(srcInfo_next.source, (float)srcPos, srcHalfWinWidth);
+				srcWin.CreateFromBuffer(source_next, (float)srcPos, srcHalfWinWidth);
 
 				AmpSpectrum harmSpec;
 				harmSpec.CreateFromWindow(srcWin);
@@ -284,7 +291,7 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 			}
 
 			fPeriodCount += srcSampleFreq;
-			logicalPos += srcDerInfo.fixed_Weight;
+			logicalPos += fixed_Weight;
 		}
 	}
 
@@ -296,10 +303,11 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 	unsigned paramId0_next = 0;
 	unsigned pos_final = 0;
 
+	float& phase = *_phase;
 	while (phase > -1.0f) phase -= 1.0f;
 
 	float fTmpWinCenter;
-	float transitionEnd = 1.0f - (srcDerInfo.preutter_pos_next - srcDerInfo.overlap_pos_next)*srcDerInfo.fixed_Weight;
+	float transitionEnd = 1.0f - (preutter_pos_next - overlap_pos_next)*fixed_Weight;
 	float transitionStart = transitionEnd* (1.0f - _transition);
 
 	for (fTmpWinCenter = phase*tempHalfWinLen; fTmpWinCenter - tempHalfWinLen <= tempLen; fTmpWinCenter += tempHalfWinLen)
