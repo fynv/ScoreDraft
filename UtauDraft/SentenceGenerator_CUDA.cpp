@@ -10,6 +10,7 @@ public:
 
 	CUDAList()
 	{
+		count = 0;
 		d_data = nullptr;
 	}
 
@@ -24,7 +25,11 @@ public:
 		this->count = count;
 		if (d_data)
 			cudaFree(d_data);
-		cudaMalloc(&d_data, sizeof(T)*count);
+		if (count > 0)
+			cudaMalloc(&d_data, sizeof(T)*count);
+		else
+			d_data = nullptr;
+
 	}
 
 	void Fill(const T* cpuData)
@@ -35,13 +40,15 @@ public:
 	void AllocateFill(unsigned count, const T* cpuData)
 	{
 		Allocate(count);
-		Fill(cpuData);
+		if (count>0)
+			Fill(cpuData);
 	}
 
 	void AllocateFill(const std::vector<T>& cpuData)
 	{
 		Allocate((unsigned)cpuData.size());
-		Fill(cpuData.data());
+		if (count>0)
+			Fill(cpuData.data());
 	}
 };
 
