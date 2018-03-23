@@ -184,9 +184,11 @@ public:
 		{
 			Leaky_T_GPU* temp = new Leaky_T_GPU[counts.size()];
 			for (unsigned i = 0; i < (unsigned)counts.size(); i++)
+			{
 				temp[i].Allocate(counts[i]);
+			}
 			cudaMemcpy(m_vec.Pointer(), temp, sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
-			operator delete[](temp);
+			delete[] temp;
 		}
 	}
 
@@ -389,6 +391,8 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 					logicalPos += srcDerInfo.vowel_Weight;
 				}
 			}
+			if (fixedBeginId != (unsigned)(-1) && fixedEndId == (unsigned)(-1))
+				fixedEndId = (unsigned)SampleLocations.size();
 		}
 
 		// next note info
@@ -452,6 +456,8 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 				fPeriodCount += srcSampleFreq;
 				logicalPos += srcDerInfo.fixed_Weight;
 			}
+			if (fixedBeginId != (unsigned)(-1) && fixedEndId == (unsigned)(-1))
+				fixedEndId = (unsigned)SampleLocations.size();
 		}
 	}
 	
@@ -468,9 +474,18 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 
 	for (unsigned i = 0; i < numPieces; i++)
 	{
-		countMaxVoiceds[i] = SrcPieceInfos[i].fixedEndId - SrcPieceInfos[i].fixedBeginId;
-		if (i<numPieces-1)
-			countMaxVoiceds_next[i] = SrcPieceInfos[i].fixedEndId_next - SrcPieceInfos[i].fixedBeginId_next;
+		if (SrcPieceInfos[i].fixedBeginId != -1)
+			countMaxVoiceds[i] = SrcPieceInfos[i].fixedEndId - SrcPieceInfos[i].fixedBeginId;
+		else
+			countMaxVoiceds[i] = 0;
+
+		if (i < numPieces - 1)
+		{
+			if (SrcPieceInfos[i].fixedBeginId_next != -1)
+				countMaxVoiceds_next[i] = SrcPieceInfos[i].fixedEndId_next - SrcPieceInfos[i].fixedBeginId_next;
+			else
+				countMaxVoiceds_next[i] = 0;
+		}
 	}
 	cuMaxVoicedLists.Allocate(countMaxVoiceds);
 	cuMaxVoicedLists_next.Allocate(countMaxVoiceds_next);
@@ -497,6 +512,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 				jobMap.push_back(job);
 			}
 	}
+
 	CUDAVector<Job> cuJobMap;
 	cuJobMap=jobMap;
 
@@ -510,5 +526,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	printf("BufSize: %u\n", BufSize);
 
 	h_GetMaxVoiced(cuSourceBufs, cuSrcPieceInfos, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
+
+
 
 }
