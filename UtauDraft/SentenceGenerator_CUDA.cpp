@@ -84,14 +84,14 @@ private:
 };
 
 template <class T_GPU, class T_CPU>
-class CUDALevel2Vector
+class CUDAImagedVector
 {
 public:
-	CUDALevel2Vector()
+	CUDAImagedVector()
 	{
 
 	}
-	~CUDALevel2Vector()
+	~CUDAImagedVector()
 	{
 		Free();
 	}
@@ -132,7 +132,7 @@ public:
 		m_vec.Free();
 	}
 
-	const CUDALevel2Vector& operator = (const std::vector<T_CPU>& cpuVecs)
+	const CUDAImagedVector& operator = (const std::vector<T_CPU>& cpuVecs)
 	{
 		Free();
 		m_vec.Allocate((unsigned)cpuVecs.size());
@@ -160,9 +160,30 @@ public:
 		}
 	}
 
-private:
+protected:
 	CUDAVector<T_GPU> m_vec;
 };
+
+template <class T>
+class CUDALevel2Vector : public CUDAImagedVector<CUDAVector<T>, std::vector<T>>
+{
+public:
+	void Allocate(const std::vector<unsigned>& counts)
+	{
+		Free();
+		m_vec.Allocate((unsigned)counts.size());
+		if (m_vec.Count() > 0)
+		{
+			CUDAVector<T>* temp = new CUDAVector<T>[counts.size()];
+			for (unsigned i = 0; i < (unsigned)counts.size(); i++)
+				temp[i].Allocate(counts[i]);
+			cudaMemcpy(m_vec.Pointer(), temp, sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
+			operator delete[](temp);
+		}
+	}
+
+};
+
 
 class CUDASrcBuf : public CUDAVector<float>
 {
@@ -179,7 +200,7 @@ public:
 	}
 };
 
-typedef CUDALevel2Vector<CUDASrcBuf, SourceInfo> CUDASrcBufList;
+typedef CUDAImagedVector<CUDASrcBuf, SourceInfo> CUDASrcBufList;
 
 struct SrcSampleInfo
 {
@@ -232,7 +253,7 @@ struct CUDASrcPieceInfo
 
 };
 
-typedef CUDALevel2Vector<CUDASrcPieceInfo, SrcPieceInfo> CUDASrcPieceInfoList;
+typedef CUDAImagedVector<CUDASrcPieceInfo, SrcPieceInfo> CUDASrcPieceInfoList;
 
 void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
