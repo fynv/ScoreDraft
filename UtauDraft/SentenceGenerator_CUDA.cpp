@@ -125,7 +125,7 @@ public:
 	{
 		if (m_vec.Count() > 0)
 		{
-			T_GPU* temp = (T_GPU*) operator new (m_vec.Count()*sizeof(T_GPU));
+			T_GPU* temp = (T_GPU*) ::operator new (m_vec.Count()*sizeof(T_GPU));
 			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			delete[] temp;
 		}
@@ -142,7 +142,9 @@ public:
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i] = cpuVecs[i];
 			cudaMemcpy(m_vec.Pointer(), temp, sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
-			operator delete[](temp);
+			printf("7\n");
+			::operator delete[](temp);
+			printf("8\n");
 		}
 		return *this;
 	}
@@ -152,11 +154,11 @@ public:
 		cpuVecs.resize(m_vec.count);
 		if (m_vec.Count() > 0)
 		{
-			T_GPU* temp = (T_GPU*) operator new (m_vec.Count()*sizeof(T_GPU));
+			T_GPU* temp = (T_GPU*) ::operator new (m_vec.Count()*sizeof(T_GPU));
 			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i].ToCPU(cpuVecs[i]);
-			operator delete[](temp);
+			::operator delete[](temp);
 		}
 	}
 
@@ -255,6 +257,16 @@ struct CUDASrcPieceInfo
 
 typedef CUDAImagedVector<CUDASrcPieceInfo, SrcPieceInfo> CUDASrcPieceInfoList;
 
+struct Job
+{
+	unsigned pieceId;
+	unsigned isNext;
+	unsigned jobOfPiece;
+};
+
+void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
+	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
+
 void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
 	std::vector<SourceInfo> srcInfos;
@@ -264,7 +276,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i])) return;	
 
 	CUDASrcBufList cuSourceBufs;
+	printf("d\n");
 	cuSourceBufs=srcInfos;
+	printf("e\n");
 
 	SourceInfo _dummyNext;
 
@@ -273,6 +287,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 
 	float max_srcHalfWinWidth = 0.0f;
 	float max_freqDetectHalfWinWidth = 0.0f;
+
 
 	for (unsigned i = 0; i < numPieces; i++)
 	{
@@ -438,5 +453,58 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	
 	CUDASrcPieceInfoList cuSrcPieceInfos;
 	cuSrcPieceInfos = SrcPieceInfos;
+
+	CUDALevel2Vector<unsigned> cuMaxVoicedLists;
+	std::vector<unsigned> countMaxVoiceds;
+	countMaxVoiceds.resize(numPieces);
+
+	CUDALevel2Vector<unsigned> cuMaxVoicedLists_next;
+	std::vector<unsigned> countMaxVoiceds_next;
+	countMaxVoiceds_next.resize(numPieces-1);
+
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		countMaxVoiceds[i] = SrcPieceInfos[i].fixedEndId - SrcPieceInfos[i].fixedBeginId;
+		if (i<numPieces-1)
+			countMaxVoiceds_next[i] = SrcPieceInfos[i].fixedEndId_next - SrcPieceInfos[i].fixedBeginId_next;
+	}
+	cuMaxVoicedLists.Allocate(countMaxVoiceds);
+	cuMaxVoicedLists_next.Allocate(countMaxVoiceds_next);
+
+	std::vector<Job> jobMap;
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		for (unsigned j = 0; j < countMaxVoiceds[i]; j++)
+		{
+			Job job;
+			job.isNext = false;
+			job.pieceId = i;
+			job.jobOfPiece = j;
+			jobMap.push_back(job);
+		}
+
+		if (i<numPieces - 1)
+			for (unsigned j = 0; j < countMaxVoiceds_next[i]; j++)
+			{
+				Job job;
+				job.isNext = true;
+				job.pieceId = i;
+				job.jobOfPiece = j;
+				jobMap.push_back(job);
+			}
+	}
+	CUDAVector<Job> cuJobMap;
+	cuJobMap=jobMap;
+
+	unsigned cuHalfWinLen = (unsigned)ceilf(max_srcHalfWinWidth);
+	unsigned cuSpecLen = (unsigned)ceilf(max_srcHalfWinWidth*0.5f);
+
+	unsigned fftLen = 1;
+	while (fftLen < max_freqDetectHalfWinWidth)
+		fftLen <<= 1;
+	unsigned BufSize = (unsigned)ceilf(max_freqDetectHalfWinWidth) * 2 + fftLen * 2;
+	printf("BufSize: %u\n", BufSize);
+
+	h_GetMaxVoiced(cuSourceBufs, cuSrcPieceInfos, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
 
 }
