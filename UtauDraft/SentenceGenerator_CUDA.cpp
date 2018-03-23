@@ -11,7 +11,7 @@ public:
 		d_data = nullptr;
 	}
 
-	~CUDAVector()
+	virtual ~CUDAVector()
 	{
 		Free();
 	}
@@ -77,6 +77,12 @@ public:
 		cudaMemcpy(cpuVec.data(), d_data, sizeof(T)*count, cudaMemcpyDeviceToHost);
 	}
 
+	void MakeLeaky()
+	{
+		count = 0;
+		d_data = nullptr;
+	}
+
 private:
 	unsigned count;
 	T* d_data;
@@ -91,7 +97,10 @@ protected:
 	{
 	public:
 		Leaky_T_GPU(){}
-		~Leaky_T_GPU(){}
+		virtual ~Leaky_T_GPU()
+		{
+			MakeLeaky();
+		}
 		using T_GPU::operator =;
 	};
 public:
@@ -99,7 +108,7 @@ public:
 	{
 
 	}
-	~CUDAImagedVector()
+	virtual ~CUDAImagedVector()
 	{
 		Free();
 	}
@@ -157,7 +166,7 @@ public:
 
 	void ToCPU(std::vector<T_CPU>& cpuVecs) const
 	{
-		cpuVecs.resize(m_vec.count);
+		cpuVecs.resize(m_vec.Count());
 		if (m_vec.Count() > 0)
 		{
 			Leaky_T_GPU* temp = new Leaky_T_GPU[m_vec.Count()];
@@ -259,6 +268,12 @@ struct CUDASrcPieceInfo
 		cpuVec.fixedEndId = fixedEndId;
 		cpuVec.fixedBeginId_next = fixedBeginId_next;
 		cpuVec.fixedEndId_next = fixedEndId_next;
+	}
+
+	void MakeLeaky()
+	{
+		SampleLocations.MakeLeaky();
+		SampleLocations_next.MakeLeaky();
 	}
 
 };
@@ -527,6 +542,37 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 
 	h_GetMaxVoiced(cuSourceBufs, cuSrcPieceInfos, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
 
+	std::vector<std::vector<unsigned>> h_maxVoicedLists;
+	std::vector<std::vector<unsigned>> h_maxVoicedLists_next;
 
+	cuMaxVoicedLists.ToCPU(h_maxVoicedLists);
+	cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
 
+	FILE *fp = fopen("dump.txt", "w");
+
+	for (unsigned i = 0; i < (unsigned)h_maxVoicedLists.size(); i++)
+	{
+		std::vector<unsigned>& sublist = h_maxVoicedLists[i];
+		fprintf(fp,"%d: ", sublist.size());
+		for (unsigned j = 0; j < (unsigned)sublist.size(); j++)
+		{
+			fprintf(fp, "%d ", sublist[j]);
+		}
+		fprintf(fp, "\n");
+	}
+	fprintf(fp, "\n");
+
+	for (unsigned i = 0; i < (unsigned)h_maxVoicedLists_next.size(); i++)
+	{
+		std::vector<unsigned>& sublist = h_maxVoicedLists_next[i];
+		fprintf(fp, "%d: ", sublist.size());
+		for (unsigned j = 0; j < (unsigned)sublist.size(); j++)
+		{
+			fprintf(fp, "%d ", sublist[j]);
+		}
+		fprintf(fp, "\n");
+	}
+
+	fclose(fp);
+	
 }
