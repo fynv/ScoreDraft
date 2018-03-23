@@ -2,88 +2,184 @@
 #include "SentenceGenerator_CUDA.h"
 
 template <class T>
-class CUDAList
+class CUDAVector
 {
 public:
-	unsigned count;
-	T* d_data;
-
-	CUDAList()
+	CUDAVector()
 	{
 		count = 0;
 		d_data = nullptr;
 	}
 
-	~CUDAList()
+	~CUDAVector()
 	{
-		if (d_data)
+		Free();
+	}
+
+	unsigned Count() const
+	{
+		return count;
+	}
+
+	T* Pointer()
+	{
+		return d_data;
+	}
+
+	const T* ConstPointer() const
+	{
+		return d_data;
+	}
+
+	operator T*()
+	{
+		return d_data;
+	}
+
+	operator const T*()
+	{
+		return d_data;
+	}
+
+	void Free()
+	{
+		if (d_data != nullptr)
+		{
 			cudaFree(d_data);
+			d_data = nullptr;
+		}
+		count = 0;
 	}
 
 	void Allocate(unsigned count)
 	{
+		Free();
 		this->count = count;
-		if (d_data)
-			cudaFree(d_data);
-		if (count > 0)
+		if (count>0)
 			cudaMalloc(&d_data, sizeof(T)*count);
-		else
-			d_data = nullptr;
-
 	}
 
-	void Fill(const T* cpuData)
+	const CUDAVector& operator = (const std::vector<T>& cpuVec)
 	{
-		if (count>0)
-			cudaMemcpy(d_data, cpuData, sizeof(T)*count, cudaMemcpyHostToDevice);
-	}
-
-	void AllocateFill(unsigned count, const T* cpuData)
-	{
-		Allocate(count);
-		if (count>0)
-			Fill(cpuData);
-	}
-
-	void AllocateFill(const std::vector<T>& cpuData)
-	{
-		Allocate((unsigned)cpuData.size());
-		if (count>0)
-			Fill(cpuData.data());
-	}
-};
-
-template <class T>
-class ImagedCUDAList
-{
-public:
-	std::vector<T> cpuList;
-	CUDAList<T> gpuList;
-
-	void SyncCPUToGPU()
-	{
-		gpuList.AllocateFill(cpuList);
-	}
-};
-
-typedef CUDAList<float> CUDASrcBuf;
-
-class CUDASrcBufList : public ImagedCUDAList<CUDASrcBuf>
-{
-public:
-	void AllocateFill(const std::vector<SourceInfo>& sourceInfoList)
-	{
-		cpuList.resize(sourceInfoList.size());
-		for (unsigned i = 0; i < (unsigned)sourceInfoList.size(); i++)
+		Free();
+		Allocate((unsigned)cpuVec.size());
+		if (count > 0)
 		{
-			cpuList[i].AllocateFill(sourceInfoList[i].source.m_data);
+			cudaMemcpy(d_data, cpuVec.data(), sizeof(T)*count, cudaMemcpyHostToDevice);
 		}
 
-		SyncCPUToGPU();
+		return *this;
 	}
+
+	void ToCPU(std::vector<T>& cpuVec) const
+	{
+		cpuVec.resize(count);
+		cudaMemcpy(cpuVec.data(), d_data, sizeof(T)*count, cudaMemcpyDeviceToHost);
+	}
+
+private:
+	unsigned count;
+	T* d_data;
 
 };
 
+template <class T_GPU, class T_CPU>
+class CUDALevel2Vector
+{
+public:
+	CUDALevel2Vector()
+	{
+
+	}
+	~CUDALevel2Vector()
+	{
+		Free();
+	}
+
+	unsigned Count() const
+	{
+		return m_vec.Count();
+	}
+
+	T_GPU* Pointer()
+	{
+		return m_vec.Pointer();
+	}
+
+	const T_GPU* ConstPointer() const
+	{
+		return m_vec.ConstPointer();
+	}
+
+	operator T_GPU*()
+	{
+		return m_vec.Pointer();
+	}
+
+	operator const T_GPU*() const
+	{
+		return m_vec.ConstPointer();
+	}
+
+	void Free()
+	{
+		if (m_vec.Count() > 0)
+		{
+			T_GPU* temp = (T_GPU*) operator new (m_vec.Count()*sizeof(T_GPU));
+			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
+			delete[] temp;
+		}
+		m_vec.Free();
+	}
+
+	const CUDALevel2Vector& operator = (const std::vector<T_CPU>& cpuVecs)
+	{
+		Free();
+		m_vec.Allocate((unsigned)cpuVecs.size());
+		if (m_vec.Count() > 0)
+		{
+			T_GPU* temp = new T_GPU[cpuVecs.size()];
+			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
+				temp[i] = cpuVecs[i];
+			cudaMemcpy(m_vec.Pointer(), temp, sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
+			operator delete[](temp);
+		}
+		return *this;
+	}
+
+	void ToCPU(std::vector<T_CPU>& cpuVecs) const
+	{
+		cpuVecs.resize(m_vec.count);
+		if (m_vec.Count() > 0)
+		{
+			T_GPU* temp = (T_GPU*) operator new (m_vec.Count()*sizeof(T_GPU));
+			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
+			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
+				temp[i].ToCPU(cpuVecs[i]);
+			operator delete[](temp);
+		}
+	}
+
+private:
+	CUDAVector<T_GPU> m_vec;
+};
+
+class CUDASrcBuf : public CUDAVector<float>
+{
+public:
+	const CUDASrcBuf&  operator = (const SourceInfo& cpuVec)
+	{
+		CUDAVector<float>::operator=(cpuVec.source.m_data);
+		return *this;
+	}
+
+	void ToCPU(SourceInfo& cpuVec) const
+	{
+		CUDAVector<float>::ToCPU(cpuVec.source.m_data);
+	}
+};
+
+typedef CUDALevel2Vector<CUDASrcBuf, SourceInfo> CUDASrcBufList;
 
 struct SrcSampleInfo
 {
@@ -104,32 +200,39 @@ struct SrcPieceInfo
 
 struct CUDASrcPieceInfo
 {
-	CUDAList<SrcSampleInfo> SampleLocations;
-	CUDAList<SrcSampleInfo> SampleLocations_next;
+	CUDAVector<SrcSampleInfo> SampleLocations;
+	CUDAVector<SrcSampleInfo> SampleLocations_next;
 	unsigned fixedBeginId;
 	unsigned fixedEndId;
 	unsigned fixedBeginId_next;
 	unsigned fixedEndId_next;
+
+
+	const CUDASrcPieceInfo& operator = (const SrcPieceInfo& cpuVec)
+	{
+		SampleLocations = cpuVec.SampleLocations;
+		SampleLocations_next = cpuVec.SampleLocations_next;
+		fixedBeginId = cpuVec.fixedBeginId;
+		fixedEndId = cpuVec.fixedEndId;
+		fixedBeginId_next = cpuVec.fixedBeginId_next;
+		fixedEndId_next = cpuVec.fixedEndId_next;
+
+		return *this;
+	}
+
+	void ToCPU(SrcPieceInfo& cpuVec) const
+	{
+		SampleLocations.ToCPU(cpuVec.SampleLocations);
+		SampleLocations_next.ToCPU(cpuVec.SampleLocations_next);
+		cpuVec.fixedBeginId = fixedBeginId;
+		cpuVec.fixedEndId = fixedEndId;
+		cpuVec.fixedBeginId_next = fixedBeginId_next;
+		cpuVec.fixedEndId_next = fixedEndId_next;
+	}
+
 };
 
-class CUDASrcPieceInfoList : public ImagedCUDAList<CUDASrcPieceInfo>
-{
-public:
-	void AllocateFill(const std::vector<SrcPieceInfo>& srcPieceList)
-	{
-		cpuList.resize(srcPieceList.size());
-		for (unsigned i = 0; i < (unsigned)srcPieceList.size(); i++)
-		{
-			cpuList[i].fixedBeginId = srcPieceList[i].fixedBeginId;
-			cpuList[i].fixedBeginId_next = srcPieceList[i].fixedBeginId_next;
-			cpuList[i].fixedEndId = srcPieceList[i].fixedEndId;
-			cpuList[i].fixedEndId_next = srcPieceList[i].fixedEndId_next;
-			cpuList[i].SampleLocations.AllocateFill(srcPieceList[i].SampleLocations);
-			cpuList[i].SampleLocations_next.AllocateFill(srcPieceList[i].SampleLocations_next);
-		}
-		SyncCPUToGPU();
-	}
-};
+typedef CUDALevel2Vector<CUDASrcPieceInfo, SrcPieceInfo> CUDASrcPieceInfoList;
 
 void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
@@ -140,7 +243,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i])) return;	
 
 	CUDASrcBufList cuSourceBufs;
-	cuSourceBufs.AllocateFill(srcInfos);
+	cuSourceBufs=srcInfos;
 
 	SourceInfo _dummyNext;
 
@@ -313,6 +416,6 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	}
 	
 	CUDASrcPieceInfoList cuSrcPieceInfos;
-	cuSrcPieceInfos.AllocateFill(SrcPieceInfos);	
+	cuSrcPieceInfos = SrcPieceInfos;
 
 }
