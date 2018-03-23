@@ -86,6 +86,14 @@ private:
 template <class T_GPU, class T_CPU>
 class CUDAImagedVector
 {
+protected:
+	class Leaky_T_GPU : public T_GPU
+	{
+	public:
+		Leaky_T_GPU(){}
+		~Leaky_T_GPU(){}
+		using T_GPU::operator =;
+	};
 public:
 	CUDAImagedVector()
 	{
@@ -125,7 +133,7 @@ public:
 	{
 		if (m_vec.Count() > 0)
 		{
-			T_GPU* temp = (T_GPU*) ::operator new (m_vec.Count()*sizeof(T_GPU));
+			T_GPU* temp = new T_GPU[m_vec.Count()];
 			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			delete[] temp;
 		}
@@ -138,13 +146,11 @@ public:
 		m_vec.Allocate((unsigned)cpuVecs.size());
 		if (m_vec.Count() > 0)
 		{
-			T_GPU* temp = new T_GPU[cpuVecs.size()];
+			Leaky_T_GPU* temp = new Leaky_T_GPU[cpuVecs.size()];
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i] = cpuVecs[i];
 			cudaMemcpy(m_vec.Pointer(), temp, sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
-			printf("7\n");
-			::operator delete[](temp);
-			printf("8\n");
+			delete[] temp;
 		}
 		return *this;
 	}
@@ -154,11 +160,11 @@ public:
 		cpuVecs.resize(m_vec.count);
 		if (m_vec.Count() > 0)
 		{
-			T_GPU* temp = (T_GPU*) ::operator new (m_vec.Count()*sizeof(T_GPU));
+			Leaky_T_GPU* temp = new Leaky_T_GPU[m_vec.Count()];
 			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i].ToCPU(cpuVecs[i]);
-			::operator delete[](temp);
+			delete[] temp;
 		}
 	}
 
@@ -176,7 +182,7 @@ public:
 		m_vec.Allocate((unsigned)counts.size());
 		if (m_vec.Count() > 0)
 		{
-			CUDAVector<T>* temp = new CUDAVector<T>[counts.size()];
+			Leaky_T_GPU* temp = new Leaky_T_GPU[counts.size()];
 			for (unsigned i = 0; i < (unsigned)counts.size(); i++)
 				temp[i].Allocate(counts[i]);
 			cudaMemcpy(m_vec.Pointer(), temp, sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
@@ -276,9 +282,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i])) return;	
 
 	CUDASrcBufList cuSourceBufs;
-	printf("d\n");
 	cuSourceBufs=srcInfos;
-	printf("e\n");
 
 	SourceInfo _dummyNext;
 
