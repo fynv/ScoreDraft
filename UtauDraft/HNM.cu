@@ -65,13 +65,14 @@ __global__
 void g_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
 CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize)
 {
-	const Job& job = jobMap.d_data[blockIdx.x];
-	const CUDASrcPieceInfo& pieceInfo = pieceInfoList.d_data[job.pieceId];
-	bool isNext = job.isNext != 0;
-	unsigned paramId = job.jobOfPiece + isNext ? pieceInfo.fixedBeginId_next : pieceInfo.fixedBeginId;
-
 	unsigned numWorker = blockDim.x;
 	unsigned workerId = threadIdx.x;
+
+	const Job& job = jobMap.d_data[blockIdx.x];
+
+	const CUDASrcPieceInfo& pieceInfo = pieceInfoList.d_data[job.pieceId];
+	bool isNext = job.isNext != 0;
+	unsigned paramId = job.jobOfPiece + (isNext ? pieceInfo.fixedBeginId_next : pieceInfo.fixedBeginId);
 
 	SrcSampleInfo& posInfo = isNext ? pieceInfo.SampleLocations_next.d_data[paramId] : pieceInfo.SampleLocations.d_data[paramId];
 
