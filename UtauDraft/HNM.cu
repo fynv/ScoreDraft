@@ -82,7 +82,7 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 	float *s_buf1 = (float*)sbuf;
 	float *s_buf2 = (float*)sbuf + u_halfWidth * 2;
 
-	const CUDASrcBuf& srcBuf = cuSrcBufs.d_data[job.pieceId];
+	const CUDASrcBuf& srcBuf = cuSrcBufs.d_data[job.isNext ? job.pieceId + 1 : job.pieceId];
 
 	d_captureFromBuf(srcBuf.count, srcBuf.d_data, posInfo.srcPos, fhalfWinlen, u_halfWidth, s_buf1);
 	d_CreateAmpSpectrumFromWindow(fhalfWinlen, u_halfWidth, s_buf1, s_buf2, uSpecLen);
@@ -116,10 +116,10 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 
 	__syncthreads();
 
-	CUDAVector<unsigned>& d_maxVoiced = isNext ? cuMaxVoicedLists.d_data[job.pieceId] : cuMaxVoicedLists_next.d_data[job.pieceId];
+	CUDAVector<unsigned>& d_maxVoicedList= isNext ? cuMaxVoicedLists_next.d_data[job.pieceId] : cuMaxVoicedLists.d_data[job.pieceId];
 
 	if (workerId==0)
-		d_maxVoiced.d_data[job.jobOfPiece] = maxVoiced;
+		d_maxVoicedList.d_data[job.jobOfPiece] = maxVoiced;
 }
 
 void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
@@ -128,4 +128,5 @@ void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList
 	static const unsigned groupSize = 256;
 	unsigned sharedBufSize = (unsigned)sizeof(float)* BufSize;
 	g_GetMaxVoiced << < jobMap.count, groupSize, sharedBufSize >> > (cuSrcBufs, pieceInfoList, cuMaxVoicedLists, cuMaxVoicedLists_next, jobMap, BufSize);
+
 }

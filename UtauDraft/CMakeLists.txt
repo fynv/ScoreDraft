@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-set (USE_CUDA false)
+set (USE_CUDA true)
 
 if (USE_CUDA) 
 find_package(CUDA REQUIRED)

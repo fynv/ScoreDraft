@@ -11,7 +11,7 @@ public:
 		d_data = nullptr;
 	}
 
-	virtual ~CUDAVector()
+	~CUDAVector()
 	{
 		Free();
 	}
@@ -97,7 +97,7 @@ protected:
 	{
 	public:
 		Leaky_T_GPU(){}
-		virtual ~Leaky_T_GPU()
+		~Leaky_T_GPU()
 		{
 			MakeLeaky();
 		}
@@ -108,7 +108,7 @@ public:
 	{
 
 	}
-	virtual ~CUDAImagedVector()
+	~CUDAImagedVector()
 	{
 		Free();
 	}
@@ -511,7 +511,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		for (unsigned j = 0; j < countMaxVoiceds[i]; j++)
 		{
 			Job job;
-			job.isNext = false;
+			job.isNext = 0;
 			job.pieceId = i;
 			job.jobOfPiece = j;
 			jobMap.push_back(job);
@@ -521,7 +521,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 			for (unsigned j = 0; j < countMaxVoiceds_next[i]; j++)
 			{
 				Job job;
-				job.isNext = true;
+				job.isNext = 1;
 				job.pieceId = i;
 				job.jobOfPiece = j;
 				jobMap.push_back(job);
