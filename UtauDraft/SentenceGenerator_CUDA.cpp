@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include "SentenceGenerator_CUDA.h"
+#include <assert.h>
 
 template <class T>
 class CUDAVector
@@ -77,6 +78,15 @@ public:
 		cudaMemcpy(cpuVec.data(), d_data, sizeof(T)*count, cudaMemcpyDeviceToHost);
 	}
 
+	void Update(const std::vector<T>& cpuVec)
+	{
+		assert(count == (unsigned)cpuVec.size());
+		if (count > 0)
+		{
+			cudaMemcpy(d_data, cpuVec.data(), sizeof(T)*count, cudaMemcpyHostToDevice);
+		}
+	}
+
 	void MakeLeaky()
 	{
 		count = 0;
@@ -142,9 +152,8 @@ public:
 	{
 		if (m_vec.Count() > 0)
 		{
-			T_GPU* temp = new T_GPU[m_vec.Count()];
-			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
-			delete[] temp;
+			std::vector<T_GPU> temp;
+			m_vec.ToCPU(temp);
 		}
 		m_vec.Free();
 	}
@@ -155,11 +164,11 @@ public:
 		m_vec.Allocate((unsigned)cpuVecs.size());
 		if (m_vec.Count() > 0)
 		{
-			Leaky_T_GPU* temp = new Leaky_T_GPU[cpuVecs.size()];
+			std::vector<Leaky_T_GPU> temp;
+			temp.resize(cpuVecs.size());
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i] = cpuVecs[i];
-			cudaMemcpy(m_vec.Pointer(), temp, sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
-			delete[] temp;
+			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
 		}
 		return *this;
 	}
@@ -169,12 +178,31 @@ public:
 		cpuVecs.resize(m_vec.Count());
 		if (m_vec.Count() > 0)
 		{
-			Leaky_T_GPU* temp = new Leaky_T_GPU[m_vec.Count()];
-			cudaMemcpy(temp, m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
+			std::vector<Leaky_T_GPU> temp;
+			temp.resize(m_vec.Count());
+			cudaMemcpy(temp.data(), m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i].ToCPU(cpuVecs[i]);
-			delete[] temp;
 		}
+	}
+
+	void Update(const std::vector<T_CPU>& cpuVecs)
+	{
+		assert(m_vec.Count() == (unsigned)cpuVecs.size());
+		if (m_vec.Count() > 0)
+		{
+			std::vector<Leaky_T_GPU> temp;
+			temp.resize(m_vec.Count());
+			cudaMemcpy(temp.data(), m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
+			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
+				temp[i].Update(cpuVecs[i]);
+			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
+		}
+	}
+
+	void MakeLeaky()
+	{
+		m_vec.MakeLeaky();
 	}
 
 protected:
@@ -191,13 +219,13 @@ public:
 		m_vec.Allocate((unsigned)counts.size());
 		if (m_vec.Count() > 0)
 		{
-			Leaky_T_GPU* temp = new Leaky_T_GPU[counts.size()];
+			std::vector<Leaky_T_GPU> temp;
+			temp.resize(counts.size());
 			for (unsigned i = 0; i < (unsigned)counts.size(); i++)
 			{
 				temp[i].Allocate(counts[i]);
 			}
-			cudaMemcpy(m_vec.Pointer(), temp, sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
-			delete[] temp;
+			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
 		}
 	}
 
@@ -216,6 +244,11 @@ public:
 	void ToCPU(SourceInfo& cpuVec) const
 	{
 		CUDAVector<float>::ToCPU(cpuVec.source.m_data);
+	}
+
+	void Update(const SourceInfo& cpuVec)
+	{
+		CUDAVector<float>::Update(cpuVec.source.m_data);
 	}
 };
 
@@ -268,6 +301,16 @@ struct CUDASrcPieceInfo
 		cpuVec.fixedEndId = fixedEndId;
 		cpuVec.fixedBeginId_next = fixedBeginId_next;
 		cpuVec.fixedEndId_next = fixedEndId_next;
+	}
+
+	void Update(const SrcPieceInfo& cpuVec)
+	{
+		SampleLocations.Update(cpuVec.SampleLocations);
+		SampleLocations_next.Update(cpuVec.SampleLocations_next);
+		fixedBeginId = cpuVec.fixedBeginId;
+		fixedEndId = cpuVec.fixedEndId;
+		fixedBeginId_next = cpuVec.fixedBeginId_next;
+		fixedEndId_next = cpuVec.fixedEndId_next;
 	}
 
 	void MakeLeaky()
@@ -548,29 +591,24 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	cuMaxVoicedLists.ToCPU(h_maxVoicedLists);
 	cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
 
-	FILE *fp = fopen("dump.txt", "w");
-
-	for (unsigned i = 0; i < (unsigned)h_maxVoicedLists.size(); i++)
+	FILE *fp = fopen("dump.txt","w");
+	for (unsigned i = 0; i < h_maxVoicedLists.size(); i++)
 	{
 		std::vector<unsigned>& sublist = h_maxVoicedLists[i];
-		fprintf(fp,"%d: ", sublist.size());
-		for (unsigned j = 0; j < (unsigned)sublist.size(); j++)
+		for (unsigned j = 0; j < sublist.size(); j++)
 		{
-			fprintf(fp, "%d ", sublist[j]);
+			fprintf(fp, "%u ", sublist[j]);
 		}
 		fprintf(fp, "\n");
-	}
-	fprintf(fp, "\n");
-
-	for (unsigned i = 0; i < (unsigned)h_maxVoicedLists_next.size(); i++)
-	{
-		std::vector<unsigned>& sublist = h_maxVoicedLists_next[i];
-		fprintf(fp, "%d: ", sublist.size());
-		for (unsigned j = 0; j < (unsigned)sublist.size(); j++)
+		if (i < h_maxVoicedLists_next.size())
 		{
-			fprintf(fp, "%d ", sublist[j]);
+			std::vector<unsigned>& sublist = h_maxVoicedLists_next[i];
+			for (unsigned j = 0; j < sublist.size(); j++)
+			{
+				fprintf(fp, "%u ", sublist[j]);
+			}
+			fprintf(fp, "\n");
 		}
-		fprintf(fp, "\n");
 	}
 
 	fclose(fp);
