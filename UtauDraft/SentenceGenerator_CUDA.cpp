@@ -333,6 +333,11 @@ struct Job
 void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
 	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
 
+void h_AnalyzeInput(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList, unsigned halfWinLen,
+	unsigned specLen, CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
+	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
+	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
+
 void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
 	std::vector<SourceInfo> srcInfos;
@@ -349,6 +354,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	std::vector<SrcPieceInfo> SrcPieceInfos;
 	SrcPieceInfos.resize(numPieces);
 
+	std::vector<SourceDerivedInfo> SrcDerInfos;
+	SrcDerInfos.resize(numPieces);
+
 	float max_srcHalfWinWidth = 0.0f;
 	float max_freqDetectHalfWinWidth = 0.0f;
 
@@ -359,7 +367,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		bool firstNote = (i == 0);
 		bool hasNextNote = (i < numPieces - 1);
 
-		SourceDerivedInfo srcDerInfo;			 
+		SourceDerivedInfo& srcDerInfo = SrcDerInfos[i];
 		srcDerInfo.DeriveInfo(firstNote, hasNextNote, lengths[i], srcInfos[i], hasNextNote ? srcInfos[i + 1] : _dummyNext);
 
 		SrcPieceInfo& srcPieceInfo = SrcPieceInfos[i];
@@ -578,10 +586,10 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	unsigned cuSpecLen = (unsigned)ceilf(max_srcHalfWinWidth*0.5f);
 
 	unsigned fftLen = 1;
-	while (fftLen < max_freqDetectHalfWinWidth)
+	while ((float)fftLen < max_freqDetectHalfWinWidth)
 		fftLen <<= 1;
 	unsigned BufSize = (unsigned)ceilf(max_freqDetectHalfWinWidth) * 2 + fftLen * 2;
-	printf("BufSize: %u\n", BufSize);
+	//printf("BufSize: %u\n", BufSize);
 
 	h_GetMaxVoiced(cuSourceBufs, cuSrcPieceInfos, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
 
@@ -589,7 +597,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	std::vector<std::vector<unsigned>> h_maxVoicedLists_next;
 
 	cuMaxVoicedLists.ToCPU(h_maxVoicedLists);
-	cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
+	/*cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
 
 	FILE *fp = fopen("dump.txt","w");
 	for (unsigned i = 0; i < h_maxVoicedLists.size(); i++)
@@ -611,6 +619,114 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		}
 	}
 
-	fclose(fp);
+	fclose(fp);*/
 	
+	for (unsigned i = 0; i < h_maxVoicedLists.size(); i++)
+	{
+		std::vector<unsigned>& sublist = h_maxVoicedLists[i];
+		SrcPieceInfo& srcPieceInfo = SrcPieceInfos[i];
+		SourceDerivedInfo& srcDerInfo = SrcDerInfos[i];
+
+		unsigned lastmaxVoiced = 0;
+		for (unsigned j = 0; j < sublist.size(); j++)
+		{
+			unsigned srcPos = srcPieceInfo.SampleLocations[j + srcPieceInfo.fixedBeginId].srcPos;
+			if ((float)srcPos >= srcDerInfo.preutter_pos && sublist[j] < lastmaxVoiced)
+			{
+				sublist[j] = lastmaxVoiced;
+			}
+			lastmaxVoiced = sublist[j];
+		}
+	}
+	cuMaxVoicedLists.Update(h_maxVoicedLists);
+
+	std::vector<unsigned> cuTotalHalfWinLen;
+	cuTotalHalfWinLen.resize(numPieces);
+	std::vector<unsigned> cuTotalSpecLen;
+	cuTotalSpecLen.resize(numPieces);
+
+	std::vector<unsigned> cuTotalHalfWinLen_next;
+	cuTotalHalfWinLen_next.resize(numPieces-1);
+	std::vector<unsigned> cuTotalSpecLen_next;
+	cuTotalSpecLen_next.resize(numPieces-1);
+
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		cuTotalHalfWinLen[i] = cuHalfWinLen*(unsigned)SrcPieceInfos[i].SampleLocations.size();
+		cuTotalSpecLen[i] = cuSpecLen*(unsigned)SrcPieceInfos[i].SampleLocations.size();
+
+		if (i < numPieces - 1)
+		{
+			cuTotalHalfWinLen_next[i] = cuHalfWinLen*(unsigned)SrcPieceInfos[i].SampleLocations_next.size();
+			cuTotalSpecLen_next[i] = cuSpecLen*(unsigned)SrcPieceInfos[i].SampleLocations_next.size();
+		}
+	}
+
+	CUDALevel2Vector<float> cuHarmWindows;
+	cuHarmWindows.Allocate(cuTotalHalfWinLen);
+	CUDALevel2Vector<float> cuNoiseSpecs;
+	cuNoiseSpecs.Allocate(cuTotalSpecLen);
+
+	CUDALevel2Vector<float> cuHarmWindows_next;
+	cuHarmWindows_next.Allocate(cuTotalHalfWinLen_next);
+	CUDALevel2Vector<float> cuNoiseSpecs_next;
+	cuNoiseSpecs_next.Allocate(cuTotalSpecLen_next);
+
+	fftLen = 1;
+	while (fftLen < cuHalfWinLen)
+		fftLen <<= 1;
+
+	BufSize = cuHalfWinLen * 2 + fftLen * 2;
+
+	jobMap.clear();
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		for (unsigned j = 0; j < (unsigned)SrcPieceInfos[i].SampleLocations.size(); j++)
+		{
+			Job job;
+			job.isNext = 0;
+			job.pieceId = i;
+			job.jobOfPiece = j;
+			jobMap.push_back(job);
+		}
+
+		if (i<numPieces - 1)
+			for (unsigned j = 0; j < (unsigned)SrcPieceInfos[i].SampleLocations_next.size(); j++)
+			{
+				Job job;
+				job.isNext = 1;
+				job.pieceId = i;
+				job.jobOfPiece = j;
+				jobMap.push_back(job);
+			}
+	}
+	cuJobMap = jobMap;
+
+	h_AnalyzeInput(cuSourceBufs, cuSrcPieceInfos, cuHalfWinLen, cuSpecLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next,
+		cuNoiseSpecs_next, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
+
+	std::vector<std::vector<float>> HarmWindows;
+	cuHarmWindows.ToCPU(HarmWindows);
+	std::vector<std::vector<float>> HarmWindows_next;
+	cuHarmWindows_next.ToCPU(HarmWindows_next);
+
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		char filename[100];
+		sprintf(filename, "dump\\%d_a.raw", i);
+		FILE *fp = fopen(filename, "wb");
+		fwrite(HarmWindows[i].data(), sizeof(float), HarmWindows[i].size(), fp);
+		fclose(fp);
+	}
+
+	for (unsigned i = 0; i < numPieces-1; i++)
+	{
+		char filename[100];
+		sprintf(filename, "dump\\%d_b.raw", i);
+		FILE *fp = fopen(filename, "wb");
+		fwrite(HarmWindows_next[i].data(), sizeof(float), HarmWindows_next[i].size(), fp);
+		fclose(fp);
+	}
+
+
 }
