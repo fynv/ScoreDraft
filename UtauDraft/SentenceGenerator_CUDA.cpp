@@ -806,7 +806,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		noteBufPos += dstPieceInfo.uSumLen;
 	}
 
-	std::vector<SynthJobInfo> SyncJobs;
+	std::vector<SynthJobInfo> SynthJobs;
 
 	float phase = 0.0f;
 	unsigned maxRandPhaseLen = 0;
@@ -854,9 +854,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 
 		while (fTmpWinCenter - tempHalfWinLen <= tempLen)
 		{
-			SynthJobInfo sythJob;
-			sythJob.pieceId = i;
-			sythJob.jobOfPiece = jobOfPiece;
+			SynthJobInfo synthJob;
+			synthJob.pieceId = i;
+			synthJob.jobOfPiece = jobOfPiece;
 
 			while (fTmpWinCenter > stretchingMap[pos_final] && pos_final < uSumLen - 1) pos_final++;
 			float fParamPos = (float)pos_final / float(uSumLen);
@@ -865,7 +865,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 			float destSampleFreq;
 			destSampleFreq = freqMap[pos_final];
 			float destHalfWinLen = powf(2.0f, _gender) / destSampleFreq;
-			sythJob.destHalfWinLen = destHalfWinLen;
+			synthJob.destHalfWinLen = destHalfWinLen;
 
 			unsigned paramId1 = paramId0 + 1;
 			while (paramId1 < SampleLocations.size() && SampleLocations[paramId1].logicalPos < fParamPos)
@@ -874,8 +874,8 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 				paramId1 = paramId0 + 1;
 			}
 			if (paramId1 == SampleLocations.size()) paramId1 = paramId0;
-			sythJob.paramId0 = paramId0;
-			sythJob.paramId0_next = 0;
+			synthJob.paramId0 = paramId0;
+			synthJob.paramId0_next = 0;
 
 			unsigned paramId1_next = paramId0_next + 1;
 			if (in_transition)
@@ -887,7 +887,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 				}
 				if (paramId1_next == SampleLocations_next.size()) paramId1_next = paramId0_next;
 
-				sythJob.paramId0_next = paramId0_next;
+				synthJob.paramId0_next = paramId0_next;
 			}
 
 			SrcSampleInfo& sl0 = SampleLocations[paramId0];
@@ -900,9 +900,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 			{
 				k = (fParamPos - sl0.logicalPos) / (sl1.logicalPos - sl0.logicalPos);
 			}
-			sythJob.k1 = k;
-			sythJob.k1_next = 0.0f;
-			sythJob.k2 = 0.0f;
+			synthJob.k1 = k;
+			synthJob.k1_next = 0.0f;
+			synthJob.k2 = 0.0f;
 
 			if (in_transition)
 			{
@@ -915,15 +915,15 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 				{
 					k = (fParamPos - sl0_next.logicalPos) / (sl1_next.logicalPos - sl0_next.logicalPos);
 				}
-				sythJob.k1_next = k;
+				synthJob.k1_next = k;
 				float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
 				if (x > 0.0f)
-					sythJob.k2 = 1.0f;
+					synthJob.k2 = 1.0f;
 				else
-					sythJob.k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+					synthJob.k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
 			}
 
-			SyncJobs.push_back(sythJob);
+			SynthJobs.push_back(synthJob);
 
 			jobOfPiece++;
 			fTmpWinCenter += tempHalfWinLen;
@@ -941,7 +941,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	cuDstPieceInfos = DstPieceInfos;
 
 	CUDAVector<SynthJobInfo> cuSynthJobs;
-	cuSynthJobs = SyncJobs;
+	cuSynthJobs = SynthJobs;
 
 	CUDAVector<float> cuSumTmpBuf1;
 	CUDAVector<float> cuSumTmpBuf2;
