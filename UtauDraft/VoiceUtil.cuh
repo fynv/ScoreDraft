@@ -111,16 +111,15 @@ __device__ void d_CreateAmpSpectrumFromWindow(float halfWinlen, unsigned u_halfW
 	d_fft(s_res_wnd, l);
 
 	float rate = halfWinlen / fLen;
-	for (unsigned i = workerId; i < uSpecLen; i += numWorker)
+	for (unsigned i = workerId; i < 2 * fftLen; i += numWorker)
 	{
-		float amplitude = sqrtf(s_res_wnd[i] * s_res_wnd[i] + s_res_wnd[i + fftLen] * s_res_wnd[i + fftLen]);
-		s_res_wnd[i] = amplitude*rate;
-	}
-	__syncthreads();
-
-	for (unsigned i = uSpecLen + workerId; i < 2 * fftLen; i += numWorker)
-	{
-		s_res_wnd[i] = 0.0f;
+		float v = 0.0f;
+		if (i < uSpecLen)
+		{
+			float amplitude = sqrtf(s_res_wnd[i] * s_res_wnd[i] + s_res_wnd[i + fftLen] * s_res_wnd[i + fftLen]);
+			v = amplitude*rate;
+		}
+		s_res_wnd[i] = v;
 	}
 
 	__syncthreads();	
@@ -206,21 +205,18 @@ __device__ void d_CreateSymmetricWindowFromAmpSpec(float* s_spectrum, unsigned u
 		s_SymWnd[fftLen/2] = 0.0f;
 		s_SymWnd[fftLen + fftLen/2] = 0.0f;
 	}
-	for (unsigned i = 1 + workerId; i < uSpecLen; i += numWorker)
+	for (unsigned i = 1 + workerId; i < fftLen / 2; i += numWorker)
 	{
-		float amplitude = s_spectrum[i];
+		float x = 0.0f;
+		if (i < uSpecLen)
+		{
+			float amplitude = s_spectrum[i];
+			x = amplitude * rate;
+		}
 		s_SymWnd[i] = 0.0f;
-		s_SymWnd[fftLen + i] = amplitude * rate;
+		s_SymWnd[fftLen + i] = x;
 		s_SymWnd[fftLen - i] = 0.0f;
-		s_SymWnd[2 * fftLen - i] = -amplitude * rate;
-	}
-
-	for (unsigned i = uSpecLen + workerId; i < fftLen / 2; i += numWorker)
-	{
-		s_SymWnd[i] = 0.0f;
-		s_SymWnd[fftLen + i] = 0.0f;
-		s_SymWnd[fftLen - i] = 0.0f;
-		s_SymWnd[2 * fftLen - i] = 0.0f;
+		s_SymWnd[2 * fftLen - i] = -x;
 	}
 	__syncthreads();
 
@@ -382,24 +378,21 @@ __device__ void d_CreateNoiseWindowFromAmpSpec(float* s_spectrum, float* randpha
 		s_NoiseWnd[fftLen / 2] = 0.0f;
 		s_NoiseWnd[fftLen + fftLen / 2] = 0.0f;
 	}
-	for (unsigned i = 1 + workerId; i < uSpecLen; i += numWorker)
+	for (unsigned i = 1 + workerId; i < fftLen / 2; i += numWorker)
 	{
-		float amplitude = s_spectrum[i]*rate;
-		float phase = randphase[i]*2.0f*PI;
-		float x = amplitude * cosf(phase);
-		float y = amplitude * sinf(phase);
+		float x = 0.0f;
+		float y = 0.0f;
+		if (i < uSpecLen)
+		{
+			float amplitude = s_spectrum[i] * rate;
+			float phase = randphase[i] * 2.0f*PI;
+			x = amplitude * cosf(phase);
+			y = amplitude * sinf(phase);
+		}
 		s_NoiseWnd[i] = x;
 		s_NoiseWnd[fftLen + i] = y;
 		s_NoiseWnd[fftLen - i] = x;
 		s_NoiseWnd[2 * fftLen - i] = -y;
-	}
-
-	for (unsigned i = uSpecLen + workerId; i < fftLen / 2; i += numWorker)
-	{
-		s_NoiseWnd[i] = 0.0f;
-		s_NoiseWnd[fftLen + i] = 0.0f;
-		s_NoiseWnd[fftLen - i] = 0.0f;
-		s_NoiseWnd[2 * fftLen - i] = 0.0f;
 	}
 	__syncthreads();
 
