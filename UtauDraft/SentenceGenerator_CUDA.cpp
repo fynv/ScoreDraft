@@ -948,11 +948,14 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	cuSumTmpBuf1.Allocate(sumTmpBufLen);
 	cuSumTmpBuf2.Allocate(sumTmpBufLen);
 
+	cudaMemset(cuSumTmpBuf1, 0, sizeof(float)*sumTmpBufLen);
+	cudaMemset(cuSumTmpBuf2, 0, sizeof(float)*sumTmpBufLen);
+
 	std::vector<CUDATempBuffer> tmpBufs1;
 	tmpBufs1.resize(numPieces);
 	std::vector<CUDATempBuffer> tmpBufs2;
 	tmpBufs2.resize(numPieces);
-	
+
 	float *pTmpBuf1 = cuSumTmpBuf1.Pointer();
 	float *pTmpBuf2 = cuSumTmpBuf2.Pointer();
 	for (unsigned i = 0; i < numPieces; i++)
