@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include "SentenceGenerator_CUDA.h"
+#include "TrackBuffer.h"
 #include <assert.h>
 
 template <class T>
@@ -228,7 +229,7 @@ public:
 			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
 		}
 	}
-
+	using CUDAImagedVector<CUDAVector<T>, std::vector<T>>::operator =;
 };
 
 
@@ -330,6 +331,33 @@ struct Job
 	unsigned jobOfPiece;
 };
 
+struct DstPieceInfo
+{
+	float minSampleFreq;
+	unsigned uSumLen;
+	float tempLen;
+	unsigned uTempLen;
+	float fTmpWinCenter0;
+};
+
+struct SynthJobInfo
+{
+	unsigned pieceId;
+	unsigned jobOfPiece;
+	float k1;
+	float k1_next;
+	float k2;
+	unsigned paramId0;
+	unsigned paramId0_next;
+	float destHalfWinLen;
+};
+
+struct CUDATempBuffer
+{
+	unsigned count;
+	float *d_data;
+};
+
 void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
 	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
 
@@ -337,6 +365,14 @@ void h_AnalyzeInput(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList
 	unsigned specLen, CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
 	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
 	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
+
+void h_Synthesis(CUDASrcPieceInfoList cuSrcPieceInfos, unsigned halfWinLen, unsigned specLen,
+	CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
+	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
+	CUDAVector<DstPieceInfo> cuDstPieceInfos, CUDAVector<CUDATempBuffer> cuTmpBufs1, CUDAVector<CUDATempBuffer> cuTmpBufs2,
+	CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs, unsigned BufSize);
+
+void h_Merge2Bufs(unsigned uSumLen, float *d_destBuf1, float *d_destBuf2);
 
 void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
@@ -594,10 +630,11 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	h_GetMaxVoiced(cuSourceBufs, cuSrcPieceInfos, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
 
 	std::vector<std::vector<unsigned>> h_maxVoicedLists;
-	std::vector<std::vector<unsigned>> h_maxVoicedLists_next;
-
 	cuMaxVoicedLists.ToCPU(h_maxVoicedLists);
-	/*cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
+
+	/*
+	std::vector<std::vector<unsigned>> h_maxVoicedLists_next;
+	cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
 
 	FILE *fp = fopen("dump.txt","w");
 	for (unsigned i = 0; i < h_maxVoicedLists.size(); i++)
@@ -705,7 +742,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	h_AnalyzeInput(cuSourceBufs, cuSrcPieceInfos, cuHalfWinLen, cuSpecLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next,
 		cuNoiseSpecs_next, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
 
-	std::vector<std::vector<float>> HarmWindows;
+	/*std::vector<std::vector<float>> HarmWindows;
 	cuHarmWindows.ToCPU(HarmWindows);
 	std::vector<std::vector<float>> HarmWindows_next;
 	cuHarmWindows_next.ToCPU(HarmWindows_next);
@@ -727,6 +764,275 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		fwrite(HarmWindows_next[i].data(), sizeof(float), HarmWindows_next[i].size(), fp);
 		fclose(fp);
 	}
+	*/
 
+	std::vector<const float*> freqMaps;
+	freqMaps.resize(numPieces);
+	std::vector<std::vector<float>> stretchingMaps;
+	stretchingMaps.resize(numPieces);
+	std::vector<DstPieceInfo> DstPieceInfos;
+	DstPieceInfos.resize(numPieces);
+
+	unsigned noteBufPos = 0;
+	unsigned sumTmpBufLen = 0;
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		DstPieceInfo& dstPieceInfo = DstPieceInfos[i];
+		dstPieceInfo.uSumLen = lengths[i];
+		freqMaps[i] = freqAllMap + noteBufPos;
+		dstPieceInfo.minSampleFreq = FLT_MAX;
+		for (unsigned pos = 0; pos < dstPieceInfo.uSumLen; pos++)
+		{
+			float sampleFreq = freqMaps[i][pos];
+			if (sampleFreq < dstPieceInfo.minSampleFreq) dstPieceInfo.minSampleFreq = sampleFreq;
+		}
+		stretchingMaps[i].resize(dstPieceInfo.uSumLen);
+
+		float pos_tmpBuf = 0.0f;
+		for (unsigned pos = 0; pos < dstPieceInfo.uSumLen; pos++)
+		{
+			float sampleFreq;
+			sampleFreq = freqMaps[i][pos];
+
+			float speed = sampleFreq / dstPieceInfo.minSampleFreq;
+			pos_tmpBuf += speed;
+			stretchingMaps[i][pos] = pos_tmpBuf;
+		}
+		dstPieceInfo.tempLen = stretchingMaps[i][dstPieceInfo.uSumLen - 1];
+		dstPieceInfo.uTempLen = (unsigned)ceilf(dstPieceInfo.tempLen);
+
+		sumTmpBufLen += dstPieceInfo.uTempLen;
+
+		noteBufPos += dstPieceInfo.uSumLen;
+	}
+
+	std::vector<SynthJobInfo> SyncJobs;
+
+	float phase = 0.0f;
+	unsigned maxRandPhaseLen = 0;
+	float maxtempHalfWinLen = 0.0f;
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		DstPieceInfo& dstPieceInfo = DstPieceInfos[i];
+		float tempHalfWinLen = 1.0f / dstPieceInfo.minSampleFreq;
+		if (tempHalfWinLen > maxtempHalfWinLen)
+			maxtempHalfWinLen = tempHalfWinLen;
+
+		unsigned paramId0 = 0;
+		unsigned paramId0_next = 0;
+		unsigned pos_final = 0;
+		
+		while (phase > -1.0f) phase -= 1.0f;
+
+		SourceDerivedInfo& srcDerInfo = SrcDerInfos[i];
+
+		float transitionEnd = 1.0f - (srcDerInfo.preutter_pos_next - srcDerInfo.overlap_pos_next)*srcDerInfo.fixed_Weight;
+		float transitionStart = transitionEnd* (1.0f - _transition);
+
+		float tempLen = dstPieceInfo.tempLen;
+		unsigned uSumLen = dstPieceInfo.uSumLen;
+
+		const float* freqMap = freqMaps[i];
+		std::vector<float>& stretchingMap = stretchingMaps[i];
+
+		SrcPieceInfo& srcPieceInfo = SrcPieceInfos[i];
+		std::vector<SrcSampleInfo>& SampleLocations = srcPieceInfo.SampleLocations;
+		std::vector<SrcSampleInfo>& SampleLocations_next = srcPieceInfo.SampleLocations_next;
+
+		bool hasNextNote = (i < numPieces - 1);
+		if (hasNextNote)
+		{
+			if (SampleLocations_next.size() == 0)
+			{
+				hasNextNote = false;
+			}
+		}
+
+		float fTmpWinCenter = phase*tempHalfWinLen;
+		dstPieceInfo.fTmpWinCenter0 = fTmpWinCenter;
+		unsigned jobOfPiece = 0;
+
+		while (fTmpWinCenter - tempHalfWinLen <= tempLen)
+		{
+			SynthJobInfo sythJob;
+			sythJob.pieceId = i;
+			sythJob.jobOfPiece = jobOfPiece;
+
+			while (fTmpWinCenter > stretchingMap[pos_final] && pos_final < uSumLen - 1) pos_final++;
+			float fParamPos = (float)pos_final / float(uSumLen);
+			bool in_transition = hasNextNote && _transition > 0.0f && _transition < 1.0f && fParamPos >= transitionStart;
+
+			float destSampleFreq;
+			destSampleFreq = freqMap[pos_final];
+			float destHalfWinLen = powf(2.0f, _gender) / destSampleFreq;
+			sythJob.destHalfWinLen = destHalfWinLen;
+
+			unsigned paramId1 = paramId0 + 1;
+			while (paramId1 < SampleLocations.size() && SampleLocations[paramId1].logicalPos < fParamPos)
+			{
+				paramId0++;
+				paramId1 = paramId0 + 1;
+			}
+			if (paramId1 == SampleLocations.size()) paramId1 = paramId0;
+			sythJob.paramId0 = paramId0;
+			sythJob.paramId0_next = 0;
+
+			unsigned paramId1_next = paramId0_next + 1;
+			if (in_transition)
+			{
+				while (paramId1_next < SampleLocations_next.size() && SampleLocations_next[paramId1_next].logicalPos < fParamPos)
+				{
+					paramId0_next++;
+					paramId1_next = paramId0_next + 1;
+				}
+				if (paramId1_next == SampleLocations_next.size()) paramId1_next = paramId0_next;
+
+				sythJob.paramId0_next = paramId0_next;
+			}
+
+			SrcSampleInfo& sl0 = SampleLocations[paramId0];
+			SrcSampleInfo& sl1 = SampleLocations[paramId1];
+
+			float k;
+			if (fParamPos >= sl1.logicalPos) k = 1.0f;
+			else if (fParamPos <= sl0.logicalPos) k = 0.0f;
+			else
+			{
+				k = (fParamPos - sl0.logicalPos) / (sl1.logicalPos - sl0.logicalPos);
+			}
+			sythJob.k1 = k;
+			sythJob.k1_next = 0.0f;
+			sythJob.k2 = 0.0f;
+
+			if (in_transition)
+			{
+				SrcSampleInfo& sl0_next = SampleLocations_next[paramId0_next];
+				SrcSampleInfo& sl1_next = SampleLocations_next[paramId1_next];
+				float k;
+				if (fParamPos >= sl1_next.logicalPos) k = 1.0f;
+				else if (fParamPos <= sl0_next.logicalPos) k = 0.0f;
+				else
+				{
+					k = (fParamPos - sl0_next.logicalPos) / (sl1_next.logicalPos - sl0_next.logicalPos);
+				}
+				sythJob.k1_next = k;
+				float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
+				if (x > 0.0f)
+					sythJob.k2 = 1.0f;
+				else
+					sythJob.k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			}
+
+			SyncJobs.push_back(sythJob);
+
+			jobOfPiece++;
+			fTmpWinCenter += tempHalfWinLen;
+		}
+
+		unsigned uSpecLen = (unsigned)ceilf(tempHalfWinLen*0.5f);
+		unsigned randPhaseLen = uSpecLen*jobOfPiece;
+		if (randPhaseLen > maxRandPhaseLen)
+			maxRandPhaseLen = randPhaseLen;
+
+		phase = (fTmpWinCenter - tempLen) / tempHalfWinLen;
+	}
+
+	CUDAVector<DstPieceInfo> cuDstPieceInfos;
+	cuDstPieceInfos = DstPieceInfos;
+
+	CUDAVector<SynthJobInfo> cuSynthJobs;
+	cuSynthJobs = SyncJobs;
+
+	CUDAVector<float> cuSumTmpBuf1;
+	CUDAVector<float> cuSumTmpBuf2;
+	cuSumTmpBuf1.Allocate(sumTmpBufLen);
+	cuSumTmpBuf2.Allocate(sumTmpBufLen);
+
+	std::vector<CUDATempBuffer> tmpBufs1;
+	tmpBufs1.resize(numPieces);
+	std::vector<CUDATempBuffer> tmpBufs2;
+	tmpBufs2.resize(numPieces);
+	
+	float *pTmpBuf1 = cuSumTmpBuf1.Pointer();
+	float *pTmpBuf2 = cuSumTmpBuf2.Pointer();
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		unsigned count = DstPieceInfos[i].uTempLen;
+		tmpBufs1[i].count = count;
+		tmpBufs1[i].d_data = pTmpBuf1;
+		tmpBufs2[i].count = count;
+		tmpBufs2[i].d_data = pTmpBuf2;
+		pTmpBuf1 += count;
+		pTmpBuf2 += count;
+	}
+
+	CUDAVector<CUDATempBuffer> cuTmpBufs1;
+	cuTmpBufs1 = tmpBufs1;
+	CUDAVector<CUDATempBuffer> cuTmpBufs2;
+	cuTmpBufs2 = tmpBufs2;
+
+	std::vector<float> randPhase;
+	randPhase.resize(maxRandPhaseLen);
+
+	for (unsigned i = 0; i < maxRandPhaseLen; i++)
+		randPhase[i] = rand01();
+
+	CUDAVector<float> cuRandPhase;
+	cuRandPhase = randPhase;
+
+	fftLen = 1;
+	while ((float)fftLen < maxtempHalfWinLen)
+		fftLen <<= 1;
+
+	BufSize = fftLen * 4;
+	//printf("BufSize: %u\n", BufSize);
+
+	h_Synthesis(cuSrcPieceInfos, cuHalfWinLen, cuSpecLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next, cuNoiseSpecs_next,
+		cuDstPieceInfos, cuTmpBufs1, cuTmpBufs2, cuRandPhase, cuSynthJobs, BufSize);
+
+	h_Merge2Bufs(sumTmpBufLen, cuSumTmpBuf1, cuSumTmpBuf2);
+
+	std::vector<float> sumTmpBuf;
+	cuSumTmpBuf1.ToCPU(sumTmpBuf);
+	/*FILE *fp = fopen("dmp.raw", "wb");
+	fwrite(sumTmpBuf.data(), sizeof(float), sumTmpBuf.size(), fp);
+	fclose(fp);
+	*/
+
+	float* pTmpBuf = &sumTmpBuf[0];
+	float* pDstBuf = noteBuf->m_data;
+	for (unsigned i = 0; i < numPieces; i++)
+	{
+		unsigned uSumLen = DstPieceInfos[i].uSumLen;
+		float *stretchingMap = &stretchingMaps[i][0];
+		const float *freqMap = freqMaps[i];
+		float minSampleFreq = DstPieceInfos[i].minSampleFreq;
+		unsigned uTempLen = DstPieceInfos[i].uTempLen;
+
+		for(unsigned pos = 0; pos < uSumLen; pos++)
+		{
+			float pos_tmpBuf = stretchingMap[pos];
+			float sampleFreq;
+			sampleFreq = freqMap[pos];
+
+			float speed = sampleFreq / minSampleFreq;
+
+			int ipos1 = (int)ceilf(pos_tmpBuf - speed*0.5f);
+			int ipos2 = (int)floorf(pos_tmpBuf + speed*0.5f);
+
+			float sum = 0.0f;
+			for (int ipos = ipos1; ipos <= ipos2; ipos++)
+			{
+				if (ipos >= 0 && ipos < uTempLen)
+					sum += pTmpBuf[ipos];
+			}
+			float value = sum / (float)(ipos2 - ipos1 + 1);
+			pDstBuf[pos] = value;
+		}
+		pTmpBuf += uTempLen;
+		pDstBuf += uSumLen;
+	}
+
+	
 
 }

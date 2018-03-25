@@ -1,4 +1,12 @@
 #include "fft.cuh"
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
 
 inline __device__ float d_WndGetSample(const float* s_Wnd, unsigned u_halfWidth, int i)
 {
@@ -356,7 +364,7 @@ __device__ void AmpSpec_Scale(float srcHalfWinLen, float* srcBuf, float dstHalfW
 }
 
 
-__device__ void d_CreateNoiseWindowFromAmpSpec(float* s_spectrum, float* randphase, unsigned uSpecLen, float halfWinlen, unsigned u_halfWidth, float* s_NoiseWnd)
+__device__ void d_CreateNoiseWindowFromAmpSpec(float* s_spectrum, float* randphase, unsigned uSpecLen, float halfWinlen, unsigned u_halfWidth, float* s_NoiseWnd, float targetHalfWidth)
 {
 	unsigned l = 0;
 	unsigned fftLen = 1;
@@ -397,18 +405,22 @@ __device__ void d_CreateNoiseWindowFromAmpSpec(float* s_spectrum, float* randpha
 	__syncthreads();
 
 	d_ifft(s_NoiseWnd, l);
+
+	unsigned u_targetHalfWidth = (unsigned)ceilf(targetHalfWidth);
+	unsigned skip_len = max(2 * fftLen, 2 * u_targetHalfWidth);
+
 	for (unsigned i = workerId; i < fftLen; i += numWorker)
 	{
 		float window = (cosf((float)i * (float)PI / (float)fftLen) + 1.0f)*0.5f;
 
-		s_NoiseWnd[i + 2 * fftLen] = s_NoiseWnd[i] * window;
+		s_NoiseWnd[i + skip_len] = s_NoiseWnd[i] * window;
 		if (i>0)
-			s_NoiseWnd[4 * fftLen - i] = s_NoiseWnd[fftLen - i] * window;
+			s_NoiseWnd[skip_len+ 2 * fftLen - i] = s_NoiseWnd[fftLen - i] * window;
 	}
 	if (workerId == 0)
-		s_NoiseWnd[3 * fftLen] = 0;
+		s_NoiseWnd[skip_len + fftLen] = 0;
 	__syncthreads();
 
-	d_ScaleWindow((float)fftLen, fftLen, s_NoiseWnd + 2 * fftLen, s_NoiseWnd, halfWinlen);
+	d_ScaleWindow((float)fftLen, fftLen, s_NoiseWnd + skip_len, s_NoiseWnd, targetHalfWidth);
 }
 

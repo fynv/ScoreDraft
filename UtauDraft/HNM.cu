@@ -58,6 +58,32 @@ struct Job
 	unsigned jobOfPiece;
 };
 
+struct DstPieceInfo
+{
+	float minSampleFreq;
+	unsigned uSumLen;
+	float tempLen;
+	unsigned uTempLen;
+	float fTmpWinCenter0;
+};
+
+struct SynthJobInfo
+{
+	unsigned pieceId;
+	unsigned jobOfPiece;
+	float k1;
+	float k1_next;
+	float k2;
+	unsigned paramId0;
+	unsigned paramId0_next;
+	float destHalfWinLen;
+};
+
+struct CUDATempBuffer
+{
+	unsigned count;
+	float *d_data;
+};
 
 __shared__ unsigned char sbuf[];
 
@@ -208,3 +234,166 @@ void h_AnalyzeInput(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList
 		halfWinLen, specLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next, cuNoiseSpecs_next,
 		cuMaxVoicedLists, cuMaxVoicedLists_next, jobMap, BufSize);
 }
+
+__global__
+void g_Synthesis(CUDASrcPieceInfoList cuSrcPieceInfos, unsigned halfWinLen, unsigned specLen, 
+CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
+CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next, 
+CUDAVector<DstPieceInfo> cuDstPieceInfos, CUDAVector<CUDATempBuffer> cuTmpBufs1, CUDAVector<CUDATempBuffer> cuTmpBufs2,
+CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs)
+{
+	unsigned numWorker = blockDim.x;
+	unsigned workerId = threadIdx.x;
+
+	const SynthJobInfo& job = cuSynthJobs.d_data[blockIdx.x];
+	unsigned pieceId = job.pieceId;
+	unsigned dstParamId = job.jobOfPiece;
+	const CUDASrcPieceInfo& srcPieceInfo = cuSrcPieceInfos.d_data[pieceId];
+	const DstPieceInfo& dstPieceInfo = cuDstPieceInfos.d_data[pieceId];
+
+	CUDATempBuffer& cuTmpBuf = dstParamId % 2 == 0 ? cuTmpBufs1.d_data[pieceId] : cuTmpBufs2.d_data[pieceId];
+
+	float tempHalfWinLen = 1.0f / dstPieceInfo.minSampleFreq;
+	unsigned u_tempHalfWinLen = (unsigned)ceilf(tempHalfWinLen);
+	float fTmpWinCenter = dstPieceInfo.fTmpWinCenter0 + dstParamId* tempHalfWinLen;
+
+	float destHalfWinLen = job.destHalfWinLen;
+	unsigned u_destHalfWinLen = (unsigned)ceilf(destHalfWinLen);
+	unsigned uSpecLen = (unsigned)ceilf(destHalfWinLen*0.5f);
+	unsigned uRandPhaseInterval = (unsigned)ceilf(tempHalfWinLen*0.5f);
+
+	unsigned paramId0, paramId1, paramId0_next, paramId1_next;
+	float srcHalfWinWidth0, srcHalfWinWidth1, srcHalfWinWidth0_next, srcHalfWinWidth1_next;
+
+	float* noiseBuf = (float*)sbuf; // max(2 * fftLen, 2 * u_tempHalfWinLen) +2*fftlen
+	for (unsigned i = workerId; i < u_tempHalfWinLen; i += numWorker)
+		noiseBuf[i] = 0.0f;
+	__syncthreads();
+
+	bool haveNoise = false;
+	if (job.k2 < 1.0f)
+	{
+		paramId0 = job.paramId0;
+		paramId1 = paramId0 + 1;
+		if (paramId1 >= srcPieceInfo.SampleLocations.count) paramId1 = paramId0;
+
+		SrcSampleInfo& posInfo0 = srcPieceInfo.SampleLocations.d_data[paramId0];
+		SrcSampleInfo& posInfo1 = srcPieceInfo.SampleLocations.d_data[paramId1];
+		srcHalfWinWidth0 = 1.0f / posInfo0.srcSampleFreq;
+		srcHalfWinWidth1 = 1.0f / posInfo1.srcSampleFreq;
+
+		float* d_NoiseSpecs = cuNoiseSpecs.d_data[pieceId].d_data;
+
+		float k = job.k1;
+		if (k < 1.0f && paramId0 >= srcPieceInfo.fixedBeginId && paramId0 < srcPieceInfo.fixedEndId)
+		{
+			haveNoise = true;
+			AmpSpec_Scale(srcHalfWinWidth0, d_NoiseSpecs + specLen*paramId0, destHalfWinLen, noiseBuf, (1.0f - k)*(1.0f - job.k2));
+		}
+
+		if (k > 0.0f && paramId1 >= srcPieceInfo.fixedBeginId && paramId1 < srcPieceInfo.fixedEndId)
+		{
+			haveNoise = true;
+			AmpSpec_Scale(srcHalfWinWidth1, d_NoiseSpecs + specLen*paramId1, destHalfWinLen, noiseBuf, k*(1.0f - job.k2));
+		}
+	}
+
+	if (job.k2 > 0.0f)
+	{
+		paramId0_next= job.paramId0_next;
+		paramId1_next = paramId0_next + 1;
+		if (paramId1_next >= srcPieceInfo.SampleLocations_next.count) paramId1_next = paramId0_next;
+
+		SrcSampleInfo& posInfo0 = srcPieceInfo.SampleLocations_next.d_data[paramId0_next];
+		SrcSampleInfo& posInfo1 = srcPieceInfo.SampleLocations_next.d_data[paramId1_next];
+		srcHalfWinWidth0_next = 1.0f / posInfo0.srcSampleFreq;
+		srcHalfWinWidth1_next = 1.0f / posInfo1.srcSampleFreq;
+
+		float* d_NoiseSpecs = cuNoiseSpecs_next.d_data[pieceId].d_data;
+
+		float k = job.k1_next;
+		if (k < 1.0f && paramId0_next >= srcPieceInfo.fixedBeginId_next && paramId0_next < srcPieceInfo.fixedBeginId_next)
+		{
+			haveNoise = true;
+			AmpSpec_Scale(srcHalfWinWidth0_next, d_NoiseSpecs + specLen*paramId0_next, destHalfWinLen, noiseBuf, (1.0f - k)*job.k2);
+		}
+
+		if (k > 0.0f && paramId1_next >= srcPieceInfo.fixedBeginId_next && paramId1_next < srcPieceInfo.fixedBeginId_next)
+		{
+			haveNoise = true;
+			AmpSpec_Scale(srcHalfWinWidth1_next, d_NoiseSpecs + specLen*paramId1_next, destHalfWinLen, noiseBuf, k*job.k2);
+		}
+	}
+
+	if (haveNoise)
+	{
+		// apply random phases
+		float* d_p_rand = cuRandPhase.d_data + dstParamId*uRandPhaseInterval;
+		d_CreateNoiseWindowFromAmpSpec(noiseBuf, d_p_rand, uSpecLen, destHalfWinLen, u_destHalfWinLen, noiseBuf, tempHalfWinLen);
+		Win_WriteToBuf(cuTmpBuf.count, cuTmpBuf.d_data, (unsigned)fTmpWinCenter, tempHalfWinLen, noiseBuf);
+	}
+
+	float* harmBuf = (float*)sbuf;
+	for (unsigned i = workerId; i < tempHalfWinLen; i += numWorker)
+		harmBuf[i] = 0.0f;
+	__syncthreads();
+
+	if (job.k2 < 1.0f)
+	{
+		float *d_HarmWindows = cuHarmWindows.d_data[pieceId].d_data;
+
+		float k = job.k1;
+		if (k < 1.0f)
+			SymWin_Repitch_FormantPreserved(srcHalfWinWidth0, d_HarmWindows + halfWinLen*paramId0, destHalfWinLen, harmBuf, (1.0f - k)*(1.0f - job.k2));
+		if (k > 0.0f)
+			SymWin_Repitch_FormantPreserved(srcHalfWinWidth1, d_HarmWindows + halfWinLen*paramId1, destHalfWinLen, harmBuf, k*(1.0f - job.k2));
+	}
+
+	if (job.k2 > 0.0f)
+	{
+		float *d_HarmWindows = cuHarmWindows_next.d_data[pieceId].d_data;
+
+		float k = job.k1_next;
+		if (k < 1.0f)
+			SymWin_Repitch_FormantPreserved(srcHalfWinWidth0_next, d_HarmWindows + halfWinLen*paramId0_next, destHalfWinLen, harmBuf, (1.0f - k)*job.k2);
+		if (k > 0.0f)
+			SymWin_Repitch_FormantPreserved(srcHalfWinWidth1_next, d_HarmWindows + halfWinLen*paramId1_next, destHalfWinLen, harmBuf, k*job.k2);
+	}
+
+	float* scaled_harmBuf = (float*)sbuf + u_destHalfWinLen;
+	d_ScaleSymWindow(destHalfWinLen, u_destHalfWinLen, harmBuf, scaled_harmBuf, tempHalfWinLen);
+
+	SymWin_WriteToBuf(cuTmpBuf.count, cuTmpBuf.d_data, (unsigned)fTmpWinCenter, tempHalfWinLen, scaled_harmBuf);
+}
+
+
+void h_Synthesis(CUDASrcPieceInfoList cuSrcPieceInfos, unsigned halfWinLen, unsigned specLen,
+	CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
+	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
+	CUDAVector<DstPieceInfo> cuDstPieceInfos, CUDAVector<CUDATempBuffer> cuTmpBufs1, CUDAVector<CUDATempBuffer> cuTmpBufs2,
+	CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs, unsigned BufSize)
+{
+	static const unsigned groupSize = 256;
+	unsigned sharedBufSize = (unsigned)sizeof(float)* BufSize;
+
+	g_Synthesis << < cuSynthJobs.count, groupSize, sharedBufSize >> > (cuSrcPieceInfos, halfWinLen, specLen,
+		cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next, cuNoiseSpecs_next, cuDstPieceInfos, cuTmpBufs1, cuTmpBufs2,
+		cuRandPhase, cuSynthJobs);
+}
+
+
+__global__
+void g_Merge2Bufs(unsigned uSumLen, float *d_destBuf1, float *d_destBuf2)
+{
+	unsigned pos = threadIdx.x + blockIdx.x*blockDim.x;
+	if (pos < uSumLen)
+		d_destBuf1[pos] += d_destBuf2[pos];
+}
+
+void h_Merge2Bufs(unsigned uSumLen, float *d_destBuf1, float *d_destBuf2)
+{
+	static const unsigned groupSize = 256;
+	g_Merge2Bufs << < (uSumLen - 1) / groupSize + 1, groupSize >> >(uSumLen, d_destBuf1, d_destBuf2);
+}
+
+
