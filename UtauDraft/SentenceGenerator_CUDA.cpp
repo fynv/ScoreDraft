@@ -632,11 +632,10 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	std::vector<std::vector<unsigned>> h_maxVoicedLists;
 	cuMaxVoicedLists.ToCPU(h_maxVoicedLists);
 
-	/*
-	std::vector<std::vector<unsigned>> h_maxVoicedLists_next;
+	/*std::vector<std::vector<unsigned>> h_maxVoicedLists_next;
 	cuMaxVoicedLists_next.ToCPU(h_maxVoicedLists_next);
 
-	FILE *fp = fopen("dump.txt","w");
+	FILE *fp = fopen("dump_gpu.txt","a");
 	for (unsigned i = 0; i < h_maxVoicedLists.size(); i++)
 	{
 		std::vector<unsigned>& sublist = h_maxVoicedLists[i];

@@ -125,7 +125,8 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 	d_CreateAmpSpectrumFromWindow(fhalfWinlen, u_halfWidth, s_buf1, s_buf2, uSpecLen);
 
 	unsigned& maxVoiced = *((unsigned*)sbuf + BufSize - 1);
-	maxVoiced = 0;
+	if (workerId == 0)
+		maxVoiced = 0;
 
 	__syncthreads();
 
@@ -147,7 +148,7 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 		}
 		if (count > 1)
 		{
-			atomicMax(&maxVoiced, i / 3);
+			atomicMax(&maxVoiced, i/3+1);
 		}
 	}
 

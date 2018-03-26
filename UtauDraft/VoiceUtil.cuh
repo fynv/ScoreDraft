@@ -136,7 +136,7 @@ __device__ void d_CreateAmpSpectrumFromWindow(float halfWinlen, unsigned u_halfW
 	{
 		s_res_wnd[i] = 0.0f;
 	}
-
+	__syncthreads();
 }
 
 
