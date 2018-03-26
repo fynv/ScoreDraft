@@ -356,7 +356,7 @@ CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs)
 		// apply random phases
 		float* d_p_rand = cuRandPhase.d_data + dstParamId*uRandPhaseInterval;
 		d_CreateNoiseWindowFromAmpSpec(noiseBuf, d_p_rand, uSpecLen, destHalfWinLen, u_destHalfWinLen, noiseBuf, tempHalfWinLen);
-		Win_WriteToBuf(cuTmpBuf.count, cuTmpBuf.d_data, (unsigned)fTmpWinCenter, tempHalfWinLen, noiseBuf);
+		Win_WriteToBuf(cuTmpBuf.count, cuTmpBuf.d_data, fTmpWinCenter, tempHalfWinLen, noiseBuf);
 	}
 
 	float* harmBuf = (float*)sbuf;
@@ -389,7 +389,7 @@ CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs)
 	float* scaled_harmBuf = (float*)sbuf + u_destHalfWinLen;
 	d_ScaleSymWindow(destHalfWinLen, u_destHalfWinLen, harmBuf, scaled_harmBuf, tempHalfWinLen);
 
-	SymWin_WriteToBuf(cuTmpBuf.count, cuTmpBuf.d_data, (unsigned)fTmpWinCenter, tempHalfWinLen, scaled_harmBuf);
+	SymWin_WriteToBuf(cuTmpBuf.count, cuTmpBuf.d_data, fTmpWinCenter, tempHalfWinLen, scaled_harmBuf);
 }
 
 

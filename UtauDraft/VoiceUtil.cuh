@@ -281,8 +281,9 @@ __device__ void SymWin_Repitch_FormantPreserved(float srcHalfWinLen, float* srcB
 	__syncthreads();
 }
 
-__device__ void SymWin_WriteToBuf(unsigned dstLen, float* d_dstBuf, unsigned dstPos, float halfWinLen, float* s_symWnd)
+__device__ void SymWin_WriteToBuf(unsigned dstLen, float* d_dstBuf, float pos, float halfWinLen, float* s_symWnd)
 {
+	int ipos = (int)floorf(pos);
 	unsigned uHalfWinLen = (unsigned)ceilf(halfWinLen);
 	unsigned numWorker = blockDim.x;
 	unsigned workerId = threadIdx.x;
@@ -291,15 +292,16 @@ __device__ void SymWin_WriteToBuf(unsigned dstLen, float* d_dstBuf, unsigned dst
 	{
 		int uI = i < 0 ? -i : i;
 		float v = s_symWnd[uI];
-		int dstI = (int)dstPos + i;
+		int dstI = ipos + i;
 		if (dstI >= 0 && dstI < dstLen)
 			d_dstBuf[dstI] += i<0? -v:v;
 	}
 	__syncthreads();
 }
 
-__device__ void Win_WriteToBuf(unsigned dstLen, float* d_dstBuf, unsigned dstPos, float halfWinLen, float* s_Wnd)
+__device__ void Win_WriteToBuf(unsigned dstLen, float* d_dstBuf, float pos, float halfWinLen, float* s_Wnd)
 {
+	int ipos = (int)floorf(pos);
 	unsigned uHalfWinLen = (unsigned)ceilf(halfWinLen);
 	unsigned numWorker = blockDim.x;
 	unsigned workerId = threadIdx.x;
@@ -308,7 +310,7 @@ __device__ void Win_WriteToBuf(unsigned dstLen, float* d_dstBuf, unsigned dstPos
 	{
 		int uI = i < 0 ? halfWinLen*2 + i : i;
 		float v = s_Wnd[uI];
-		int dstI = (int)dstPos + i;
+		int dstI = ipos + i;
 		if (dstI >= 0 && dstI < dstLen)
 			d_dstBuf[dstI] += v;
 	}
@@ -364,7 +366,7 @@ __device__ void AmpSpec_Scale(float srcHalfWinLen, float* srcBuf, float dstHalfW
 		dstBuf[i] += destValue*mulRate;
 
 	}
-
+	__syncthreads();
 
 }
 
