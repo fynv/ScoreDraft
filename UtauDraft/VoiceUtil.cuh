@@ -119,7 +119,7 @@ __device__ void d_CreateAmpSpectrumFromWindow(float halfWinlen, unsigned u_halfW
 	d_fft(s_res_wnd, l);
 
 	float rate = halfWinlen / fLen;
-	for (unsigned i = workerId; i < 2 * fftLen; i += numWorker)
+	for (unsigned i = workerId; i < fftLen; i += numWorker)
 	{
 		float v = 0.0f;
 		if (i < uSpecLen)
@@ -131,6 +131,11 @@ __device__ void d_CreateAmpSpectrumFromWindow(float halfWinlen, unsigned u_halfW
 	}
 
 	__syncthreads();	
+
+	for (unsigned i = fftLen+workerId; i < 2*fftLen; i += numWorker)
+	{
+		s_res_wnd[i] = 0.0f;
+	}
 
 }
 
