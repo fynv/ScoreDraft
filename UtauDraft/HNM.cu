@@ -312,13 +312,13 @@ CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs)
 		float* d_NoiseSpecs = cuNoiseSpecs_next.d_data[pieceId].d_data;
 
 		float k = job.k1_next;
-		if (k < 1.0f && paramId0_next >= srcPieceInfo.fixedBeginId_next && paramId0_next < srcPieceInfo.fixedBeginId_next)
+		if (k < 1.0f && paramId0_next >= srcPieceInfo.fixedBeginId_next && paramId0_next < srcPieceInfo.fixedEndId_next)
 		{
 			haveNoise = true;
 			AmpSpec_Scale(srcHalfWinWidth0_next, d_NoiseSpecs + specLen*paramId0_next, destHalfWinLen, noiseBuf, (1.0f - k)*job.k2);
 		}
 
-		if (k > 0.0f && paramId1_next >= srcPieceInfo.fixedBeginId_next && paramId1_next < srcPieceInfo.fixedBeginId_next)
+		if (k > 0.0f && paramId1_next >= srcPieceInfo.fixedBeginId_next && paramId1_next < srcPieceInfo.fixedEndId_next)
 		{
 			haveNoise = true;
 			AmpSpec_Scale(srcHalfWinWidth1_next, d_NoiseSpecs + specLen*paramId1_next, destHalfWinLen, noiseBuf, k*job.k2);
