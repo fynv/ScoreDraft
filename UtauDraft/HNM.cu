@@ -116,13 +116,23 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 	unsigned u_halfWidth = (unsigned)ceilf(fhalfWinlen);
 	unsigned uSpecLen = (unsigned)ceilf(fhalfWinlen*0.5f);
 
+	unsigned fftLen = 1;
+	while (fftLen < u_halfWidth)
+	{
+		fftLen <<= 1;
+	}
+
+	bool skip = u_halfWidth * 2 + fftLen * 2> BufSize;
 	float *s_buf1 = (float*)sbuf;
 	float *s_buf2 = (float*)sbuf + u_halfWidth * 2;
 
-	const CUDASrcBuf& srcBuf = cuSrcBufs.d_data[isNext ? pieceId + 1 : pieceId];
+	if (!skip)
+	{
+		const CUDASrcBuf& srcBuf = cuSrcBufs.d_data[isNext ? pieceId + 1 : pieceId];
 
-	d_captureFromBuf(srcBuf.count, srcBuf.d_data, posInfo.srcPos, fhalfWinlen, u_halfWidth, s_buf1);
-	d_CreateAmpSpectrumFromWindow(fhalfWinlen, u_halfWidth, s_buf1, s_buf2, uSpecLen);
+		d_captureFromBuf(srcBuf.count, srcBuf.d_data, posInfo.srcPos, fhalfWinlen, u_halfWidth, s_buf1);
+		d_CreateAmpSpectrumFromWindow(fhalfWinlen, u_halfWidth, s_buf1, s_buf2, uSpecLen);
+	}
 
 	unsigned& maxVoiced = *((unsigned*)sbuf + BufSize - 1);
 	if (workerId == 0)
@@ -130,29 +140,33 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 
 	__syncthreads();
 
-	for (unsigned i = 6 + 3 * workerId; i + 4 < uSpecLen; i += 3 * numWorker)
+	if (!skip)
 	{
-		unsigned count = 0;
-		for (int j = -3; j <= 3; j += 3)
+
+		for (unsigned i = 6 + 3 * workerId; i + 4 < uSpecLen; i += 3 * numWorker)
 		{
-			float absv0 = s_buf2[(int)i + j];
-			float absv1 = s_buf2[(int)i + j - 1];
-			float absv2 = s_buf2[(int)i + j + 1];
-
-			float rate = absv0 / (absv0 + absv1 + absv2);
-
-			if (rate > 0.7f)
+			unsigned count = 0;
+			for (int j = -3; j <= 3; j += 3)
 			{
-				count++;
+				float absv0 = s_buf2[(int)i + j];
+				float absv1 = s_buf2[(int)i + j - 1];
+				float absv2 = s_buf2[(int)i + j + 1];
+
+				float rate = absv0 / (absv0 + absv1 + absv2);
+
+				if (rate > 0.7f)
+				{
+					count++;
+				}
+			}
+			if (count > 1)
+			{
+				atomicMax(&maxVoiced, i / 3 + 1);
 			}
 		}
-		if (count > 1)
-		{
-			atomicMax(&maxVoiced, i/3+1);
-		}
-	}
 
-	__syncthreads();
+		__syncthreads();
+	}
 
 	CUDAVector<unsigned>& d_maxVoicedList= isNext ? cuMaxVoicedLists_next.d_data[pieceId] : cuMaxVoicedLists.d_data[pieceId];
 
@@ -163,6 +177,7 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
 	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize)
 {
+	if (BufSize > 12000) BufSize = 12000;
 	unsigned groupSize = calcGroupSize(BufSize/4);
 	unsigned sharedBufSize = (unsigned)sizeof(float)* BufSize;
 	g_GetMaxVoiced << < jobMap.count, groupSize, sharedBufSize >> > (cuSrcBufs, pieceInfoList, cuMaxVoicedLists, cuMaxVoicedLists_next, jobMap, BufSize);
