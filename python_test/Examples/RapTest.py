@@ -41,7 +41,7 @@ for i in range(int(len(poem[1])/divider)):
 
 durations=[ [36,60,36,60,48,48,48, 36,60,36,60,48,48,48] ]
 
-poem=poems[278]
+poem=poems[296]
 divider= poem[0]*2
 
 assert(divider==14)
