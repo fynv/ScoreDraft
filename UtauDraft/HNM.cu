@@ -4,6 +4,16 @@
 
 #include <vector>
 
+#include <stdio.h>
+
+unsigned calcGroupSize(unsigned workPerGroup)
+{
+	unsigned s = 1;
+	while (s < workPerGroup && s<256)
+		s <<= 1;
+	return s;
+}
+
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
@@ -152,7 +162,7 @@ CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoi
 void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
 	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize)
 {
-	static const unsigned groupSize = 256;
+	unsigned groupSize = calcGroupSize(BufSize/4);
 	unsigned sharedBufSize = (unsigned)sizeof(float)* BufSize;
 	g_GetMaxVoiced << < jobMap.count, groupSize, sharedBufSize >> > (cuSrcBufs, pieceInfoList, cuMaxVoicedLists, cuMaxVoicedLists_next, jobMap, BufSize);
 
@@ -228,7 +238,7 @@ void h_AnalyzeInput(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList
 	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
 	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize)
 {
-	static const unsigned groupSize = 256;
+	unsigned groupSize = calcGroupSize(BufSize / 4);
 	unsigned sharedBufSize = (unsigned)sizeof(float)* BufSize;
 	g_AnalyzeInput << < jobMap.count, groupSize, sharedBufSize >> > (cuSrcBufs, pieceInfoList,
 		halfWinLen, specLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next, cuNoiseSpecs_next,
@@ -373,7 +383,7 @@ void h_Synthesis(CUDASrcPieceInfoList cuSrcPieceInfos, unsigned halfWinLen, unsi
 	CUDAVector<DstPieceInfo> cuDstPieceInfos, CUDAVector<CUDATempBuffer> cuTmpBufs1, CUDAVector<CUDATempBuffer> cuTmpBufs2,
 	CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs, unsigned BufSize)
 {
-	static const unsigned groupSize = 256;
+	unsigned groupSize = calcGroupSize(BufSize / 4);
 	unsigned sharedBufSize = (unsigned)sizeof(float)* BufSize;
 
 	g_Synthesis << < cuSynthJobs.count, groupSize, sharedBufSize >> > (cuSrcPieceInfos, halfWinLen, specLen,
