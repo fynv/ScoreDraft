@@ -740,7 +740,7 @@ class UtauDraftDeferred : public Singer_deferred
 {
 public:
 	UtauDraftDeferred(bool useCUDA = false) : Singer_deferred(new UtauDraft(useCUDA)){}
-	UtauDraftDeferred::UtauDraftDeferred(const UtauDraftDeferred & in) : Singer_deferred(in){}
+	UtauDraftDeferred(const UtauDraftDeferred & in) : Singer_deferred(in){}
 };
 
 class UtauDraftInitializer : public SingerInitializer

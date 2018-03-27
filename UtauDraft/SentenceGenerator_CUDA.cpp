@@ -100,20 +100,22 @@ private:
 
 };
 
+template<class T>
+class Leaky_T : public T
+{
+public:
+	using T::MakeLeaky;
+	using T::operator =;
+	Leaky_T(){}
+	~Leaky_T()
+	{
+		MakeLeaky();
+	}
+};
+
 template <class T_GPU, class T_CPU>
 class CUDAImagedVector
 {
-protected:
-	class Leaky_T_GPU : public T_GPU
-	{
-	public:
-		Leaky_T_GPU(){}
-		~Leaky_T_GPU()
-		{
-			MakeLeaky();
-		}
-		using T_GPU::operator =;
-	};
 public:
 	CUDAImagedVector()
 	{
@@ -165,7 +167,7 @@ public:
 		m_vec.Allocate((unsigned)cpuVecs.size());
 		if (m_vec.Count() > 0)
 		{
-			std::vector<Leaky_T_GPU> temp;
+			std::vector<Leaky_T<T_GPU>> temp;
 			temp.resize(cpuVecs.size());
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
 				temp[i] = cpuVecs[i];
@@ -179,7 +181,7 @@ public:
 		cpuVecs.resize(m_vec.Count());
 		if (m_vec.Count() > 0)
 		{
-			std::vector<Leaky_T_GPU> temp;
+			std::vector<Leaky_T<T_GPU>> temp;
 			temp.resize(m_vec.Count());
 			cudaMemcpy(temp.data(), m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
@@ -192,7 +194,7 @@ public:
 		assert(m_vec.Count() == (unsigned)cpuVecs.size());
 		if (m_vec.Count() > 0)
 		{
-			std::vector<Leaky_T_GPU> temp;
+			std::vector<Leaky_T<T_GPU>> temp;
 			temp.resize(m_vec.Count());
 			cudaMemcpy(temp.data(), m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
 			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
@@ -211,16 +213,18 @@ protected:
 };
 
 template <class T>
-class CUDALevel2Vector : public CUDAImagedVector<CUDAVector<T>, std::vector<T>>
+class CUDALevel2Vector : public CUDAImagedVector<CUDAVector<T>, std::vector<T> >
 {
 public:
+	using CUDAImagedVector<CUDAVector<T>, std::vector<T> >::Free;
+	using CUDAImagedVector<CUDAVector<T>, std::vector<T> >::m_vec;
 	void Allocate(const std::vector<unsigned>& counts)
 	{
 		Free();
 		m_vec.Allocate((unsigned)counts.size());
 		if (m_vec.Count() > 0)
 		{
-			std::vector<Leaky_T_GPU> temp;
+			std::vector<Leaky_T<CUDAVector<T>>> temp;
 			temp.resize(counts.size());
 			for (unsigned i = 0; i < (unsigned)counts.size(); i++)
 			{

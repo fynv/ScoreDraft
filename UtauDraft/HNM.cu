@@ -2,9 +2,13 @@
 #include <cmath>
 #include <VoiceUtil.cuh>
 
-#include <vector>
-
 #include <stdio.h>
+
+namespace std
+{
+	template<typename Tp>
+	class vector;
+}
 
 unsigned calcGroupSize(unsigned workPerGroup)
 {
@@ -34,7 +38,7 @@ template <class T_GPU, class T_CPU>
 class CUDAImagedVector : public CUDAVector<T_GPU>{};
 
 template <class T>
-class CUDALevel2Vector : public CUDAImagedVector<CUDAVector<T>, std::vector<T>>{};
+class CUDALevel2Vector : public CUDAImagedVector<CUDAVector<T>, std::vector<T> >{};
 
 class CUDASrcBuf : public CUDAVector<float> {};
 
@@ -95,7 +99,7 @@ struct CUDATempBuffer
 	float *d_data;
 };
 
-__shared__ unsigned char sbuf[];
+extern __shared__ unsigned char sbuf[];
 
 __global__
 void g_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
