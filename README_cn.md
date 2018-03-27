@@ -123,8 +123,6 @@ python_test 之外的内容基本上是C++代码，您可以自行编译。
 
 # 基于用例的使用说明
 
-[新增 Jupyter notebook 幻灯片](https://github.com/fynv/ScoreDraft/blob/master/python_test/Examples/Singing%20through%20Python_zh.ipynb)
-
 首先，为了使用ScoreDraft，所有的代码都需要
 
 ```Python
