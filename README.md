@@ -142,6 +142,7 @@ which are used to build the binaries.
 # Usage Introduction
 
 Usage introduction of ScoreDraft has been moved to:
+
 [http://scoredraft.org/index.php/introduction-to-scoredraft/](http://scoredraft.org/index.php/introduction-to-scoredraft/)
 
 Chinese version (中文使用介绍）:
