@@ -44,15 +44,20 @@ bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float
 	buf.m_data.resize(uEnd - uBegin);
 
 	float acc = 0.0f;
-	for (unsigned i = uBegin; i < uEnd; i++)
+	float count = 0.0f;
+	for (unsigned i = uBegin; i < uEnd && i<whole.m_data.size(); i++)
 	{
 		acc += whole.m_data[i] * whole.m_data[i];
+		if (whole.m_data[i] != 0.0f)
+		{
+			count+=1.0f;
+		}
 	}
-	acc = sqrtf((float)(uEnd - uBegin) / acc)*0.3f;
+	acc = sqrtf(count / acc)*0.3f;
 
 	for (unsigned i = uBegin; i < uEnd; i++)
 	{
-		buf.m_data[i - uBegin] = whole.m_data[i] * acc;
+		buf.m_data[i - uBegin] = (i<whole.m_data.size())? (whole.m_data[i] * acc) : 0.0f;
 	}
 
 	return true;
