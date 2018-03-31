@@ -25,7 +25,7 @@ Ayaka = ScoreDraft.Ayaka_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(Ayaka, CVVCChineseConverter.CVVCChineseConverter)
 
 doc=ScoreDraft.Document()
-doc.setReferenceFreqeuncy(440.0)
+doc.setReferenceFrequency(440.0)
 doc.sing(seq, Ayaka)
 doc.mixDown('cvvc2.wav')
 

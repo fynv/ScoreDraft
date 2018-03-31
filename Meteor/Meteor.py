@@ -21,7 +21,7 @@ class Document:
 	def getReferenceFrequency(self):
 		return self.refFreq
 
-	def setReferenceFreqeuncy(self,refFreq):
+	def setReferenceFrequency(self,refFreq):
 		self.refFreq=refFreq
 
 	def newBuf(self, chn=-1):

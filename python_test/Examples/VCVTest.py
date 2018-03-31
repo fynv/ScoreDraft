@@ -28,7 +28,7 @@ line= ("er", do(5,12), re(5,12), "yue", mi(5,12), so(5,12), "jian", mi(5,48), "c
 line+=("hua", la(4,24), "you", do(5,48), "zheng", la(4,12), do(5,12), "kai", la(4,96), BL(96))
 seq += [line]
 
-doc.setReferenceFreqeuncy(440.0)
+doc.setReferenceFrequency(440.0)
 
 WanEr=  ScoreDraft.WanEr_UTAU()
 WanEr.tune ("rap_freq 2.0")
