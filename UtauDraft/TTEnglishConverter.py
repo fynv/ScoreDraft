@@ -7,13 +7,15 @@ lyricPrefixSet=set()
 vowelSet={'eI','aI','aU','OI','oU','3','i','I','U','u','E','{','A','V','O','@'}
 vowelPrefixSet=set()
 
+atomicSet={'tS','dZ'}
+
 def BuildLyricSet():
 	with open(ScoreDraftPath+'/UTAUVoice/TetoEng/Teto/oto.ini', 'r') as f:
 		while True:
 			line = f.readline()
 			if not line:
 				break
-			p1 = line.find("=")
+			p1 = line.find('=')
 			if p1==-1:
 				continue
 			fn=line[0:p1-4]
@@ -46,16 +48,28 @@ for vowel in vowelSet:
 		vowelPrefixSet.add(vowel[0:i+1])
 
 def TTEnglishConverter(inList):
+	inList_a=[]
+	for inLyric in inList:
+		lyric_a=[]
+		i=0
+		while i<len(inLyric):
+			atom=''
+			while i<len(inLyric) and (atom=='' or (atom+inLyric[i] in atomicSet)):
+				atom=atom+inLyric[i]
+				i+=1
+			lyric_a+=[atom]
+		inList_a+=[lyric_a]
+
 	vowelMap=[]
 
-	for inLyric in inList:
+	for inLyric in inList_a:
 		start=-1
 		end=-1
 		for i in range(len(inLyric)):
 			if start==-1:
 				if inLyric[i] in vowelPrefixSet:
 					start=i
-			if inLyric[start:i+1] in vowelPrefixSet:
+			if start!=-1 and (''.join(inLyric[start:i+1]) in vowelPrefixSet):
 				end=i+1
 		vowelMap+=[(start,end)]
 
@@ -65,16 +79,15 @@ def TTEnglishConverter(inList):
 	prefix='-'
 	iIn=0
 
-
-	while cur[0]<len(inList) and cur[1]<len(inList[cur[0]]):	
+	while cur[0]<len(inList_a) and cur[1]<len(inList_a[cur[0]]):	
 		# pass 1 
 		while len(prefix)>0:
-			test_seg = prefix + inList[cur[0]][cur[1]]
+			test_seg = prefix + inList_a[cur[0]][cur[1]]
 
 			if test_seg in lyricPrefixSet:
 				break
 
-			test_seg = prefix +' '+inList[cur[0]][cur[1]]
+			test_seg = prefix +' '+inList_a[cur[0]][cur[1]]
 
 			if test_seg in lyricPrefixSet:
 				break
@@ -95,10 +108,10 @@ def TTEnglishConverter(inList):
 
 			while True:
 				newChar=''
-				if not (cur2[0]<len(inList) and cur2[1]<len(inList[cur2[0]])):
+				if not (cur2[0]<len(inList_a) and cur2[1]<len(inList_a[cur2[0]])):
 					newChar='-'
 				else:
-					newChar= inList[cur2[0]][cur2[1]]
+					newChar= inList_a[cur2[0]][cur2[1]]
 
 				test_seg=lastSeg+newChar
 				if not (test_seg in lyricPrefixSet):
@@ -111,16 +124,16 @@ def TTEnglishConverter(inList):
 				if test_seg in lyricSet:
 					cur=cur2[:]
 					seg=test_seg
-					if cur[0]<len(inList):
+					if cur[0]<len(inList_a):
 						if cur[1]>=vowelMap[cur[0]][0] and cur[1]<vowelMap[cur[0]][1]:
 							isVowel=True
 							iIn=cur[0]
 
-				if not (cur2[0]<len(inList) and cur2[1]<len(inList[cur2[0]])):
+				if not (cur2[0]<len(inList_a) and cur2[1]<len(inList_a[cur2[0]])):
 					break
 
 				cur2[1]+=1
-				if cur2[1]>=len(inList[cur2[0]]):
+				if cur2[1]>=len(inList_a[cur2[0]]):
 					cur2[0]+=1
 					cur2[1]=0				
 
@@ -132,20 +145,20 @@ def TTEnglishConverter(inList):
 
 		outList+=[(seg, iIn, isVowel)]
 
-		if not (cur[0]<len(inList) and cur[1]<len(inList[cur[0]])):
+		if not (cur[0]<len(inList_a) and cur[1]<len(inList_a[cur[0]])):
 			break
 
 		cur[1]+=1
-		if cur[1]>=len(inList[cur[0]]):
+		if cur[1]>=len(inList_a[cur[0]]):
 			cur[0]+=1
 			cur[1]=0
 
 		pos=nextStart[:]
 		prefix=''
 		while pos[0]<cur[0] or (pos[0]==cur[0] and pos[1]<cur[1]):
-			prefix+=inList[pos[0]][pos[1]]
+			prefix+=inList_a[pos[0]][pos[1]]
 			pos[1]+=1
-			if pos[1]>=len(inList[pos[0]]):
+			if pos[1]>=len(inList_a[pos[0]]):
 				pos[0]+=1
 				pos[1]=0
 
@@ -169,9 +182,3 @@ def TTEnglishConverter(inList):
 	#print(ret)
 
 	return ret
-
-
-
-
-
-

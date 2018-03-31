@@ -34,6 +34,7 @@ JPVCVConverter.py
 TsuroVCVConverter.py
 TTEnglishConverter.py
 XiaYYConverter.py
+VCCVEnglishConverter.py
 )
 
 set (INCLUDE_DIR
