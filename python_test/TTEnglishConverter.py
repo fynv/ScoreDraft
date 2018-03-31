@@ -82,13 +82,12 @@ def TTEnglishConverter(inList):
 	while cur[0]<len(inList_a) and cur[1]<len(inList_a[cur[0]]):	
 		# pass 1 
 		while len(prefix)>0:
-			test_seg = prefix + inList_a[cur[0]][cur[1]]
-
-			if test_seg in lyricPrefixSet:
-				break
+			if prefix=='-' or cur[1]>0 or vowelMap[cur[0]][0]==0:
+				test_seg = prefix + inList_a[cur[0]][cur[1]]
+				if test_seg in lyricPrefixSet:
+					break
 
 			test_seg = prefix +' '+inList_a[cur[0]][cur[1]]
-
 			if test_seg in lyricPrefixSet:
 				break
 
@@ -107,14 +106,17 @@ def TTEnglishConverter(inList):
 			isVowel=False
 
 			while True:
+				spaceMust=False
 				newChar=''
 				if not (cur2[0]<len(inList_a) and cur2[1]<len(inList_a[cur2[0]])):
 					newChar='-'
 				else:
 					newChar= inList_a[cur2[0]][cur2[1]]
+					if lastSeg!='' and lastSeg!='-' and cur2[1]==0 and vowelMap[cur2[0]][0]>0:
+						spaceMust=True
 
 				test_seg=lastSeg+newChar
-				if not (test_seg in lyricPrefixSet):
+				if spaceMust or not (test_seg in lyricPrefixSet):
 					test_seg=lastSeg+' '+newChar
 					if not (test_seg in lyricPrefixSet):
 						break
