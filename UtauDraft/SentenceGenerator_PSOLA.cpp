@@ -55,6 +55,8 @@ void SentenceGenerator_PSOLA::GeneratePiece(bool isVowel, unsigned uSumLen, cons
 
 	for (unsigned srcPos = startPos; srcPos < srcInfo.source.m_data.size(); srcPos++)
 	{
+		if ((float)srcPos >= srcDerInfo.fixed_end && !isVowel) break;
+
 		float srcSampleFreq;
 		float srcFreqPos = (srcInfo.srcbegin + (float)srcPos) / (float)srcInfo.frq.m_window_interval;
 		unsigned uSrcFreqPos = (unsigned)srcFreqPos;

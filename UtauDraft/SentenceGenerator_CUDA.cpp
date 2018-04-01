@@ -406,13 +406,12 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 
 		bool firstNote = (i == 0);
 		bool hasNextNote = (i < numPieces - 1);
+		bool _isVowel = isVowel_list[i] != 0;
 
 		SourceDerivedInfo& srcDerInfo = SrcDerInfos[i];
-		srcDerInfo.DeriveInfo(firstNote, hasNextNote, lengths[i], srcInfos[i], hasNextNote ? srcInfos[i + 1] : _dummyNext);
+		srcDerInfo.DeriveInfo(firstNote, hasNextNote, lengths[i], srcInfos[i], hasNextNote ? srcInfos[i + 1] : _dummyNext, _isVowel);
 
 		SrcPieceInfo& srcPieceInfo = SrcPieceInfos[i];
-
-		bool _isVowel = isVowel_list[i] != 0;
 
 		// current note info
 		{
@@ -438,6 +437,8 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 
 			for (unsigned srcPos = startPos; srcPos < srcInfo.source.m_data.size(); srcPos++)
 			{
+				if ((float)srcPos >= srcDerInfo.fixed_end && !_isVowel) break;
+
 				float srcSampleFreq;
 				float srcFreqPos = (srcInfo.srcbegin + (float)srcPos) / (float)srcInfo.frq.m_window_interval;
 				unsigned uSrcFreqPos = (unsigned)srcFreqPos;

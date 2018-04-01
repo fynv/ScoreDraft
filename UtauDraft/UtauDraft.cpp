@@ -100,7 +100,7 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) 
 	return true;
 }
 
-void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc)
+void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel)
 {
 	float total_len = curSrc.srcend - curSrc.srcbegin;
 	overlap_pos = curSrc.loc.overlap* (float)curSrc.source.m_sampleRate*0.001f;
@@ -125,14 +125,22 @@ void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLe
 		note_len = vowel_len + fixed_len;
 	}
 
-	float k = 1.0f;
-	if (sumLenWithoutHead > note_len)
+	if (isVowel)
 	{
-		float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
-		if (k2 < k) k = k2;
+		float k = 1.0f;
+		if (sumLenWithoutHead > note_len)
+		{
+			float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
+			if (k2 < k) k = k2;
+		}
+		vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
+		fixed_Weight = k* vowel_Weight;
 	}
-	vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
-	fixed_Weight = k* vowel_Weight;
+	else
+	{
+		vowel_Weight = 0.0f;
+		fixed_Weight = 1.0f / fixed_len;
+	}
 
 	if (firstNote)
 	{
