@@ -167,6 +167,7 @@ def VCCVEnglishConverter(inList):
 	ret=[]
 	syllable=()
 	iSyllable=0
+	has_C=False
 
 	for i in range(len(outList)):
 		outItem=outList[i]
@@ -174,10 +175,14 @@ def VCCVEnglishConverter(inList):
 			ret+=[syllable]
 			syllable=()
 			iSyllable=outItem[1]
+			has_C=False
 		weight=0.1
 		if outItem[2]:
 			weight=0.4
-		syllable+=(outItem[0], weight, outItem[2])
+		if outItem[2] or not has_C:
+			syllable+=(outItem[0], weight, outItem[2])
+			if not outItem[2]:
+				has_C=True
 
 	ret+=[syllable]
 
