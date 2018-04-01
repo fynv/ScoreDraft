@@ -44,7 +44,7 @@ struct SourceDerivedInfo
 	float fixed_Weight;
 	float headerWeight;
 
-	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel);
+	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel, float VCVelocity=1.0f);
 };
 
 class SentenceGenerator
@@ -52,6 +52,7 @@ class SentenceGenerator
 public:
 	float _transition;
 	float _gender;
+	float _vcvelocity;
 
 	virtual void GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf) = 0;
 
@@ -90,6 +91,7 @@ private:
 	float m_transition;
 	float m_rap_distortion;
 	float m_gender;
+	float m_vcvelocity;
 
 	PyObject* m_LyricConverter;
 

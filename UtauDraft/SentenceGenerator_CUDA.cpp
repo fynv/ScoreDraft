@@ -409,7 +409,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		bool _isVowel = isVowel_list[i] != 0;
 
 		SourceDerivedInfo& srcDerInfo = SrcDerInfos[i];
-		srcDerInfo.DeriveInfo(firstNote, hasNextNote, lengths[i], srcInfos[i], hasNextNote ? srcInfos[i + 1] : _dummyNext, _isVowel);
+		srcDerInfo.DeriveInfo(firstNote, hasNextNote, lengths[i], srcInfos[i], hasNextNote ? srcInfos[i + 1] : _dummyNext, _isVowel, _vcvelocity);
 
 		SrcPieceInfo& srcPieceInfo = SrcPieceInfos[i];
 
