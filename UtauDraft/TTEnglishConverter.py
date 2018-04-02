@@ -115,6 +115,9 @@ def TTEnglishConverter(inList):
 					if lastSeg!='' and lastSeg!='-' and cur2[1]==0 and vowelMap[cur2[0]][0]>0:
 						spaceMust=True
 
+				if lastSeg=='' and cur[0]<len(inList_a) and cur[1]>=vowelMap[cur[0]][0] and cur[1]<vowelMap[cur[0]][1]:
+					lastSeg='-'
+
 				test_seg=lastSeg+newChar
 				if spaceMust or not (test_seg in lyricPrefixSet):
 					test_seg=lastSeg+' '+newChar
