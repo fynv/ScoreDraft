@@ -9,9 +9,9 @@ void SentenceGenerator_CPU::_generatePiece(const UtauSourceFetcher& srcFetcher, 
 
 	bool hasNextNote = lyric_next != nullptr;
 
-	if (!srcFetcher.FetchSourceInfo(lyric, srcInfo)) return;
+	if (!srcFetcher.FetchSourceInfo(lyric, srcInfo, !isVowel? _constVC : -1.0f)) return;
 	if (hasNextNote && !srcFetcher.FetchSourceInfo(lyric_next, srcInfo_next)) return;
-	srcDerInfo.DeriveInfo(firstNote, hasNextNote, uSumLen, srcInfo, srcInfo_next, isVowel, _vcvelocity);
+	srcDerInfo.DeriveInfo(firstNote, hasNextNote, uSumLen, srcInfo, srcInfo_next, isVowel);
 
 	Buffer dstBuf;
 	dstBuf.m_sampleRate = srcInfo.source.m_sampleRate;

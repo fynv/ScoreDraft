@@ -28,7 +28,7 @@ public:
 	OtoMap* m_OtoMap;
 	std::string m_defaultLyric;
 
-	bool FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) const;
+	bool FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, float constVC=-1.0f) const;
 	static bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end);
 
 };
@@ -44,7 +44,7 @@ struct SourceDerivedInfo
 	float fixed_Weight;
 	float headerWeight;
 
-	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel, float VCVelocity=1.0f);
+	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel);
 };
 
 class SentenceGenerator
@@ -52,7 +52,7 @@ class SentenceGenerator
 public:
 	float _transition;
 	float _gender;
-	float _vcvelocity;
+	float _constVC;
 
 	virtual void GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf) = 0;
 
@@ -91,7 +91,7 @@ private:
 	float m_transition;
 	float m_rap_distortion;
 	float m_gender;
-	float m_vcvelocity;
+	float m_constVC;
 
 	PyObject* m_LyricConverter;
 
@@ -99,6 +99,7 @@ private:
 	PrefixMap* m_PrefixMap;
 
 	bool m_use_CUDA;
+
 };
 
 #endif

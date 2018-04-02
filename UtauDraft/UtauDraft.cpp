@@ -61,7 +61,7 @@ bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float
 	return true;
 }
 
-bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) const
+bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, float constVC) const
 {
 	if (m_OtoMap->find(lyric) == m_OtoMap->end())
 	{
@@ -79,6 +79,8 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) 
 
 	{
 		loc = (*m_OtoMap)[lyric];
+		if (constVC > 0.0f && loc.consonant - loc.preutterance > constVC)
+			loc.consonant = loc.preutterance + constVC;
 
 		char frq_path[2048];
 		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
@@ -100,7 +102,7 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo) 
 	return true;
 }
 
-void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel, float VCVelocity)
+void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel)
 {
 	float total_len = curSrc.srcend - curSrc.srcbegin;
 	overlap_pos = curSrc.loc.overlap* (float)curSrc.source.m_sampleRate*0.001f;
@@ -139,7 +141,7 @@ void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLe
 	else
 	{
 		vowel_Weight = 0.0f;
-		fixed_Weight = VCVelocity / fixed_len;
+		fixed_Weight = 1.0f / fixed_len;
 	}
 
 	if (firstNote)
@@ -159,7 +161,7 @@ UtauDraft::UtauDraft(bool useCUDA)
 	m_transition = 0.1f;
 	m_rap_distortion = 1.0f;
 	m_gender = 0.0f;
-	m_vcvelocity = 1.0f;
+	m_constVC = -1.0f;
 	m_LyricConverter = nullptr;
 
 	m_use_prefix_map = true;
@@ -236,11 +238,11 @@ bool UtauDraft::Tune(const char* cmd)
 			if (sscanf(cmd + strlen("gender") + 1, "%f", &value))
 				m_gender = value;
 		}
-		else if (strcmp(command, "vcvelocity") == 0)
+		else if (strcmp(command, "constvc") == 0)
 		{
 			float value;
-			if (sscanf(cmd + strlen("vcvelocity") + 1, "%f", &value))
-				m_vcvelocity = value;
+			if (sscanf(cmd + strlen("constvc") + 1, "%f", &value))
+				m_constVC = value;
 		}
 	}
 	return false;
@@ -262,7 +264,7 @@ SentenceGenerator* UtauDraft::createSentenceGenerator()
 	}
 	sg->_gender = m_gender;
 	sg->_transition = m_transition;
-	sg->_vcvelocity = m_vcvelocity;
+	sg->_constVC = m_constVC;
 	return sg;
 }
 
