@@ -7,7 +7,7 @@ lyricPrefixSet=set()
 vowelSet={'a','e','i','o','u','E','9','3','@','A','I','O','8','Q','6','x','&','1','0'}
 vowelPrefixSet=set()
 
-atomicSet={'ch','dh','sh','th','zh','ng','Ang'}
+atomicSet={'ch','dh','sh','th','zh','ng','Ang','dr','tr'}
 
 def BuildLyricSet():
 	with open(ScoreDraftPath+'/UTAUVoice/Yami/D4/oto.ini', 'r') as f:

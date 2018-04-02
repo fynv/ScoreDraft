@@ -7,7 +7,7 @@ lyricPrefixSet=set()
 vowelSet={'eI','aI','aU','OI','oU','3','i','I','U','u','E','{','A','V','O','@'}
 vowelPrefixSet=set()
 
-atomicSet={'tS','dZ'}
+atomicSet={'tS','dZ','dr','tr'}
 
 def BuildLyricSet():
 	with open(ScoreDraftPath+'/UTAUVoice/TetoEng/Teto/oto.ini', 'r') as f:
