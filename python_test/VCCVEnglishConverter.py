@@ -137,7 +137,9 @@ def VCCVEnglishConverter(inList):
 				cur2[1]+=1
 				if cur2[1]>=len(inList_a[cur2[0]]):
 					cur2[0]+=1
-					cur2[1]=0				
+					cur2[1]=0	
+					if seg!='':
+						break			
 
 
 			if len(seg)>0 or len(prefix)==0:
