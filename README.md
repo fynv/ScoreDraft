@@ -23,7 +23,7 @@ made for UTAU, including CVVC and VCV voice-banks. The new engine is called
 "UtauDraft". The name only indicates the intension to be compatible with UTAU voice
 banks.
 
-I'm not sure where ScoreDraft will go in the furture. from here I'm building 
+I'm not sure where ScoreDraft will go in the furture. From here I'm building 
 a big set of utilities to allow different kinds all waveforms to
 be generated and mixed together through scripts. 
 
