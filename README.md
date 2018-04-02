@@ -5,26 +5,26 @@ ScoreDraft
 ScoreDraft is a simple music/singing synthesizer that provides a Python based 
 score authoring interface. 
 
-Historically, there has been some changes in the design goal of the software.
-At the beginning, the software was intendend to be used for music experiments 
-like just intonation, and in the first design, I was intending to use text 
+Historically, there have been changes in the design goal of ScoreDraft.
+The software was originally intendend to be used for music experiments 
+such as just intonation. For the initial design, I was intending to use text 
 files as the means of authoring, i.e., the C++ program reads a text file, 
-parse the notes and generates an audio file. However, after trying using
+parse the notes and generates an audio file. However, after using
 Python as a script layer, it has shown very much benefit comparing to text 
 parsing. So I moved quickly to Python.
 
-Then, I became interested in extending ScoreDraft for singing synthesis, simliar 
-to Vocaloid and UTAU, but using script, and this has become the focus of the 
-developent of ScoreDraft recently. In the first stage, I implemented a simple
-voice synthesizing engine that generates voice note by note from individual voice
+I became interested in extending ScoreDraft for singing synthesis, simliar 
+to Vocaloid and UTAU, but using script. Since then singing synthesis 
+has become the focus of development. In the first stage, I implemented a simple
+voice synthesizing engine that generates a voice note by note from individual voice
 samples. This engine is called "KeLa", named after the famous video on Bilibili.
-In the second stage, I try to build a new engine that can make use of voice-banks 
-made for UTAU, including those CVVC and VCV voice-banks. The new engine is called 
+In the second stage, I built a new engine makes use of voice-banks 
+made for UTAU, including CVVC and VCV voice-banks. The new engine is called 
 "UtauDraft". The name only indicates the intension to be compatible with UTAU voice
 banks.
 
-I'm really not sure where ScoreDraft will go in the furture. Basically, here, 
-I'm building a big set of utilities to allow different kinds all waveforms to
+I'm not sure where ScoreDraft will go in the furture. from here I'm building 
+a big set of utilities to allow different kinds all waveforms to
 be generated and mixed together through scripts. 
 
 The following example shows how easily a piece of musical sound can be generated
