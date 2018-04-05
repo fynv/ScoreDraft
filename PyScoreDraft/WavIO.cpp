@@ -1,6 +1,6 @@
-#include "WinWavWriter.h"
-#include "TrackBuffer.h"
+#include "WavIO.h"
 #include <WriteWav.h>
+#include <ReadWav.h>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -37,3 +37,32 @@ void WriteToWav(TrackBuffer& track, const char* fileName)
 	delete[] buffer;
 }
 
+void ReadFromWav(TrackBuffer& track, const char* fileName)
+{
+	unsigned numSamples;
+	unsigned chn;
+	unsigned sampleRate;
+
+	ReadWav reader;
+	reader.OpenFile(fileName);
+	reader.ReadHeader(sampleRate, numSamples, chn);
+
+	unsigned localBufferSize = track.GetLocalBufferSize();
+
+	NoteBuffer buf;
+	buf.m_sampleRate = sampleRate;
+	buf.m_channelNum = chn;
+	buf.m_sampleNum = localBufferSize;
+	buf.Allocate();
+
+	while (numSamples > 0)
+	{
+		unsigned readCount = min(numSamples, localBufferSize);
+		float maxv;
+		reader.ReadSamples(buf.m_data, readCount, maxv);
+		buf.m_sampleNum = readCount;
+		buf.m_cursorDelta = (float)readCount;
+		track.WriteBlend(buf);
+		numSamples -= readCount;
+	}
+}

@@ -3,28 +3,21 @@
 
 #include <vector>
 #include <float.h>
+#include <stdio.h>
 
-template<class T>
-class SubList : public std::vector<const T*>
-{
-public:
-	std::vector<unsigned> indices;
-	float m_start;
-	float m_end;
-};
+typedef std::vector<unsigned> SubList;
 
-template<class T>
 class SubLists
 {
 public:
 	float m_minStart;
 	float m_maxEnd;
 	float m_interval;
-	std::vector<SubList<T>> m_subLists;
+	std::vector<SubList> m_subLists;
 
 	SubLists()	{}
 
-	unsigned GetIntervalId(float v)
+	unsigned GetIntervalId(float v) const
 	{
 		if (v < m_minStart) return 0;
 		unsigned id = (unsigned)((v - m_minStart) / m_interval);
@@ -32,6 +25,36 @@ public:
 		return id;
 	}
 
+	void SaveToFile(FILE* fp) const
+	{
+		fwrite(&m_minStart, sizeof(float), 3, fp);
+		unsigned count = (unsigned)m_subLists.size();
+		fwrite(&count, sizeof(unsigned), 1, fp);
+		for (unsigned i = 0; i < count; i++)
+		{
+			unsigned sub_count = (unsigned)m_subLists[i].size();
+			fwrite(&sub_count, sizeof(unsigned), 1, fp);
+			fwrite(&m_subLists[i][0], sizeof(unsigned), sub_count, fp);
+		}
+	}
+
+	void LoadFromFile(FILE* fp)
+	{
+		fread(&m_minStart, sizeof(float), 3, fp);
+		unsigned count;
+		fread(&count, sizeof(unsigned), 1, fp);
+		m_subLists.clear();
+		m_subLists.resize(count);
+		for (unsigned i = 0; i < count; i++)
+		{
+			unsigned sub_count;
+			fread(&sub_count, sizeof(unsigned), 1, fp);
+			m_subLists[i].resize(sub_count);
+			fread(&m_subLists[i][0], sizeof(unsigned), sub_count, fp);
+		}
+	}
+
+	template<class T>
 	void SetData(const std::vector<T>& fullList, float interval)
 	{
 		m_interval = interval;
@@ -50,14 +73,13 @@ public:
 
 		for (unsigned i = 0; i < (unsigned)fullList.size(); i++)
 		{
-			unsigned startInterval = (fullList[i].start - m_minStart) / interval;
-			unsigned endInterval = (fullList[i].end - m_minStart) / interval;
+			unsigned startInterval = (unsigned)((fullList[i].start - m_minStart) / interval);
+			unsigned endInterval = (unsigned)((fullList[i].end - m_minStart) / interval);
 			if (endInterval >= numIntervals) endInterval = numIntervals - 1;
 
 			for (unsigned j = startInterval; j <= endInterval; j++)
 			{
-				m_subLists[j].push_back(&fullList[i]);
-				m_subLists[j].indices.push_back(i);
+				m_subLists[j].push_back(i);
 			}
 
 		}

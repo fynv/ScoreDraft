@@ -384,7 +384,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	srcInfos.resize(numPieces);
 
 	for (unsigned i = 0; i < numPieces; i++)
-		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i], !isVowel_list[i] ? _constVC :1.0f)) return;
+		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i], !isVowel_list[i] ? _constVC : -1.0f)) return;
 
 	CUDASrcBufList cuSourceBufs;
 	cuSourceBufs=srcInfos;

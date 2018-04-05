@@ -51,9 +51,6 @@ void ViewWidget::SetData(const Visualizer* data)
 	m_data = data;
 	if (data != nullptr)
 	{
-		m_notes_sublists.SetData(data->GetNotes(), 3.0f);
-		m_beats_sublists.SetData(data->GetBeats(), 3.0f);
-		m_singing_sublists.SetData(data->GetSingings(), 3.0f);
 		_buildColorMap();
 	}
 }
@@ -239,26 +236,30 @@ void ViewWidget::paintGL()
 
 	glDisable(GL_DEPTH_TEST);
 
+	const SubLists& notes_sublists = m_data->GetNotesSublists();
+	const SubLists& beats_sublists = m_data->GetBeatsSublists();
+	const SubLists& singing_sublists = m_data->GetSingingSublists();
+
 	float note_inTime = m_refTime + (float)m_timer.elapsed()*0.001f;
-	unsigned note_intervalId = m_notes_sublists.GetIntervalId(note_inTime);
+	unsigned note_intervalId = notes_sublists.GetIntervalId(note_inTime);
 	float note_outTime = note_inTime - m_showTime;
-	unsigned note_intervalId_min = m_notes_sublists.GetIntervalId(note_outTime);
+	unsigned note_intervalId_min = notes_sublists.GetIntervalId(note_outTime);
 
 	/// draw meteors
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 	//notes
-	if (m_notes_sublists.m_subLists.size()>0)
+	if (notes_sublists.m_subLists.size()>0)
 	{
 		std::set<const VisNote*> visiableNotes;
 
 		for (unsigned i = note_intervalId_min; i <= note_intervalId; i++)
 		{
-			const SubList<VisNote>& subList = m_notes_sublists.m_subLists[i];
+			const SubList& subList = notes_sublists.m_subLists[i];
 			for (unsigned j = 0; j < (unsigned)subList.size(); j++)
 			{
-				const VisNote& note = *subList[j];
+				const VisNote& note = m_data->GetNotes()[subList[j]];
 				if (note.start<note_inTime && note.end> note_outTime)
 					visiableNotes.insert(&note);
 			}
@@ -306,14 +307,15 @@ void ViewWidget::paintGL()
 	}
 
 	// beats
-	if (m_beats_sublists.m_subLists.size()>0)
+	if (beats_sublists.m_subLists.size()>0)
 	{
-		unsigned beat_intervalId = m_beats_sublists.GetIntervalId(note_inTime);
+		unsigned beat_intervalId = beats_sublists.GetIntervalId(note_inTime);
 
-		const SubList<VisBeat>& subList = m_beats_sublists.m_subLists[beat_intervalId];
+		const SubList& subList = beats_sublists.m_subLists[beat_intervalId];
 		for (unsigned i = 0; i < (unsigned)subList.size(); i++)
 		{
-			const VisBeat& beat = *subList[i];
+			unsigned beatIndex = subList[i];
+			const VisBeat& beat = m_data->GetBeats()[beatIndex];
 			
 			float start = beat.start;
 			float end = beat.end;
@@ -324,8 +326,6 @@ void ViewWidget::paintGL()
 
 			if (note_inTime >= start && note_inTime <= end)
 			{
-				unsigned beatIndex = subList.indices[i];
-
 				float centerx = m_beats_centers[beatIndex].x*m_w;
 				float centery = m_beats_centers[beatIndex].y*(m_h - m_whiteKeyHeight) + m_whiteKeyHeight;
 				float radius = m_w*m_percussion_flash_size_factor;
@@ -339,19 +339,19 @@ void ViewWidget::paintGL()
 
 
 	// singing
-	if (m_singing_sublists.m_subLists.size()>0)
+	if (singing_sublists.m_subLists.size()>0)
 	{
-		unsigned singing_intervalId = m_singing_sublists.GetIntervalId(note_inTime);
-		unsigned singing_intervalId_min = m_singing_sublists.GetIntervalId(note_outTime);
+		unsigned singing_intervalId = singing_sublists.GetIntervalId(note_inTime);
+		unsigned singing_intervalId_min = singing_sublists.GetIntervalId(note_outTime);
 
 		std::set<const VisSinging*> visiableNotes;
 
 		for (unsigned i = singing_intervalId_min; i <= singing_intervalId; i++)
 		{
-			const SubList<VisSinging>& subList = m_singing_sublists.m_subLists[i];
+			const SubList& subList = singing_sublists.m_subLists[i];
 			for (unsigned j = 0; j < (unsigned)subList.size(); j++)
 			{
-				const VisSinging& note = *subList[j];
+				const VisSinging& note = m_data->GetSingings()[subList[j]];
 				if (note.start<note_inTime && note.end> note_outTime)
 					visiableNotes.insert(&note);
 			}
@@ -421,20 +421,21 @@ void ViewWidget::paintGL()
 	memset(pressed, 0, sizeof(bool)* numKeys);
 
 	// notes
-	if (m_notes_sublists.m_subLists.size()>0)
+	if (notes_sublists.m_subLists.size()>0)
 	{
-		const SubList<VisNote>& subList = m_notes_sublists.m_subLists[note_intervalId];
+		const SubList& subList = notes_sublists.m_subLists[note_intervalId];
 		for (unsigned i = 0; i < (unsigned)subList.size(); i++)
 		{
-			float start = subList[i]->start;
-			float end = subList[i]->end;
+			const VisNote& note = m_data->GetNotes()[subList[i]];
+			float start = note.start;
+			float end = note.end;
 
 			// early key-up movement
 			end -= (end - start)*0.1f;
 
 			if (note_inTime >= start && note_inTime <= end)
 			{
-				int index = subList[i]->pitch + indexShift;
+				int index = note.pitch + indexShift;
 				if (index >= 0 && index < numKeys)
 				{
 					pressed[index] = true;
@@ -479,19 +480,19 @@ void ViewWidget::paintGL()
 	painter.endNativePainting();
 
 	// singing
-	if (m_singing_sublists.m_subLists.size()>0)
+	if (singing_sublists.m_subLists.size()>0)
 	{
-		unsigned singing_intervalId = m_singing_sublists.GetIntervalId(note_inTime);
-		unsigned singing_intervalId_min = m_singing_sublists.GetIntervalId(note_outTime);
+		unsigned singing_intervalId = singing_sublists.GetIntervalId(note_inTime);
+		unsigned singing_intervalId_min = singing_sublists.GetIntervalId(note_outTime);
 
 		std::set<const VisSinging*> visiableNotes;
 
 		for (unsigned i = singing_intervalId_min; i <= singing_intervalId; i++)
 		{
-			const SubList<VisSinging>& subList = m_singing_sublists.m_subLists[i];
+			const SubList& subList = singing_sublists.m_subLists[i];
 			for (unsigned j = 0; j < (unsigned)subList.size(); j++)
 			{
-				const VisSinging& note = *subList[j];
+				const VisSinging& note = m_data->GetSingings()[subList[j]];
 				if (note.start<note_inTime && note.start> note_outTime)
 					visiableNotes.insert(&note);
 			}
@@ -517,7 +518,7 @@ void ViewWidget::paintGL()
 			std::string lyric = (*iter)->lyric;
 
 			painter.setPen(QColor(color[0], color[1], color[2]));
-			painter.drawText(QPoint((int)x, m_h - 1 - (int)startY), QString::fromUtf8(lyric.data(), lyric.length()));
+			painter.drawText(QPoint((int)x, m_h - 1 - (int)startY), QString::fromUtf8(lyric.data(), (int)lyric.length()));
 
 		}
 	}

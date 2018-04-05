@@ -162,17 +162,19 @@ bool ReadWav::ReadSamples(float* samples, unsigned count, float& max_v)
 
 	if (count > 0)
 	{
-		short* data = new short[m_totalSamples*m_num_channels];
-		fread(data, sizeof(short), m_totalSamples*m_num_channels, m_fp);
+		short* data = new short[count*m_num_channels];
+		fread(data, sizeof(short), count*m_num_channels, m_fp);
 
 		max_v = 0.0f;
-		for (unsigned i = 0; i < m_totalSamples*m_num_channels; i++)
+		for (unsigned i = 0; i < count*m_num_channels; i++)
 		{	
 			float v = (float)data[i] / 32767.0f;
 			samples[i] = v;
 			max_v = max(max_v, fabsf(v));
 		}
 		delete[] data;
+
+		m_readSamples += count;
 	}
 
 	if (m_totalSamples - m_readSamples <= 0) CloseFile();

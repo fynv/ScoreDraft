@@ -96,6 +96,7 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 			}
 		}
 	}		
+	m_needUpdateSublists = true;
 }
 
 void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyObject *seq_py, unsigned tempo)
@@ -124,6 +125,7 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyOb
 			pos += fduration;
 		}
 	}
+	m_needUpdateSublists = true;
 }
 
 void VisSinging::CreateFromSingingPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const SingingPiece& piece)
@@ -335,10 +337,22 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 
 		}
 	}
+	m_needUpdateSublists = true;
 }
 
-void Visualizer::Play(unsigned bufferId) const
+void Visualizer::_updateSublists()
 {
+	m_notes_sublists.SetData(m_notes, 3.0f);
+	m_beats_sublists.SetData(m_beats, 3.0f);
+	m_singing_sublists.SetData(m_singings, 3.0f);
+	m_needUpdateSublists = false;
+}
+
+void Visualizer::Play(unsigned bufferId) 
+{
+	if (m_needUpdateSublists)
+		_updateSublists();
+
 	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
 
 	int argc = 0;
@@ -348,6 +362,85 @@ void Visualizer::Play(unsigned bufferId) const
 	widget.show();
 	app.exec();
 }
+
+void Visualizer::SaveToFile(const char* filename)
+{
+	if (m_needUpdateSublists)
+		_updateSublists();
+
+	FILE *fp=fopen(filename, "wb");
+	unsigned countNotes = (unsigned) m_notes.size();
+	fwrite(&countNotes, sizeof(unsigned), 1, fp);
+	fwrite(&m_notes[0], sizeof(VisNote), countNotes, fp);
+	m_notes_sublists.SaveToFile(fp);
+	unsigned countBeats = (unsigned)m_beats.size();
+	fwrite(&countBeats, sizeof(unsigned), 1, fp);
+	fwrite(&m_beats[0], sizeof(VisBeat), countBeats, fp);
+	m_beats_sublists.SaveToFile(fp);
+	unsigned countSinging = (unsigned)m_singings.size();
+	fwrite(&countSinging, sizeof(unsigned), 1, fp);
+	for (unsigned i = 0; i < countSinging; i++)
+	{
+		const VisSinging& singing = m_singings[i];
+		fwrite(&singing.singerId, sizeof(unsigned), 1, fp);
+		unsigned char len = (unsigned char)singing.lyric.length();
+		fwrite(&len, 1, 1, fp);
+		if (len>0)
+			fwrite(singing.lyric.data(), 1, len, fp);
+		unsigned count = (unsigned)singing.pitch.size();
+		fwrite(&count, sizeof(unsigned), 1, fp);
+		fwrite(singing.pitch.data(), sizeof(float), count, fp);
+		fwrite(&singing.start, sizeof(float), 2, fp);
+	}
+	m_singing_sublists.SaveToFile(fp);
+	fclose(fp);
+}
+
+void Visualizer::LoadFromFile(const char* filename)
+{
+	FILE *fp = fopen(filename, "rb");
+	unsigned countNotes;
+	fread(&countNotes, sizeof(unsigned), 1, fp);
+	m_notes.clear();
+	m_notes.resize(countNotes);
+	fread(&m_notes[0], sizeof(VisNote), countNotes, fp);
+	m_notes_sublists.LoadFromFile(fp);
+	unsigned countBeats;
+	fread(&countBeats, sizeof(unsigned), 1, fp);
+	m_beats.clear();
+	m_beats.resize(countBeats);
+	fread(&m_beats[0], sizeof(VisBeat), countBeats, fp);
+	m_beats_sublists.LoadFromFile(fp);
+	unsigned countSinging;
+	fread(&countSinging, sizeof(unsigned), 1, fp);
+	m_singings.clear();
+	m_singings.resize(countSinging);
+	for (unsigned i = 0; i < countSinging; i++)
+	{
+		VisSinging& singing = m_singings[i];
+		fread(&singing.singerId, sizeof(unsigned), 1, fp);
+		unsigned char len;
+		fread(&len, 1, 1, fp);
+		if (len > 0)
+		{
+			char _str[256];
+			fread(_str, 1, len, fp);
+			_str[len] = 0;
+			singing.lyric = _str;
+		}
+		else
+			singing.lyric = "";
+		unsigned count;
+		fread(&count, sizeof(unsigned), 1, fp);
+		singing.pitch.resize(count);
+		fread(singing.pitch.data(), sizeof(float), count, fp);
+		fread(&singing.start, sizeof(float), 2, fp);
+	}
+	m_singing_sublists.LoadFromFile(fp);
+	fclose(fp);
+	m_needUpdateSublists = true;
+}
+
 
 typedef Deferred<Visualizer> Visualizer_deferred;
 typedef std::vector<Visualizer_deferred> VisualizerMap;
@@ -437,6 +530,29 @@ static PyObject* Play(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyObject* SaveToFile(PyObject *args)
+{
+	unsigned visualizerId;
+	const char* fn;
+	if (!PyArg_ParseTuple(args, "Is", &visualizerId, &fn))
+		return NULL;
+
+	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
+	visualizer->SaveToFile(fn);
+	return PyLong_FromUnsignedLong(0);
+}
+
+static PyObject* LoadFromFile(PyObject *args)
+{
+	unsigned visualizerId;
+	const char* fn;
+	if (!PyArg_ParseTuple(args, "Is", &visualizerId, &fn))
+		return NULL;
+
+	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
+	visualizer->LoadFromFile(fn);
+	return PyLong_FromUnsignedLong(0);
+}
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
@@ -448,5 +564,7 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessBeatSeq", ProcessBeatSeq, "visualizerId, percList, startPos, seq, tempo", "visualizerId, ObjectToId(percList), startPos, seq, tempo");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessSingingSeq", ProcessSingingSeq, "visualizerId, singer, startPos, seq, tempo, refFreq", "visualizerId, singer.id, startPos, seq, tempo, refFreq");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorPlay", Play, "visualizerId, buffer", "visualizerId, buffer.id");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorSaveToFile", SaveToFile, "visualizerId, filename", "visualizerId, filename");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorLoadFromFile", LoadFromFile, "visualizerId, filename", "visualizerId, filename");
 }
 

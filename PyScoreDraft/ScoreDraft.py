@@ -308,6 +308,14 @@ def WriteTrackBufferToWav(buf, filename):
 	'''
 	PyScoreDraft.WriteTrackBufferToWav(buf.id, filename)
 
+def ReadTrackBufferFromWav(buf, filename):
+	'''
+	Function used to read a track-buffer from a .wav file.
+	buf -- an instance of TrackBuffer
+	filename -- a string
+	'''
+	PyScoreDraft.ReadTrackBufferFromWav(buf.id, filename)
+
 # generate dynamic code
 g_generated_code_and_summary=PyScoreDraft.GenerateCode()
 exec(g_generated_code_and_summary[0])

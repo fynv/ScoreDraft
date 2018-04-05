@@ -74,3 +74,7 @@ class Document:
 		targetBuf=ScoreDraft.TrackBuffer(chn)
 		self.mix(targetBuf)
 		ScoreDraft.MeteorPlay(self.visualizerId, targetBuf)
+
+	def saveToFile(self, filename):
+		ScoreDraft.MeteorSaveToFile(self.visualizerId, filename)
+		

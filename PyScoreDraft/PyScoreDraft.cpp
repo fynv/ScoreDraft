@@ -29,7 +29,7 @@
 #include <instruments/NaivePiano.h>
 #include <instruments/BottleBlow.h>
 
-#include "WinWavWriter.h"
+#include "WavIO.h"
 
 #include <vector>
 #include <utility>
@@ -756,6 +756,18 @@ static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyObject* ReadTrackBufferFromWav(PyObject *self, PyObject *args)
+{
+	unsigned BufferId;
+	const char* fn;
+	if (!PyArg_ParseTuple(args, "Is", &BufferId, &fn))
+		return NULL;
+	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	ReadFromWav(*buffer, fn);
+
+	return PyLong_FromUnsignedLong(0);
+}
+
 static PyObject* CallExtension(PyObject *self, PyObject *args)
 {
 	unsigned extId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
@@ -983,6 +995,12 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 	{
 		"WriteTrackBufferToWav",
 		WriteTrackBufferToWav,
+		METH_VARARGS,
+		""
+	},
+	{
+		"ReadTrackBufferFromWav",
+		ReadTrackBufferFromWav,
 		METH_VARARGS,
 		""
 	},

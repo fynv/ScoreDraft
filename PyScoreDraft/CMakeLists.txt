@@ -4,12 +4,12 @@ find_package(PythonLibs 3 REQUIRED)
 
 set(SOURCES
 PyScoreDraft.cpp
-WinWavWriter.cpp
+WavIO.cpp
 )
 
 set(HEADERS 
 PyScoreDraft.h
-WinWavWriter.h
+WavIO.h
 )
 
 set(PYTHON

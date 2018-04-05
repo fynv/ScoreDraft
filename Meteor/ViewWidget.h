@@ -7,7 +7,6 @@
 #include <QOpenGLFunctions>
 #include <QTime>
 
-#include "SubListLookUp.h"
 #include <map>
 
 typedef std::map<unsigned, unsigned char*> ColorMap;
@@ -43,14 +42,9 @@ private:
 	int m_w, m_h;
 	const Visualizer* m_data;
 
-	SubLists<VisNote> m_notes_sublists;
 	ColorMap m_InstColorMap;
-
-	SubLists<VisBeat> m_beats_sublists;
 	ColorMap m_PercColorMap;
 	std::vector<Pos2D> m_beats_centers;
-
-	SubLists<VisSinging> m_singing_sublists;
 	ColorMap m_SingerColorMap;
 
 	float m_refTime;
