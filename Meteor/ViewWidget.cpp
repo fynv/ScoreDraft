@@ -375,8 +375,8 @@ void ViewWidget::paintGL()
 
 			for (unsigned i = 0; i < num_pitches - 1; i++)
 			{
-				float x1 = pitches[i] * pixelPerPitch + (float)m_w*0.5f;
-				float x2 = pitches[i + 1] * pixelPerPitch + (float)m_w*0.5f;
+				float x1 = pitches[i] * pixelPerPitch + (float)m_w*0.5f + m_whiteKeyWidth*0.5f;
+				float x2 = pitches[i + 1] * pixelPerPitch + (float)m_w*0.5f + m_whiteKeyWidth*0.5f;
 				
 				float k1 = (float)i / (float)(num_pitches - 1);
 				float y1 = startY*(1.0f - k1) + endY*k1;
@@ -391,11 +391,6 @@ void ViewWidget::paintGL()
 				glVertex2f(x2 - m_singing_half_width, y2);
 
 			}
-
-			float x = pitches[0] * pixelPerPitch + (float)m_w*0.5f;
-			std::string lyric = (*iter)->lyric;
-			//painter.setPen(Qt::white);
-			//painter.drawText(QPoint((int)x, (int)(m_h - startY)), QString::fromUtf8(lyric.data(), lyric.length()));
 
 		}
 		
@@ -514,7 +509,7 @@ void ViewWidget::paintGL()
 			unsigned singerId = (*iter)->singerId;
 			unsigned char* color = m_SingerColorMap[singerId];
 
-			float x = (*iter)->pitch[0] * pixelPerPitch + (float)m_w*0.5f+m_singing_half_width;
+			float x = (*iter)->pitch[0] * pixelPerPitch + (float)m_w*0.5f + m_whiteKeyWidth*0.5f + m_singing_half_width;
 			std::string lyric = (*iter)->lyric;
 
 			painter.setPen(QColor(color[0], color[1], color[2]));
