@@ -7,7 +7,6 @@
 
 #include "QtPCMPlayer.h"
 #include "BufferQueue.h"
-#include <cmath>
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))

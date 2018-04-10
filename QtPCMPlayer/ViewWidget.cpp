@@ -1,6 +1,7 @@
 #include "ViewWidget.h"
 #include <QPainter>
 #include <fft.h>
+#include <cmath>
 
 ViewWidget::ViewWidget(QWidget* parent) : QOpenGLWidget(parent)
 {
