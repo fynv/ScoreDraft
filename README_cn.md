@@ -134,6 +134,7 @@ ScoreDraft 的使用说明目前已经转移到：
 * CMake 3.0+
 * Python3
 * Qt5 (这个只在可视化扩展"QtPCMPlayer"和"Meteor"中需要，如果您不需要这些扩展，您可以把它们从/CMakeLists.txt中移除，这样就可以不安装Qt5了）
+* CUDA (UtauDraft默认启用CUDA加速，可以在/UtauDraft/CMakeLists.txt中将USE_CUDA设置为false来禁用)
 
 运行 CMake 来为您的编译器生成makefiles或project files，然后即可编译。
 

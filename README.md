@@ -156,6 +156,7 @@ To build ScoreDraft from source-code, you need to install:
 * CMake 3.0+
 * Python3
 * Qt5 (Needed by "QtPCMPlayer“ and "Meteor" extensions. You can remove them from /CMakeLists.txt if you don't need them. Then you don't need Qt5)
+* CUDA (Optionally needed by UtauDraft, can be disabled by setting "USE_CUDA" to false in /UtauDraft/CMakeLists.txt)
 
 Run CMake to generate makefiles/project files for your system and build.
 You are recommanded to:
