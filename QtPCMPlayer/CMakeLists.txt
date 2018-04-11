@@ -85,6 +85,11 @@ ScoreDraftCore
 
 include_directories(${INCLUDE_DIR})
 add_library (QtPCMPlayerExt SHARED ${SOURCES} ${HEADERS})
+if (WIN32) 
+set_target_properties(QtPCMPlayerExt PROPERTIES SUFFIX ".dll")
+else()
+set_target_properties(QtPCMPlayerExt PROPERTIES SUFFIX ".so")
+endif()
 target_link_libraries(QtPCMPlayerExt ${LINK_LIBS})
 
 install(TARGETS QtPCMPlayerExt DESTINATION Extensions)
