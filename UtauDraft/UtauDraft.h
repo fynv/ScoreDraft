@@ -50,6 +50,8 @@ struct SourceDerivedInfo
 class SentenceGenerator
 {
 public:
+	SentenceGenerator(){}
+	virtual ~SentenceGenerator(){}
 	float _transition;
 	float _gender;
 	float _constVC;

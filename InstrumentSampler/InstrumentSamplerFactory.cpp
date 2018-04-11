@@ -42,6 +42,7 @@ public:
 	{
 		m_IsMultiSampler = false;
 	}
+	virtual ~InstrumentSingleSamplerInitializer(){}
 	virtual Instrument_deferred Init()
 	{
 		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_root.data(), m_name.data());
