@@ -24,6 +24,9 @@ public:
 	std::string m_root;
 	bool m_IsMultiSampler;
 
+	InstrumentSamplerInitializer(){}
+	virtual ~InstrumentSamplerInitializer(){}
+
 	std::string GetComment()
 	{
 		if (!m_IsMultiSampler)
@@ -64,7 +67,7 @@ public:
 	{
 		m_IsMultiSampler = true;
 	}
-
+	virtual ~InstrumentMultiSamplerInitializer(){}
 
 	static int compareSampleWav(const void* a, const void* b)
 	{
