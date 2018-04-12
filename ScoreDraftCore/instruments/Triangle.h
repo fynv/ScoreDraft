@@ -7,7 +7,7 @@ class Triangle : public Instrument
 {
 public:
 	Triangle();
-	~Triangle();
+	virtual ~Triangle();
 
 protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);

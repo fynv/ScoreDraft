@@ -7,7 +7,7 @@ class PureSin : public Instrument
 {
 public:
 	PureSin();
-	~PureSin();
+	virtual ~PureSin();
 
 protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);

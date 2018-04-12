@@ -121,6 +121,7 @@ namespace VoiceUtil
 	class Window
 	{
 	public:
+		virtual ~Window(){}
 		float m_halfWidth;
 		std::vector<float> m_data;
 
@@ -492,6 +493,7 @@ namespace VoiceUtil
 	class SymmetricWindow_Base : public Window
 	{
 	public:
+		virtual ~SymmetricWindow_Base(){}
 		bool NonZero()
 		{
 			for (unsigned i = 0; i < (unsigned)m_data.size(); i++)
@@ -573,6 +575,7 @@ namespace VoiceUtil
 	class SymmetricWindow_Axis : public SymmetricWindow_Base
 	{
 	public:
+		virtual ~SymmetricWindow_Axis(){}
 		virtual float GetSample(int i) const
 		{
 			if (i < 0)
@@ -753,6 +756,7 @@ namespace VoiceUtil
 	class SymmetricWindow_Center : public SymmetricWindow_Base
 	{
 	public:
+		virtual ~SymmetricWindow_Center(){}
 		virtual float GetSample(int i) const
 		{
 			if (i < 0)

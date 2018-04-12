@@ -7,7 +7,7 @@ class Sawtooth : public Instrument
 {
 public:
 	Sawtooth();
-	~Sawtooth();
+	virtual ~Sawtooth();
 
 protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);

@@ -64,7 +64,7 @@ class UtauDraft : public Singer
 {
 public:
 	UtauDraft(bool useCUDA=false);
-	~UtauDraft();
+	virtual ~UtauDraft();
 
 	void SetOtoMap(OtoMap* otoMap);
 	void SetPrefixMap(PrefixMap* prefixMap);

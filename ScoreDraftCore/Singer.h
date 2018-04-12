@@ -46,7 +46,7 @@ class Singer
 {
 public:
 	Singer();
-	~Singer();
+	virtual ~Singer();
 
 	void SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
 	void RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);

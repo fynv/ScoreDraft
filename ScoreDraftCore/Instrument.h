@@ -9,7 +9,7 @@ class Instrument
 {
 public:
 	Instrument();
-	~Instrument();
+	virtual ~Instrument();
 
 	void PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo=80,float RefFreq=261.626f);
 

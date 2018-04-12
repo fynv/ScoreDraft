@@ -7,7 +7,7 @@ class NaivePiano : public Instrument
 {
 public:
 	NaivePiano();
-	~NaivePiano();
+	virtual ~NaivePiano();
 
 protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);

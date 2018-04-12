@@ -18,18 +18,21 @@ typedef Deferred<Singer> Singer_deferred;
 class InstrumentInitializer
 {
 public:
+	virtual ~InstrumentInitializer(){}
 	virtual Instrument_deferred Init() = 0;
 };
 
 class PercussionInitializer
 {
 public:
+	virtual ~PercussionInitializer() {}
 	virtual Percussion_deferred Init() = 0;
 };
 
 class SingerInitializer
 {
 public:
+	virtual ~SingerInitializer(){}
 	virtual Singer_deferred Init() = 0;
 };
 
@@ -110,6 +113,7 @@ typedef std::vector<TrackBuffer_deferred> TrackBufferMap;
 class Logger
 {
 public:
+	virtual ~Logger(){}
 	virtual void PrintLine(const char* line) const = 0;
 };
 

@@ -15,7 +15,7 @@ public:
 	{
 		if (m != nullptr) m->addRef();
 	}
-	~Deferred()
+	virtual ~Deferred()
 	{
 		if (m != nullptr) m->release();
 		m = nullptr;

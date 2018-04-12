@@ -76,7 +76,7 @@ public:
 		m_sample = nullptr;
 	}
 
-	~PercussionSampler()
+	virtual ~PercussionSampler()
 	{
 	}
 

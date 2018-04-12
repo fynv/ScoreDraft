@@ -7,7 +7,7 @@ class Square : public Instrument
 {
 public:
 	Square();
-	~Square();
+	virtual ~Square();
 
 protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);

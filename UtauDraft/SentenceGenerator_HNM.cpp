@@ -40,6 +40,8 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 		SymmetricWindow HarmWindow;
 		AmpSpectrum NoiseSpectrum;
 
+		virtual ~ParameterSet(){}
+
 		void Scale(const ParameterSet& src, float targetHalfWidth)
 		{
 			HarmWindow.Repitch_FormantPreserved(src.HarmWindow, targetHalfWidth);

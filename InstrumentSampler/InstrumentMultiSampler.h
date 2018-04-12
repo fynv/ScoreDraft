@@ -14,7 +14,7 @@ class InstrumentMultiSampler : public Instrument
 {
 public:
 	InstrumentMultiSampler();
-	~InstrumentMultiSampler();
+	virtual ~InstrumentMultiSampler();
 
 	void SetSampleList(std::vector<InstrumentSample_deferred>* sampleWavList)
 	{

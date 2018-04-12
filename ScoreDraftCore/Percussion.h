@@ -14,7 +14,7 @@ class Percussion
 {
 public:
 	Percussion();
-	~Percussion();
+	virtual ~Percussion();
 
 	void PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo = 80);
 	static void PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo = 80);

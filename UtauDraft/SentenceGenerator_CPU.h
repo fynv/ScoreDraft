@@ -6,6 +6,7 @@
 class SentenceGenerator_CPU : public SentenceGenerator
 {
 public:
+	virtual ~SentenceGenerator_CPU(){}
 	virtual void GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf);
 
 protected:
