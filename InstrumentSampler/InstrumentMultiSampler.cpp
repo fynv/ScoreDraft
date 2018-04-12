@@ -174,12 +174,6 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 		}
 	}
 
-	
-	InstrumentSample_deferred wav1 = sampleList[I];
-	InstrumentSample_deferred wav2 = sampleList[I + 1];
-	float origin_SampleFreq1 = wav1->m_origin_freq / (float)wav1->m_origin_sample_rate;
-	float origin_SampleFreq2 = wav2->m_origin_freq / (float)wav2->m_origin_sample_rate;
-
 	if (useSingle)
 	{
 		NoteBuffer tmpBuffer;
@@ -200,6 +194,11 @@ void InstrumentMultiSampler::GenerateNoteWave(float fNumOfSamples, float sampleF
 	}
 	else
 	{
+		InstrumentSample_deferred wav1 = sampleList[I];
+		InstrumentSample_deferred wav2 = sampleList[I + 1];
+		float origin_SampleFreq1 = wav1->m_origin_freq / (float)wav1->m_origin_sample_rate;
+		float origin_SampleFreq2 = wav2->m_origin_freq / (float)wav2->m_origin_sample_rate;
+
 		NoteBuffer tmpBuffer1;
 		_generateNoteWave(I, fNumOfSamples, sampleFreq, &tmpBuffer1);
 
