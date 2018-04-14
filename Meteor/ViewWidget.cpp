@@ -224,6 +224,8 @@ void ViewWidget::paintGL()
 	painter.begin(this);
 	painter.beginNativePainting();
 
+	glEnable(GL_MULTISAMPLE);
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0.0, (double)m_w, 0.0, (double)m_h, -1.0, 1.0);

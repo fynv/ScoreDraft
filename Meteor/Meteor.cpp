@@ -358,6 +358,11 @@ void Visualizer::Play(unsigned bufferId)
 	int argc = 0;
 	char* argv = nullptr;
 	QApplication app(argc, &argv);
+
+	QSurfaceFormat fmt;
+	fmt.setSamples(8);
+	QSurfaceFormat::setDefaultFormat(fmt);
+
 	MainWidget widget(this, buffer);
 	widget.show();
 	app.exec();
