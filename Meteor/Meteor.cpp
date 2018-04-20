@@ -128,17 +128,17 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyOb
 	m_needUpdateSublists = true;
 }
 
-void VisSinging::CreateFromSingingPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const SingingPiece& piece)
+void VisSinging::CreateFromSyllable(unsigned singerId, float pos, float pitchShift, unsigned tempo, const Syllable& syllable)
 {
 	this->singerId = singerId;
-	this->lyric = piece.m_lyric;
+	this->lyric = syllable.m_lyric;
 	this->start = pos;
 
 	float totalLen = 0.0f;
-	for (unsigned i = 0; i < (unsigned)piece.m_notes.size(); i++)
+	for (unsigned i = 0; i < (unsigned)syllable.m_ctrlPnts.size(); i++)
 	{
-		unsigned uDuration = piece.m_notes[i].m_duration;
-		float fduration = (float)(uDuration * 60) / (float)(tempo * 48);
+		int iDuration = syllable.m_ctrlPnts[i].m_duration;
+		float fduration = (float)(iDuration * 60) / (float)(tempo * 48);
 		totalLen += fduration;
 	}
 	this->end = pos + totalLen;
@@ -151,51 +151,20 @@ void VisSinging::CreateFromSingingPiece(unsigned singerId, float pos, float pitc
 	unsigned pitchPos = 0;
 	float fPitchPos = 0.0f;
 	float nextPitchPos=0.0f;
-	for (unsigned i = 0; i < (unsigned)piece.m_notes.size(); i++)
+	for (unsigned i = 0; i < (unsigned)syllable.m_ctrlPnts.size(); i++)
 	{
-		unsigned uDuration = piece.m_notes[i].m_duration;
-		float fduration = (float)(uDuration * 60) / (float)(tempo * 48);
+		int iDuration = syllable.m_ctrlPnts[i].m_duration;
+		if (iDuration <= 0) continue;
+		float fduration = (float)(iDuration * 60) / (float)(tempo * 48);
+		float freq1 = syllable.m_ctrlPnts[i].m_freq_rel;
+		float freq2 = i < syllable.m_ctrlPnts.size() - 1 ? syllable.m_ctrlPnts[i + 1].m_freq_rel : freq1;
+		float thisPitchPos = nextPitchPos;
 		nextPitchPos += fduration;
 		for (; fPitchPos < nextPitchPos && pitchPos<pitchLen; fPitchPos += secPerPitchSample, pitchPos++)
 		{
-			pitch[pitchPos] = piece.m_notes[i].m_freq_rel;
+			float k = (fPitchPos - thisPitchPos) / fduration;
+			pitch[pitchPos] = freq1*(1.0f-k)+freq2*k;
 		}
-	}
-
-	// smoothing
-	float* temp = new float[pitchLen];
-	temp[0] = pitch[0];
-	temp[pitchLen - 1] = pitch[pitchLen - 1];
-	for (unsigned i = 1; i < pitchLen - 1; i++)
-	{
-		temp[i] = 0.25f*(pitch[i - 1] + pitch[i + 1]) + 0.5f*pitch[i];
-	}
-
-	for (unsigned i = 0; i < pitchLen; i++)
-	{
-		pitch[i] = logf(temp[i])*12.0f / logf(2.0f) + pitchShift;
-	}
-
-	delete[] temp;
-}
-
-void VisSinging::CreateFromRapPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const RapPiece& piece)
-{
-	this->singerId = singerId;
-	this->lyric = piece.m_lyric;
-	this->start = pos;
-	float totalLen = (float)(piece.m_duration * 60) / (float)(tempo * 48);
-	this->end = pos + totalLen;
-
-	float pitchPerSec = 50.0f;
-	float secPerPitchSample = 1.0f / pitchPerSec;
-	unsigned pitchLen = (unsigned)ceilf(totalLen*pitchPerSec);
-	this->pitch.resize(pitchLen);
-
-	for (unsigned i = 0; i < pitchLen; i++)
-	{
-		float k = (float)i / (float)(pitchLen - 1);
-		pitch[i] = (1.0f - k)*piece.m_freq1 + k*piece.m_freq2;
 	}
 
 	// smoothing
@@ -243,8 +212,9 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 					_item = PyTuple_GetItem(item, j);
 					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
 					{
-						SingingPiece piece;
-						piece.m_lyric = lyric;
+
+						Syllable syllable;
+						syllable.m_lyric = lyric;
 
 						float totalDuration = 0.0f;
 
@@ -253,57 +223,86 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 							_item = PyTuple_GetItem(item, j);
 							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;
 
-							Note note;
-							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
-							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
-							
-							float fduration = (float)(note.m_duration * 60) / (float)(tempo * 48);
+							unsigned numCtrlPnt = (unsigned)(PyTuple_Size(_item) + 1) / 2;
+							for (unsigned k = 0; k < numCtrlPnt; k++)
+							{
+								ControlPoint ctrlPnt;
+								ctrlPnt.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, k * 2));
+								if (k * 2 + 1 < PyTuple_Size(_item))
+									ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, k * 2 + 1));
+								else
+									ctrlPnt.m_duration = 0;
 
-							if (note.m_freq_rel>0.0f)
-							{
-								piece.m_notes.push_back(note);
-								totalDuration += fduration;
-							}
-							else
-							{
-								if (piece.m_notes.size() > 0)
+								float fduration = (float)(ctrlPnt.m_duration * 60) / (float)(tempo * 48);
+
+								if (ctrlPnt.m_freq_rel > 0.0f)
 								{
-									VisSinging singing;
-									singing.CreateFromSingingPiece(singerId, pos, pitchShift, tempo, piece);
-									m_singings.push_back(singing);
-
-									piece.m_notes.clear();
-									pos += totalDuration;
-									totalDuration = 0.0f;
+									syllable.m_ctrlPnts.push_back(ctrlPnt);
+									totalDuration += fduration;
 								}
-								pos += fduration;
+								else
+								{
+									if (syllable.m_ctrlPnts.size() > 0)
+									{
+										VisSinging singing;
+										singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+										m_singings.push_back(singing);
+
+										syllable.m_ctrlPnts.clear();
+										pos += totalDuration;
+										totalDuration = 0.0f;
+									}
+									pos += fduration;
+								}
+							}
+							if (syllable.m_ctrlPnts.size() > 0)
+							{
+								ControlPoint& lastCtrlPnt = *(syllable.m_ctrlPnts.end() - 1);
+								if (lastCtrlPnt.m_freq_rel > 0.0f && lastCtrlPnt.m_duration > 0)
+								{
+									ControlPoint ctrlPnt;
+									ctrlPnt.m_freq_rel = lastCtrlPnt.m_freq_rel;
+									ctrlPnt.m_duration = 0;
+									syllable.m_ctrlPnts.push_back(ctrlPnt);
+								}
 							}
 						}
-						if (piece.m_notes.size() > 0)
+						if (syllable.m_ctrlPnts.size() > 0)
 						{
 							VisSinging singing;
-							singing.CreateFromSingingPiece(singerId, pos, pitchShift, tempo, piece);
+							singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
 							m_singings.push_back(singing);
 							pos += totalDuration;
-						}
-			
+						}			
 					}
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
 					{
-						RapPiece piece;
-						piece.m_lyric = lyric;
-						piece.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						Syllable syllable;
+						syllable.m_lyric = lyric;
+
+						int duration;
+						float freq1, freq2;
+
+						duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
 						j++;
-						piece.m_freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
-						piece.m_freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
 
-						float fduration = (float)(piece.m_duration * 60) / (float)(tempo * 48);
-						if (piece.m_freq1 > 0.0 && piece.m_freq2 > 0.0)
+						float fduration = (float)(duration * 60) / (float)(tempo * 48);
+						if (freq1 > 0.0 && freq2 > 0.0)
 						{
+							ControlPoint ctrlPnt;
+							ctrlPnt.m_duration = duration;
+							ctrlPnt.m_freq_rel = freq1;
+							syllable.m_ctrlPnts.push_back(ctrlPnt);
+							ctrlPnt.m_duration = 0;
+							ctrlPnt.m_freq_rel = freq2;
+							syllable.m_ctrlPnts.push_back(ctrlPnt);
+
 							VisSinging singing;
-							singing.CreateFromRapPiece(singerId, pos, pitchShift, tempo, piece);
+							singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
 							m_singings.push_back(singing);
 						}
 						pos += fduration;
@@ -314,21 +313,23 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
-				SingingPiece piece;
-				piece.m_lyric = "";
+				Syllable syllable;
+				syllable.m_lyric = "";
 
-				Note note;
-				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
-				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+				ControlPoint ctrlPnt;
+				ctrlPnt.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+				ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+				syllable.m_ctrlPnts.push_back(ctrlPnt);
 
-				piece.m_notes.push_back(note);
+				float fduration = (float)(ctrlPnt.m_duration * 60) / (float)(tempo * 48);
 
-				float fduration = (float)(note.m_duration * 60) / (float)(tempo * 48);
-
-				if (note.m_freq_rel > 0.0f)
+				if (ctrlPnt.m_freq_rel > 0.0f)
 				{
+					ctrlPnt.m_duration = 0;
+					syllable.m_ctrlPnts.push_back(ctrlPnt);
+
 					VisSinging singing;
-					singing.CreateFromSingingPiece(singerId, pos, pitchShift, tempo,piece);
+					singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
 					m_singings.push_back(singing);
 				}
 

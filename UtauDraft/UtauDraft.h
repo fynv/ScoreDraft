@@ -73,16 +73,25 @@ public:
 
 	virtual bool Tune(const char* cmd);
 
-	virtual void GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf);
-	virtual void GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf);
-	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf);
-	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf);
-
+	virtual void GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf);
+	virtual void GenerateWave_SingConsecutive(SyllableInternalList syllableList, NoteBuffer* noteBuf);
 
 private:
 	static void _floatBufSmooth(float* buf, unsigned size);
-	SingingPieceInternalList _convertLyric_singing(SingingPieceInternalList pieceList);
-	RapPieceInternalList _convertLyric_rap(const RapPieceInternalList& inputList);
+
+	struct LyricPiece
+	{
+		std::string lyric;
+		float fNumOfSamples;
+		bool isVowel;
+		unsigned syllableId;
+	};
+
+	typedef Deferred<LyricPiece> LyricPiece_Deferred;
+	typedef std::vector<LyricPiece_Deferred> LyricPieceList;
+
+	LyricPieceList _convertLyric(LyricPieceList syllableList);
+
 	float getFirstNoteHeadSamples(const char* lyric);
 
 	SentenceGenerator* createSentenceGenerator();
@@ -91,7 +100,6 @@ private:
 	OtoMap* m_OtoMap;
 
 	float m_transition;
-	float m_rap_distortion;
 	float m_gender;
 	float m_constVC;
 

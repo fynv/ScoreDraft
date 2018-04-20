@@ -159,7 +159,6 @@ UtauDraft::UtauDraft(bool useCUDA)
 	m_use_CUDA = useCUDA;
 
 	m_transition = 0.1f;
-	m_rap_distortion = 1.0f;
 	m_gender = 0.0f;
 	m_constVC = -1.0f;
 	m_LyricConverter = nullptr;
@@ -204,14 +203,7 @@ bool UtauDraft::Tune(const char* cmd)
 		char command[1024];
 		sscanf(cmd, "%s", command);
 
-		if (strcmp(command, "rap_distortion") == 0)
-		{
-			float value;
-			if (sscanf(cmd + strlen("rap_distortion") + 1, "%f", &value))
-				m_rap_distortion = value;
-			return true;
-		}
-		else if (strcmp(command, "transition") == 0)
+		if (strcmp(command, "transition") == 0)
 		{
 			float value;
 			if (sscanf(cmd + strlen("transition") + 1, "%f", &value))
@@ -268,22 +260,13 @@ SentenceGenerator* UtauDraft::createSentenceGenerator()
 	return sg;
 }
 
-void UtauDraft::GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
+void UtauDraft::GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf)
 {
-	SingingPieceInternal_Deferred dPiece;
-	*dPiece = piece;
-	SingingPieceInternalList pieceList;
-	pieceList.push_back(dPiece);
-	GenerateWave_SingConsecutive(pieceList, noteBuf);
-}
-
-void UtauDraft::GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf)
-{
-	RapPieceInternal_Deferred dPiece;
-	*dPiece = piece;
-	RapPieceInternalList pieceList;
-	pieceList.push_back(dPiece);
-	GenerateWave_RapConsecutive(pieceList, noteBuf);
+	SyllableInternal_Deferred dSyllable;
+	*dSyllable = syllable;
+	SyllableInternalList syllableList;
+	syllableList.push_back(dSyllable);
+	GenerateWave_SingConsecutive(syllableList, noteBuf);
 }
 
 void UtauDraft::_floatBufSmooth(float* buf, unsigned size)
@@ -326,168 +309,67 @@ void UtauDraft::_floatBufSmooth(float* buf, unsigned size)
 	delete[] buf2;
 }
 
-void UtauDraft::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf)
+void UtauDraft::GenerateWave_SingConsecutive(SyllableInternalList syllableList, NoteBuffer* noteBuf)
 {
+	LyricPieceList lyricList;
+	for (unsigned i = 0; i < (unsigned)syllableList.size(); i++)
+	{
+		LyricPiece_Deferred piece;
+		piece->lyric = syllableList[i]->lyric;
+		piece->fNumOfSamples=syllableList[i]->GetTotalDuration();
+		piece->isVowel = true;
+		piece->syllableId = i;
+		lyricList.push_back(piece);
+	}
+
 	if (m_LyricConverter != nullptr)
 	{
-		pieceList = _convertLyric_singing(pieceList);
-	}	
+		lyricList = _convertLyric(lyricList);
+	}
+	unsigned numPieces = (unsigned)lyricList.size();
 
 	if (m_PrefixMap != nullptr && m_use_prefix_map)
 	{
-		for (unsigned j = 0; j < pieceList.size(); j++)
-		{
-			SingingPieceInternal& piece = *pieceList[j];
+		std::vector<std::string> prefixes;
+		prefixes.resize(syllableList.size());
 
+		for (unsigned i = 0; i < syllableList.size(); i++)
+		{
+			SyllableInternal& syllable = *syllableList[i];
 			float aveFreq = 0.0f;
 			float sumLen = 0.0f;
-			for (size_t i = 0; i < piece.notes.size(); i++)
+			for (unsigned j = 0; j < syllable.ctrlPnts.size(); j++)
 			{
-				float sampleFreq = piece.notes[i].sampleFreq;
-				float len = piece.notes[i].fNumOfSamples;
-				aveFreq += sampleFreq*len;
-				sumLen += len;
-			}
-			if (sumLen > 0.0f)
-			{
-				aveFreq /= sumLen;
-				aveFreq *= noteBuf->m_sampleRate;
-			}
-			else
-			{
-				aveFreq = piece.notes[0].sampleFreq *noteBuf->m_sampleRate;
-			}
-			std::string prefix = m_PrefixMap->GetPrefixFromFreq(aveFreq);
+				ControlPointInternal& ctrlPnt = syllable.ctrlPnts[j];
+				if (ctrlPnt.fNumOfSamples <= 0.0f) continue;
+				float freq1 = ctrlPnt.sampleFreq;
+				float freq2 = j < syllable.ctrlPnts.size() - 1 ? syllable.ctrlPnts[j + 1].sampleFreq : freq1;
 
-			piece.lyric += prefix;
-
+				aveFreq += (freq1 + freq2)*ctrlPnt.fNumOfSamples;
+				sumLen += ctrlPnt.fNumOfSamples;				
+			}
+			aveFreq /= sumLen*2.0f;
+			prefixes[i] = m_PrefixMap->GetPrefixFromFreq(aveFreq);
 		}
 
+		for (unsigned j = 0; j < numPieces; j++)
+		{
+			LyricPiece & piece = *lyricList[j];
+			piece.lyric += prefixes[piece.syllableId];
+		}
 	}
-
+	
 	std::vector<unsigned> lens;
-	lens.resize(pieceList.size());
-	float sumAllLen=0.0f;
-	unsigned uSumAllLen;
-
-	float firstNoteHead = this->getFirstNoteHeadSamples(pieceList[0]->lyric.data());
-		
-	for (unsigned j = 0; j < pieceList.size(); j++)
-	{
-		SingingPieceInternal& piece = *pieceList[j];
-
-		float sumLen = 0.0f;
-		for (size_t i = 0; i < piece.notes.size(); i++)
-			sumLen += piece.notes[i].fNumOfSamples;
-
-		if (j == 0)	sumLen += firstNoteHead;
-
-		float oldSumAllLen = sumAllLen;
-		sumAllLen += sumLen;
-			
-		lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
-	}
-	uSumAllLen = (unsigned)ceilf(sumAllLen);
-
-	noteBuf->m_sampleNum = uSumAllLen;
-	noteBuf->m_alignPos = (unsigned)firstNoteHead;
-	noteBuf->Allocate();
-
-	float *freqAllMap = new float[uSumAllLen];
-	unsigned noteBufPos = 0;
-	for (unsigned j = 0; j < pieceList.size(); j++)
-	{
-		SingingPieceInternal& piece = *pieceList[j];
-		unsigned uSumLen = lens[j];
-		if (uSumLen == 0) continue;
-		float *freqMap = freqAllMap + noteBufPos;
-		unsigned pos = 0;
-		float targetPos = j == 0 ? firstNoteHead : 0.0f;
-		float sampleFreq;
-		for (size_t i = 0; i < piece.notes.size(); i++)
-		{
-			sampleFreq = piece.notes[i].sampleFreq;
-			targetPos += piece.notes[i].fNumOfSamples;
-
-			for (; (float)pos < targetPos && pos<uSumLen; pos++)
-			{
-				freqMap[pos] = sampleFreq;
-			}
-		}
-
-		for (; pos < uSumLen; pos++)
-		{
-			freqMap[pos] = sampleFreq;
-		}
-		noteBufPos += uSumLen;
-	}
-
-	_floatBufSmooth(freqAllMap, uSumAllLen);
-
-	unsigned numPieces = (unsigned)pieceList.size();
-	std::vector<std::string> lyrics;
-	std::vector<unsigned> isVowel;
-
-	lyrics.resize(numPieces);
-	isVowel.resize(numPieces);
-
-	for (unsigned j = 0; j < numPieces; j++)
-	{
-		SingingPieceInternal& piece = *pieceList[j];
-		lyrics[j] = piece.lyric;
-		isVowel[j] = piece.isVowel?1:0;
-	}
-
-	UtauSourceFetcher srcFetcher;
-	srcFetcher.m_OtoMap = m_OtoMap;
-	srcFetcher.m_defaultLyric = m_defaultLyric;
-
-	SentenceGenerator* sg = createSentenceGenerator();
-	sg->GenerateSentence(srcFetcher, numPieces, lyrics.data(), isVowel.data(), lens.data(), freqAllMap, noteBuf);
-	releasSentenceGenerator(sg);
-
-	delete[] freqAllMap;
-
-	// Envolope
-	for (unsigned pos = 0; pos < uSumAllLen; pos++)
-	{
-		float x2 = (float)(uSumAllLen-1 - pos) / (float)lens[pieceList.size()-1];
-		float amplitude = 1.0f - expf(-x2*10.0f);
-		noteBuf->m_data[pos] *= amplitude;
-	}
-}
-
-void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
-{
-	if (m_LyricConverter != nullptr)
-	{
-		pieceList = _convertLyric_rap(pieceList);
-	}
-
-	if (m_PrefixMap != nullptr && m_use_prefix_map)
-	{
-		for (unsigned j = 0; j < pieceList.size(); j++)
-		{
-			RapPieceInternal& piece = *pieceList[j];
-			float aveFreq = (piece.sampleFreq1 + piece.sampleFreq2)*0.5f;
-			aveFreq *= noteBuf->m_sampleRate;
-			std::string prefix = m_PrefixMap->GetPrefixFromFreq(aveFreq);
-			piece.lyric += prefix;
-		}
-	}
-
-	std::vector<unsigned> lens;
-	lens.resize(pieceList.size());
+	lens.resize(numPieces);
 	float sumAllLen = 0.0f;
-	unsigned uSumAllLen;
 
-	float firstNoteHead = this->getFirstNoteHeadSamples(pieceList[0]->lyric.data());
+	float firstNoteHead = this->getFirstNoteHeadSamples(lyricList[0]->lyric.data());
 
-	for (unsigned j = 0; j < pieceList.size(); j++)
+	for (unsigned j = 0; j < numPieces; j++)
 	{
-		RapPieceInternal& piece = *pieceList[j];
-
+		LyricPiece & piece = *lyricList[j];
 		float sumLen = piece.fNumOfSamples;
+
 		if (j == 0)	sumLen += firstNoteHead;
 
 		float oldSumAllLen = sumAllLen;
@@ -495,31 +377,51 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 
 		lens[j] = (unsigned)ceilf(sumAllLen) - (unsigned)ceilf(oldSumAllLen);
 	}
-	uSumAllLen = (unsigned)ceilf(sumAllLen);
+	unsigned uSumAllLen = (unsigned)ceilf(sumAllLen);
 
 	noteBuf->m_sampleNum = uSumAllLen;
 	noteBuf->m_alignPos = (unsigned)firstNoteHead;
 	noteBuf->Allocate();
 
-	float *freqAllMap = new float[uSumAllLen];
-	unsigned noteBufPos = 0;
-	for (unsigned j = 0; j < pieceList.size(); j++)
+	float *freqAllMap = new float[uSumAllLen];	
+	float targetPos = firstNoteHead;
+
+	float headFreq = syllableList[0]->ctrlPnts[0].sampleFreq;
+	unsigned uPos = 0;
+	for (; (float)uPos < targetPos; uPos++)
 	{
-		RapPieceInternal& piece = *pieceList[j];
-		unsigned uSumLen = lens[j];
-		if (uSumLen == 0) continue;
-		float *freqMap = freqAllMap + noteBufPos;
-		for (unsigned i = 0; i < uSumLen; i++)
+		freqAllMap[uPos] = headFreq;
+	}
+
+	for (unsigned i = 0; i < (unsigned)syllableList.size(); i++)
+	{
+		SyllableInternal& syllable = *syllableList[i];
+		for (unsigned j = 0; j < syllable.ctrlPnts.size(); j++)
 		{
-			float x = (float)i / (float)(uSumLen - 1);
-			freqMap[i] = piece.sampleFreq1 + (piece.sampleFreq2 - piece.sampleFreq1)*x;
+			ControlPointInternal& ctrlPnt = syllable.ctrlPnts[j];
+			if (ctrlPnt.fNumOfSamples <= 0.0f) continue;
+			float startPos = targetPos;
+			targetPos += ctrlPnt.fNumOfSamples;
+			float freq1 = ctrlPnt.sampleFreq;
+			float freq2 = j < syllable.ctrlPnts.size() - 1 ? syllable.ctrlPnts[j + 1].sampleFreq : freq1;
+			for (; (float)uPos < targetPos && uPos<uSumAllLen; uPos++)
+			{
+				float k = ((float)uPos - startPos) / (targetPos - startPos);
+				freqAllMap[uPos] = freq1*(1.0f-k)+freq2*k;
+			}
 		}
-		noteBufPos += uSumLen;
+	}
+
+	SyllableInternal& lastSyllable = **(syllableList.end()-1);
+	ControlPointInternal& lastCtrlPnt = *(lastSyllable.ctrlPnts.end()-1);
+	float tailFreq = lastCtrlPnt.sampleFreq;
+	for (; uPos < uSumAllLen; uPos++)
+	{
+		freqAllMap[uPos] = tailFreq;
 	}
 
 	_floatBufSmooth(freqAllMap, uSumAllLen);
 
-	unsigned numPieces = (unsigned)pieceList.size();
 	std::vector<std::string> lyrics;
 	std::vector<unsigned> isVowel;
 
@@ -528,7 +430,7 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 
 	for (unsigned j = 0; j < numPieces; j++)
 	{
-		RapPieceInternal& piece = *pieceList[j];
+		LyricPiece& piece = *lyricList[j];
 		lyrics[j] = piece.lyric;
 		isVowel[j] = piece.isVowel ? 1 : 0;
 	}
@@ -546,146 +448,26 @@ void UtauDraft::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, Note
 	// Envolope
 	for (unsigned pos = 0; pos < uSumAllLen; pos++)
 	{
-		float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[pieceList.size() - 1];
+		float x2 = (float)(uSumAllLen - 1 - pos) / (float)lens[numPieces - 1];
 		float amplitude = 1.0f - expf(-x2*10.0f);
 		noteBuf->m_data[pos] *= amplitude;
 	}
 
-
-	/// Distortion 
-	if (m_rap_distortion > 1.0f)
-	{
-		float maxV = 0.0f;
-		for (unsigned pos = 0; pos < uSumAllLen; pos++)
-		{
-			float v = noteBuf->m_data[pos];
-			if (fabsf(v) > maxV) maxV = v;
-		}
-
-		for (unsigned pos = 0; pos < uSumAllLen; pos++)
-		{
-			float v = noteBuf->m_data[pos];
-			v *= m_rap_distortion;
-			if (v > maxV) v = maxV;
-			if (v < -maxV) v = -maxV;
-			noteBuf->m_data[pos] = v;
-		}
-	}
-
 }
 
-SingingPieceInternalList UtauDraft::_convertLyric_singing(SingingPieceInternalList pieceList)
-{
-	PyObject* lyricList=PyList_New(0);
-	for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
-	{
-		PyObject *byteCode = PyBytes_FromString(pieceList[i]->lyric.data());
-		PyList_Append(lyricList, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
-	}
-	PyObject* args = PyTuple_Pack(1, lyricList);
-	PyObject* rets = PyObject_CallObject(m_LyricConverter, args);
-
-	SingingPieceInternalList list_converted;
-	for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
-	{
-		PyObject* tuple = PyList_GetItem(rets, i);
-		unsigned count = (unsigned)PyTuple_Size(tuple);
-
-		std::vector<std::string> lyrics;
-		std::vector<float> weights;
-		std::vector<bool> isVowels;
-
-		float sum_weight = 0.0f;
-		for (unsigned j = 0; j < count; j+=3)
-		{
-			PyObject *byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple, j), m_lyric_charset.data(), 0);
-			std::string lyric = PyBytes_AS_STRING(byteCode);
-			lyrics.push_back(lyric);
-
-			float weight=1.0f;
-			if (j + 1 < count)
-			{
-				weight = (float)PyFloat_AsDouble(PyTuple_GetItem(tuple, j + 1));
-			}
-			weights.push_back(weight);
-				
-			sum_weight += weight;
-
-			bool isVowel = true;
-			if (j + 2 < count)
-			{
-				isVowel = PyObject_IsTrue(PyTuple_GetItem(tuple, j + 2)) !=0 ;
-			}
-			isVowels.push_back(isVowel);
-		}	
-
-		SingingPieceInternal_Deferred piece = pieceList[i];
-
-		float totalNumSamples = 0.0f;
-		for (unsigned j = 0; j < (unsigned)piece->notes.size(); j++)
-		{
-			SingerNoteParams param = piece->notes[j];
-			totalNumSamples += param.fNumOfSamples;
-		}
-
-		float startPos = 0.0f;
-		unsigned i_note = 0;
-		float noteStartPos = 0.0f;
-
-		for (unsigned j = 0; j < lyrics.size(); j++)
-		{
-			float weight = weights[j] / sum_weight;
-			float endPos = startPos + weight* totalNumSamples;
-
-			bool isVowel = isVowels[j];
-				
-			SingingPieceInternal_Deferred newPiece;
-			newPiece->lyric = lyrics[j];
-			newPiece->isVowel = isVowel;
-
-			while (endPos > noteStartPos || newPiece->notes.size()==0)
-			{
-				float noteEndPos = noteStartPos + piece->notes[i_note].fNumOfSamples;
-				while (noteEndPos <= startPos)
-				{
-					noteStartPos = noteEndPos;
-					i_note++;
-					noteEndPos = noteStartPos + piece->notes[i_note].fNumOfSamples;
-				}
-
-				SingerNoteParams newParam;
-				newParam.sampleFreq = piece->notes[i_note].sampleFreq;
-				newParam.fNumOfSamples = min(noteEndPos - startPos, endPos - startPos);
-				newPiece->notes.push_back(newParam);		
-					
-				noteStartPos = noteEndPos;
-				i_note++;
-
-				startPos += newParam.fNumOfSamples;
-			}
-				
-			i_note--;
-			noteStartPos -= piece->notes[i_note].fNumOfSamples;
-			list_converted.push_back(newPiece);
-		}		
-	}
-
-	return list_converted;
-}
-
-RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& inputList)
+UtauDraft::LyricPieceList UtauDraft::_convertLyric(UtauDraft::LyricPieceList syllableList)
 {
 	PyObject* lyricList = PyList_New(0);
-	for (unsigned i = 0; i < (unsigned)inputList.size(); i++)
+	for (unsigned i = 0; i < (unsigned)syllableList.size(); i++)
 	{
-		PyObject *byteCode = PyBytes_FromString(inputList[i]->lyric.data());
+		PyObject *byteCode = PyBytes_FromString(syllableList[i]->lyric.data());
 		PyList_Append(lyricList, PyUnicode_FromEncodedObject(byteCode, m_lyric_charset.data(), 0));
 	}
 	PyObject* args = PyTuple_Pack(1, lyricList);
 	PyObject* rets = PyObject_CallObject(m_LyricConverter, args);
 
-	RapPieceInternalList outputList;
-	for (unsigned i = 0; i < (unsigned)inputList.size(); i++)
+	LyricPieceList list_converted;
+	for (unsigned i = 0; i < (unsigned)syllableList.size(); i++)
 	{
 		PyObject* tuple = PyList_GetItem(rets, i);
 		unsigned count = (unsigned)PyTuple_Size(tuple);
@@ -695,7 +477,7 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 		std::vector<bool> isVowels;
 
 		float sum_weight = 0.0f;
-		for (unsigned j = 0; j < count; j +=3)
+		for (unsigned j = 0; j < count; j += 3)
 		{
 			PyObject *byteCode = PyUnicode_AsEncodedString(PyTuple_GetItem(tuple, j), m_lyric_charset.data(), 0);
 			std::string lyric = PyBytes_AS_STRING(byteCode);
@@ -718,26 +500,22 @@ RapPieceInternalList UtauDraft::_convertLyric_rap(const RapPieceInternalList& in
 			isVowels.push_back(isVowel);
 		}
 
-		const RapPieceInternal& inputPiece = *inputList[i];
-		float k = 0.0f;
+		LyricPiece_Deferred syllable = syllableList[i];
+
+		float totalNumSamples = syllable->fNumOfSamples;
+
 		for (unsigned j = 0; j < lyrics.size(); j++)
 		{
-			float weight = weights[j] / sum_weight;
-			bool isVowel = isVowels[j];
+			LyricPiece_Deferred newPiece;
+			newPiece->lyric = lyrics[j];
+			newPiece->fNumOfSamples = totalNumSamples*weights[j] / sum_weight;
+			newPiece->isVowel = isVowels[j];
+			newPiece->syllableId = i;
 
-			RapPieceInternal_Deferred outputPiece;
-			outputPiece->fNumOfSamples = weight* inputPiece.fNumOfSamples;
-			outputPiece->lyric = lyrics[j];
-			outputPiece->isVowel = isVowel;
-			outputPiece->sampleFreq1 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
-			k += weight;
-			outputPiece->sampleFreq2 = (1.0f - k)*inputPiece.sampleFreq1 + k*inputPiece.sampleFreq2;
-			outputList.push_back(outputPiece);
+			list_converted.push_back(newPiece);
 		}
-
 	}
-
-	return outputList;
+	return list_converted;
 }
 
 float UtauDraft::getFirstNoteHeadSamples(const char* lyric)

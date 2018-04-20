@@ -21,8 +21,7 @@ Note.h
 Instrument.h
 Beat.h
 Percussion.h
-SingingPiece.h
-RapPiece.h
+Syllable.h
 Singer.h
 instruments/BottleBlow.h
 instruments/NaivePiano.h

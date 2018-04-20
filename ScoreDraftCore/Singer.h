@@ -7,40 +7,32 @@
 
 class NoteBuffer;
 class TrackBuffer;
-class SingingPiece;
-class SingingSequence;
-class RapPiece;
-class RapSequence;
+class Syllable;
+class SyllableSequence;
 
-struct SingerNoteParams
+struct ControlPointInternal
 {
 	float fNumOfSamples;
 	float sampleFreq; // periods/sample or 1/samplesPerPeriod
 };
 
-struct SingingPieceInternal
+struct SyllableInternal
 {
 	std::string lyric;
-	std::vector<SingerNoteParams> notes;
+	std::vector<ControlPointInternal> ctrlPnts;
 
-	bool isVowel;
+	float GetTotalDuration()
+	{
+		float totalDuration = 0.0f;
+		for (size_t i = 0; i < ctrlPnts.size(); i++)
+			totalDuration += ctrlPnts[i].fNumOfSamples;
+
+		return totalDuration;
+	}
 };
 
-typedef Deferred<SingingPieceInternal> SingingPieceInternal_Deferred;
-typedef std::vector<SingingPieceInternal_Deferred> SingingPieceInternalList;
-
-struct RapPieceInternal
-{
-	std::string lyric;
-	float fNumOfSamples;
-	float sampleFreq1;
-	float sampleFreq2;
-
-	bool isVowel;
-};
-
-typedef Deferred<RapPieceInternal> RapPieceInternal_Deferred;
-typedef std::vector<RapPieceInternal_Deferred> RapPieceInternalList;
+typedef Deferred<SyllableInternal> SyllableInternal_Deferred;
+typedef std::vector<SyllableInternal_Deferred> SyllableInternalList;
 
 class Singer
 {
@@ -48,11 +40,8 @@ public:
 	Singer();
 	virtual ~Singer();
 
-	void SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
-	void RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo = 80, float RefFreq = 261.626f);
-
-	void SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo = 80, float RefFreq = 261.626f);
-	void RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo = 80, float RefFreq = 261.626f);
+	void SingSyllable(TrackBuffer& buffer, const Syllable& syllable, unsigned tempo = 80, float RefFreq = 261.626f);
+	void SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequence& syllables, unsigned tempo = 80, float RefFreq = 261.626f);
 
 	std::string GetLyricCharset()
 	{
@@ -63,11 +52,8 @@ public:
 
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
-	virtual void GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf);
-	virtual void GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf);
-
-	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf);
-	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf);
+	virtual void GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf);
+	virtual void GenerateWave_SingConsecutive(SyllableInternalList syllableList, NoteBuffer* noteBuf);
 
 	float m_noteVolume;
 	float m_notePan;

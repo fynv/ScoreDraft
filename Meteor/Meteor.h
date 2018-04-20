@@ -4,8 +4,7 @@
 #include <Python.h>
 #include <vector>
 #include <string>
-#include <SingingPiece.h>
-#include <RapPiece.h>
+#include <Syllable.h>
 
 struct VisNote
 {
@@ -30,8 +29,7 @@ struct VisSinging
 	float start;
 	float end;
 
-	void CreateFromSingingPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const SingingPiece& piece);
-	void CreateFromRapPiece(unsigned singerId, float pos, float pitchShift, unsigned tempo, const RapPiece& piece);
+	void CreateFromSyllable(unsigned singerId, float pos, float pitchShift, unsigned tempo, const Syllable& syllable);
 };
 
 #include "SubListLookUp.h"

@@ -143,7 +143,6 @@ public:
 	KeLa()
 	{
 		m_transition = 0.1f;
-		m_rap_distortion = 1.0f;
 	}
 	void SetName(const char* root, const char* name)
 	{
@@ -214,139 +213,65 @@ public:
 #endif
 
 	}
-	virtual bool Tune(const char* cmd)
-	{
-		if (!Singer::Tune(cmd))
-		{
-			char command[1024];
-			sscanf(cmd, "%s", command);
 
-			if (strcmp(command, "rap_distortion") == 0)
-			{
-				float value;
-				if (sscanf(cmd + strlen("rap_distortion")+1, "%f", &value))
-					m_rap_distortion = value;
-				return true;
-			}
-		}
-		return false;
-	}
-	virtual void GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
+	virtual void GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf)
 	{
-		if (piece.notes.size() < 1) return;
+		if (syllable.ctrlPnts.size() < 1) return;
 
 		float sumLen = 0.0f;
-		for (size_t i = 0; i < piece.notes.size(); i++)
-			sumLen += piece.notes[i].fNumOfSamples;
+		for (size_t i = 0; i < syllable.ctrlPnts.size(); i++)
+			sumLen += syllable.ctrlPnts[i].fNumOfSamples;
 		
 		unsigned uSumLen = (unsigned)ceilf(sumLen);		
 		float *freqMap = new float[uSumLen];
 
 		unsigned pos = 0;
 		float targetPos = 0.0f;
-		float sampleFreq;
-		for (size_t i = 0; i < piece.notes.size(); i++)
+		float sampleFreq1;
+		float sampleFreq2;
+		for (size_t i = 0; i < syllable.ctrlPnts.size(); i++)
 		{
-			sampleFreq = piece.notes[i].sampleFreq;
-			targetPos += piece.notes[i].fNumOfSamples;
+			float fNumOfSamples = syllable.ctrlPnts[i].fNumOfSamples;
+			if (fNumOfSamples <= 0.0f) continue;
+
+			sampleFreq1 = syllable.ctrlPnts[i].sampleFreq;
+			sampleFreq2 = i < syllable.ctrlPnts.size() - 1 ? syllable.ctrlPnts[i + 1].sampleFreq : sampleFreq1;
+
+			float startPos = targetPos;
+			targetPos += syllable.ctrlPnts[i].fNumOfSamples;
 		
 			for (; (float)pos < targetPos; pos++)
 			{
-				freqMap[pos] = sampleFreq;
+				float k = (pos - startPos) / (targetPos - startPos);
+				freqMap[pos] = sampleFreq1*(1.0f - k) + sampleFreq2*k;
 			}
 		}
 		for (; pos < uSumLen; pos++)
 		{
-			freqMap[pos] = sampleFreq;
+			freqMap[pos] = sampleFreq2;
 		}
 
-		/// Make frequency tweakings here
+		/// Make frequency tweakings here		
 
-		/// Transition
-		if (m_transition > 0.0f && m_transition<1.0f)
-		{
-			targetPos = 0.0f;
-			for (size_t i = 0; i < piece.notes.size() - 1; i++)
-			{
-				float sampleFreq0 = piece.notes[i].sampleFreq;
-				float sampleFreq1 = piece.notes[i + 1].sampleFreq;
-				targetPos += piece.notes[i].fNumOfSamples;
-
-				float transStart = targetPos - m_transition*piece.notes[i].fNumOfSamples;
-				for (unsigned pos = (unsigned)ceilf(transStart); pos <= (unsigned)floorf(targetPos); pos++)
-				{
-					float k = (cosf(((float)pos - targetPos) / (targetPos - transStart)   * (float)PI) + 1.0f)*0.5f;
-					freqMap[pos] = (1.0f - k)* sampleFreq0 + k*sampleFreq1;
-				}
-
-			}
-		}
-
-		/// Viberation
-		/*for (pos = 0; pos < uSumLen; pos++)
-		{
-			float vib = 1.0f - 0.02f*cosf(2.0f*PI* (float)pos*10.0f / 44100.0f);
-			freqMap[pos] *= vib;
-		}*/
-
-		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
+		_generateWave(syllable.lyric.data(), sumLen, freqMap, noteBuf);
 
 		delete[] freqMap;	
 
 	}
 
-	virtual void GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf)
-	{
-		float sumLen = piece.fNumOfSamples;
-		unsigned uSumLen = (unsigned)ceilf(sumLen);
-		float *freqMap = new float[uSumLen];
-
-		for (unsigned i = 0; i < uSumLen; i++)
-		{
-			float x = (float)i / (float)(uSumLen - 1);
-			freqMap[i] = piece.sampleFreq1 + (piece.sampleFreq2 - piece.sampleFreq1)*x;
-		}
-
-		_generateWave(piece.lyric.data(), sumLen, freqMap, noteBuf);
-		delete[] freqMap;
-
-		/// Distortion 
-		if (m_rap_distortion > 1.0f)
-		{
-			float maxV = 0.0f;
-			for (unsigned pos = 0; pos < uSumLen; pos++)
-			{
-				float v = noteBuf->m_data[pos];
-				if (fabsf(v) > maxV) maxV = v;
-			}
-
-			for (unsigned pos = 0; pos < uSumLen; pos++)
-			{
-				float x2 = (float)pos / sumLen;
-				float amplitude = 1.0f - expf((x2 - 1.0f)*10.0f);
-
-				float v = noteBuf->m_data[pos];
-				v *= m_rap_distortion;
-				if (v > maxV) v = maxV;
-				if (v < -maxV) v = -maxV;
-				noteBuf->m_data[pos] = v;
-			}
-		}
-	}
-
-	virtual void GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf)
+	virtual void GenerateWave_SingConsecutive(SyllableInternalList syllableList, NoteBuffer* noteBuf)
 	{
 		typedef Deferred<NoteBuffer> NoteBuffer_Deferred;
 		std::vector <NoteBuffer_Deferred> subBufs;
 
 		float sumAllLen = 0.0f;
 
-		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
+		for (unsigned i = 0; i < (unsigned)syllableList.size(); i++)
 		{
-			SingingPieceInternal& piece = *pieceList[i];
+			SyllableInternal& syllable = *syllableList[i];
 			NoteBuffer_Deferred subBuf;
 			subBuf->m_sampleRate = noteBuf->m_sampleRate;
-			GenerateWave(piece, subBuf);
+			GenerateWave(syllable, subBuf);
 			sumAllLen += subBuf->m_sampleNum;
 			subBufs.push_back(subBuf);
 		}
@@ -367,42 +292,6 @@ public:
 			bufPos += subBuf.m_sampleNum;
 		}
 		
-	}
-
-	virtual void GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
-	{
-		typedef Deferred<NoteBuffer> NoteBuffer_Deferred;
-		std::vector <NoteBuffer_Deferred> subBufs;
-
-		float sumAllLen = 0.0f;
-
-		for (unsigned i = 0; i < (unsigned)pieceList.size(); i++)
-		{
-			RapPieceInternal&  piece = *pieceList[i];
-			NoteBuffer_Deferred subBuf;
-			subBuf->m_sampleRate = noteBuf->m_sampleRate;
-			GenerateWave_Rap(piece, subBuf);
-			sumAllLen += subBuf->m_sampleNum;
-			subBufs.push_back(subBuf);
-		}
-
-		unsigned uSumAllLen = (unsigned)ceilf(sumAllLen);
-		noteBuf->m_sampleNum = uSumAllLen;
-		noteBuf->Allocate();
-
-		float bufPos = 0.0f;
-		for (unsigned i = 0; i < (unsigned)subBufs.size(); i++)
-		{
-			NoteBuffer& subBuf = *subBufs[i];
-			unsigned noteStart = (unsigned)ceilf(bufPos);
-			unsigned noteEnd = (unsigned)ceilf(bufPos + subBuf.m_sampleNum);
-			for (unsigned j = noteStart; j < noteEnd; j++)
-			{
-				noteBuf->m_data[j] = subBuf.m_data[j - noteStart];
-			}
-			bufPos += subBuf.m_sampleNum;
-		}
-
 	}
 
 private:
@@ -703,7 +592,6 @@ private:
 	std::string m_root;
 
 	float m_transition;
-	float m_rap_distortion;
 };
 
 class KeLaInitializer : public SingerInitializer

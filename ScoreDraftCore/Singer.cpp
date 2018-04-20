@@ -1,6 +1,5 @@
 #include "Singer.h"
-#include "SingingPiece.h"
-#include "RapPiece.h"
+#include "Syllable.h"
 #include "TrackBuffer.h"
 #include <memory.h>
 #include <cmath>
@@ -33,183 +32,122 @@ void Singer::Silence(unsigned numOfSamples, NoteBuffer* noteBuf)
 	memset(noteBuf->m_data, 0, sizeof(float)*numOfSamples);
 }
 
-void Singer::GenerateWave(SingingPieceInternal piece, NoteBuffer* noteBuf)
+void Singer::GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf)
 {
-	float totalDuration = 0.0f;
-	for (size_t i = 0; i < piece.notes.size(); i++)
-		totalDuration += piece.notes[i].fNumOfSamples;
-
+	float totalDuration = syllable.GetTotalDuration();
 	Silence((unsigned)ceilf(totalDuration), noteBuf);
 }
 
-void Singer::GenerateWave_Rap(RapPieceInternal piece, NoteBuffer* noteBuf)
-{
-	Silence((unsigned)ceilf(piece.fNumOfSamples), noteBuf);
-}
-
-void Singer::GenerateWave_SingConsecutive(SingingPieceInternalList pieceList, NoteBuffer* noteBuf)
+void Singer::GenerateWave_SingConsecutive(SyllableInternalList syllableList, NoteBuffer* noteBuf)
 {
 	float totalDuration = 0.0f;
-	for (size_t j = 0; j < pieceList.size(); j++)
+	for (size_t j = 0; j < syllableList.size(); j++)
 	{
-		SingingPieceInternal& piece = *pieceList[j];
-		for (size_t i = 0; i < piece.notes.size(); i++)
-			totalDuration += piece.notes[i].fNumOfSamples;
-	}
-	Silence((unsigned)ceilf(totalDuration), noteBuf);
-
-}
-
-void Singer::GenerateWave_RapConsecutive(RapPieceInternalList pieceList, NoteBuffer* noteBuf)
-{
-	float totalDuration = 0.0f;
-	for (size_t j = 0; j < pieceList.size(); j++)
-	{
-		RapPieceInternal& piece = *pieceList[j];
-		totalDuration += piece.fNumOfSamples;
+		SyllableInternal& syllable = *syllableList[j];
+		totalDuration += syllable.GetTotalDuration();
 	}
 	Silence((unsigned)ceilf(totalDuration), noteBuf);
 }
 
-void Singer::SingPiece(TrackBuffer& buffer, const SingingPiece& piece, unsigned tempo, float RefFreq)
+void Singer::SingSyllable(TrackBuffer& buffer, const Syllable& syllable, unsigned tempo, float RefFreq)
 {
-	std::vector<SingerNoteParams> noteParams;
+	std::vector<ControlPointInternal> ctrlpnts;
 
 	float totalDuration = 0.0f;
 
-	for (size_t i = 0; i < piece.m_notes.size(); i++)
+	for (size_t i = 0; i < syllable.m_ctrlPnts.size(); i++)
 	{
-		const Note& aNote = piece.m_notes[i];
-		float fduration = fabsf((float)(aNote.m_duration * 60)) / (float)(tempo * 48);
+		const ControlPoint& aCtrlPnt = syllable.m_ctrlPnts[i];
+		float fduration = fabsf((float)(aCtrlPnt.m_duration * 60)) / (float)(tempo * 48);
 		float fNumOfSamples = buffer.Rate()*fduration;
-		if (aNote.m_freq_rel<0.0f)
+		if (aCtrlPnt.m_freq_rel<0.0f)
 		{
-			if (noteParams.size()>0)
+			if (ctrlpnts.size()>0)
 			{
-				std::string lyric = piece.m_lyric;
+				std::string lyric = syllable.m_lyric;
 				if (lyric == "") lyric = m_defaultLyric;
-				SingingPieceInternal _piece;
-				_piece.lyric = lyric;
-				_piece.notes = noteParams;
-				_piece.isVowel = true;
+				SyllableInternal _syllable;
+				_syllable.lyric = lyric;
+				_syllable.ctrlPnts = ctrlpnts;
+
 				NoteBuffer noteBuf;
 				noteBuf.m_sampleRate = (float)buffer.Rate();
 				noteBuf.m_cursorDelta = totalDuration;
 				noteBuf.m_volume = m_noteVolume;
 				noteBuf.m_pan = m_notePan;
 
-				GenerateWave(_piece, &noteBuf);
+				GenerateWave(_syllable, &noteBuf);
 				buffer.WriteBlend(noteBuf);
-				noteParams.clear();
+				ctrlpnts.clear();
 				totalDuration = 0.0f;
 			}
 
-			if (aNote.m_duration>0)
+			if (aCtrlPnt.m_duration>0)
 			{
 				buffer.MoveCursor(fNumOfSamples);
 			}
-			else if (aNote.m_duration<0)
+			else if (aCtrlPnt.m_duration<0)
 			{
 				buffer.MoveCursor(-fNumOfSamples);
 			}
 			continue;
 		}
 
-		SingerNoteParams param;
-		float freq = RefFreq*aNote.m_freq_rel;
-		param.sampleFreq = freq / (float)buffer.Rate();
-		param.fNumOfSamples = fNumOfSamples;
-		noteParams.push_back(param);
+		ControlPointInternal ctrlpnt;
+		float freq = RefFreq*aCtrlPnt.m_freq_rel;
+		ctrlpnt.sampleFreq = freq / (float)buffer.Rate();
+		ctrlpnt.fNumOfSamples = fNumOfSamples;
+		ctrlpnts.push_back(ctrlpnt);
 		totalDuration += fNumOfSamples;
 	}
 
-	if (noteParams.size()>0)
+	if (ctrlpnts.size()>0)
 	{
-		std::string lyric = piece.m_lyric;
+		std::string lyric = syllable.m_lyric;
 		if (lyric == "") lyric = m_defaultLyric;
-		SingingPieceInternal _piece;
-		_piece.lyric = lyric;
-		_piece.notes = noteParams;
-		_piece.isVowel = true;
+		SyllableInternal _syllable;
+		_syllable.lyric = lyric;
+		_syllable.ctrlPnts = ctrlpnts;
 		NoteBuffer noteBuf;
 		noteBuf.m_sampleRate = (float)buffer.Rate();
 		noteBuf.m_cursorDelta = totalDuration;
 		noteBuf.m_volume = m_noteVolume;
 		noteBuf.m_pan = m_notePan;
 
-		GenerateWave(_piece, &noteBuf);
+		GenerateWave(_syllable, &noteBuf);
 		buffer.WriteBlend(noteBuf);
 	}
 
 }
 
-void Singer::RapAPiece(TrackBuffer& buffer, const RapPiece& piece, unsigned tempo, float RefFreq)
+void Singer::SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequence& syllables, unsigned tempo, float RefFreq)
 {
-	float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
-	float fNumOfSamples = buffer.Rate()*fduration;
-
-	if (piece.m_freq1<0.0 || piece.m_freq2<0.0)
-	{
-		if (piece.m_duration>0)
-		{
-			buffer.MoveCursor(fNumOfSamples);
-			return;
-		}
-		else if (piece.m_duration<0)
-		{
-			buffer.MoveCursor(-fNumOfSamples);
-			return;
-		}
-		else return;
-	}
-
-	RapPieceInternal _piece;
-	_piece.lyric = piece.m_lyric;
-	_piece.fNumOfSamples = fNumOfSamples;
-	_piece.sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
-	_piece.sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
-	_piece.isVowel = true;
-
-	NoteBuffer noteBuf;
-	noteBuf.m_sampleRate = (float)buffer.Rate();
-	noteBuf.m_cursorDelta = fNumOfSamples;
-	noteBuf.m_volume = m_noteVolume;
-	noteBuf.m_pan = m_notePan;
-
-	GenerateWave_Rap(_piece, &noteBuf);
-
-	buffer.WriteBlend(noteBuf);
-}
-
-void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& pieces, unsigned tempo, float RefFreq)
-{
-	SingingPieceInternalList pieceList;
+	SyllableInternalList syllableList;
 
 	float totalDuration = 0.0f;
 
-	for (size_t j = 0; j < pieces.size(); j++)
+	for (size_t j = 0; j < syllables.size(); j++)
 	{
-		const SingingPiece& piece = pieces[j];
-		std::vector<SingerNoteParams> noteParams;
+		const Syllable& syllable = syllables[j];
+		std::vector<ControlPointInternal> ctrlpnts;
 
-		for (size_t i = 0; i < piece.m_notes.size(); i++)
+		for (size_t i = 0; i < syllable.m_ctrlPnts.size(); i++)
 		{
-			const Note& aNote = piece.m_notes[i];
-			float fduration = fabsf((float)(aNote.m_duration * 60)) / (float)(tempo * 48);
+			const ControlPoint& aCtrlPnt = syllable.m_ctrlPnts[i];
+			float fduration = fabsf((float)(aCtrlPnt.m_duration * 60)) / (float)(tempo * 48);
 			float fNumOfSamples = buffer.Rate()*fduration;
-			if (aNote.m_freq_rel < 0.0f)
+			if (aCtrlPnt.m_freq_rel < 0.0f)
 			{
-				if (pieceList.size()>0 || noteParams.size()>0)
+				if (syllableList.size()>0 || ctrlpnts.size()>0)
 				{
-					if (noteParams.size() > 0)
+					if (ctrlpnts.size() > 0)
 					{
-						std::string lyric = piece.m_lyric;
+						std::string lyric = syllable.m_lyric;
 						if (lyric == "") lyric = m_defaultLyric;
-						SingingPieceInternal_Deferred _piece;
-						_piece->lyric = lyric;
-						_piece->notes = noteParams;
-						_piece->isVowel = true;
-						pieceList.push_back(_piece);
+						SyllableInternal_Deferred _syllable;
+						_syllable->lyric = lyric;
+						_syllable->ctrlPnts = ctrlpnts;
+						syllableList.push_back(_syllable);
 					}
 					NoteBuffer noteBuf;
 					noteBuf.m_sampleRate = (float)buffer.Rate();
@@ -217,43 +155,42 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 					noteBuf.m_volume = m_noteVolume;
 					noteBuf.m_pan = m_notePan;
 
-					GenerateWave_SingConsecutive(pieceList, &noteBuf);
+					GenerateWave_SingConsecutive(syllableList, &noteBuf);
 					buffer.WriteBlend(noteBuf);
-					noteParams.clear();
-					pieceList.clear();
+					ctrlpnts.clear();
+					syllableList.clear();
 					totalDuration = 0.0f;
 				}
 
-				if (aNote.m_duration>0)
+				if (aCtrlPnt.m_duration>0)
 				{
 					buffer.MoveCursor(fNumOfSamples);
 				}
-				else if (aNote.m_duration<0)
+				else if (aCtrlPnt.m_duration<0)
 				{
 					buffer.MoveCursor(-fNumOfSamples);
 				}
 				continue;
 			}
-			SingerNoteParams param;
-			float freq = RefFreq*aNote.m_freq_rel;
-			param.sampleFreq = freq / (float)buffer.Rate();
-			param.fNumOfSamples = fNumOfSamples;
-			noteParams.push_back(param);
+			ControlPointInternal ctrlpnt;
+			float freq = RefFreq*aCtrlPnt.m_freq_rel;
+			ctrlpnt.sampleFreq = freq / (float)buffer.Rate();
+			ctrlpnt.fNumOfSamples = fNumOfSamples;
+			ctrlpnts.push_back(ctrlpnt);
 			totalDuration += fNumOfSamples;
 		}
-		if (noteParams.size()>0)
+		if (ctrlpnts.size()>0)
 		{
-			std::string lyric = piece.m_lyric;
+			std::string lyric = syllable.m_lyric;
 			if (lyric == "") lyric = m_defaultLyric;
-			SingingPieceInternal_Deferred _piece;
-			_piece->lyric = lyric;
-			_piece->notes = noteParams;
-			_piece->isVowel = true;
-			pieceList.push_back(_piece);
+			SyllableInternal_Deferred _syllable;
+			_syllable->lyric = lyric;
+			_syllable->ctrlPnts = ctrlpnts;
+			syllableList.push_back(_syllable);
 		}		
 	}
 
-	if (pieceList.size() > 0)
+	if (syllableList.size() > 0)
 	{
 		NoteBuffer noteBuf;
 		noteBuf.m_sampleRate = (float)buffer.Rate();
@@ -261,74 +198,9 @@ void Singer::SingConsecutivePieces(TrackBuffer& buffer, const SingingSequence& p
 		noteBuf.m_volume = m_noteVolume;
 		noteBuf.m_pan = m_notePan;
 
-		GenerateWave_SingConsecutive(pieceList, &noteBuf);
+		GenerateWave_SingConsecutive(syllableList, &noteBuf);
 		buffer.WriteBlend(noteBuf);
 	}
-}
-
-void Singer::RapConsecutivePieces(TrackBuffer& buffer, const RapSequence& pieces, unsigned tempo, float RefFreq)
-{
-	RapPieceInternalList pieceList;
-
-	float totalDuration = 0.0f;
-
-	for (size_t j = 0; j < pieces.size(); j++)
-	{
-		const RapPiece& piece = pieces[j];
-		float fduration = fabsf((float)(piece.m_duration * 60)) / (float)(tempo * 48);
-		float fNumOfSamples = buffer.Rate()*fduration;
-
-		if (piece.m_freq1 < 0.0f || piece.m_freq2 < 0.0f)
-		{
-			if (pieceList.size()>0)
-			{
-				NoteBuffer noteBuf;
-				noteBuf.m_sampleRate = (float)buffer.Rate();
-				noteBuf.m_cursorDelta = totalDuration;
-				noteBuf.m_volume = m_noteVolume;
-				noteBuf.m_pan = m_notePan;
-
-				GenerateWave_RapConsecutive(pieceList, &noteBuf);
-				buffer.WriteBlend(noteBuf);
-				pieceList.clear();
-				totalDuration = 0.0f;
-			}
-			if (piece.m_duration>0)
-			{
-				buffer.MoveCursor(fNumOfSamples);
-			}
-			else if (piece.m_duration<0)
-			{
-				buffer.MoveCursor(-fNumOfSamples);
-			}
-		}
-		else
-		{
-
-			RapPieceInternal_Deferred _piece;
-			_piece->lyric = piece.m_lyric;
-			_piece->fNumOfSamples = fNumOfSamples;
-			_piece->sampleFreq1 = RefFreq*piece.m_freq1 / (float)buffer.Rate();
-			_piece->sampleFreq2 = RefFreq*piece.m_freq2 / (float)buffer.Rate();
-			_piece->isVowel = true;
-			totalDuration += fNumOfSamples;
-
-			pieceList.push_back(_piece);
-
-		}
-	}
-	if (pieceList.size() > 0)
-	{
-		NoteBuffer noteBuf;
-		noteBuf.m_sampleRate = (float)buffer.Rate();
-		noteBuf.m_cursorDelta = totalDuration;
-		noteBuf.m_volume = m_noteVolume;
-		noteBuf.m_pan = m_notePan;
-
-		GenerateWave_RapConsecutive(pieceList, &noteBuf);
-		buffer.WriteBlend(noteBuf);
-	}
-
 }
 
 

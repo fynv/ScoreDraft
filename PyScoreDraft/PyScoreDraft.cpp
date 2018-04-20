@@ -13,8 +13,7 @@
 
 #include <Note.h>
 #include <Beat.h>
-#include <SingingPiece.h>
-#include <RapPiece.h>
+#include <Syllable.h>
 
 #include <Instrument.h>
 #include <Percussion.h>
@@ -616,8 +615,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			PyObject *_item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
 			{
-				SingingSequence singing_pieces;
-				RapSequence rap_pieces;
+				SyllableSequence syllables;
 
 				size_t tupleSize = PyTuple_Size(item);
 
@@ -632,71 +630,94 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 					_item = PyTuple_GetItem(item, j);
 					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
 					{
-						SingingPiece piece;
-						piece.m_lyric = lyric;
+						Syllable syllable;
+						syllable.m_lyric = lyric;
 
 						for (; j<tupleSize; j++)
 						{
 							_item = PyTuple_GetItem(item, j);
-							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;					
+							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;
 
-							Note note;
-							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
-							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
-							piece.m_notes.push_back(note);
-							
+							unsigned numCtrlPnt = (unsigned)(PyTuple_Size(_item)+1)/2;
+
+							for (unsigned k = 0; k < numCtrlPnt; k++)
+							{
+								ControlPoint ctrlPnt;
+								ctrlPnt.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, k*2));
+								if (k * 2 + 1 < PyTuple_Size(_item))
+									ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, k * 2 + 1));
+								else
+									ctrlPnt.m_duration = 0;
+								syllable.m_ctrlPnts.push_back(ctrlPnt);
+							}
+							ControlPoint& lastCtrlPnt = *(syllable.m_ctrlPnts.end()-1);
+							if (lastCtrlPnt.m_freq_rel > 0.0f && lastCtrlPnt.m_duration>0)
+							{
+								ControlPoint ctrlPnt;
+								ctrlPnt.m_freq_rel = lastCtrlPnt.m_freq_rel;
+								ctrlPnt.m_duration = 0;
+								syllable.m_ctrlPnts.push_back(ctrlPnt);
+							}
 						}
-						singing_pieces.push_back(piece);
+						syllables.push_back(syllable);
 					}
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
 					{
-						RapPiece piece;
-						piece.m_lyric = lyric;
-						piece.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
+						Syllable syllable;
+						syllable.m_lyric = lyric;
+
+						int duration;
+						float freq1, freq2;
+
+						duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
 						j++;
-						piece.m_freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						freq1 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
-						piece.m_freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
+						freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
-						rap_pieces.push_back(piece);
+
+						ControlPoint ctrlPnt;
+						ctrlPnt.m_duration = duration;
+						ctrlPnt.m_freq_rel = freq1;
+						syllable.m_ctrlPnts.push_back(ctrlPnt);
+						if (freq1 > 0.0f && freq2 > 0.0f)
+						{
+							ctrlPnt.m_duration = 0;
+							ctrlPnt.m_freq_rel = freq2;
+							syllable.m_ctrlPnts.push_back(ctrlPnt);
+						}
+						syllables.push_back(syllable);
 					}
 
 				}
-				if (singing_pieces.size() > 0)
+				if (syllables.size() > 0)
 				{
-					if (singing_pieces.size() < 2)
+					if (syllables.size() < 2)
 					{
-						singer->SingPiece(*buffer, singing_pieces[0], tempo, RefFreq);
+						singer->SingSyllable(*buffer, syllables[0], tempo, RefFreq);
 					}
 					else
 					{
-						singer->SingConsecutivePieces(*buffer, singing_pieces, tempo, RefFreq);
-					}
-				}
-				if (rap_pieces.size() > 0)
-				{
-					if (rap_pieces.size() < 2)
-					{
-						singer->RapAPiece(*buffer, rap_pieces[0], tempo, RefFreq);
-					}
-					else
-					{
-						singer->RapConsecutivePieces(*buffer, rap_pieces, tempo, RefFreq);
+						singer->SingConsecutiveSyllables(*buffer, syllables, tempo, RefFreq);
 					}
 				}
 				
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
-				SingingPiece piece;
-				piece.m_lyric = "";
+				Syllable syllable;
+				syllable.m_lyric = "";
 
-				Note note;
-				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
-				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
-
-				piece.m_notes.push_back(note);
-				singer->SingPiece(*buffer, piece, tempo, RefFreq);
+				ControlPoint ctrlPnt;
+				ctrlPnt.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
+				ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
+				syllable.m_ctrlPnts.push_back(ctrlPnt);
+				if (ctrlPnt.m_freq_rel>0.0f)
+				{
+					ctrlPnt.m_duration = 0;
+					syllable.m_ctrlPnts.push_back(ctrlPnt);
+				}
+				singer->SingSyllable(*buffer, syllable, tempo, RefFreq);
 			}
 
 		}
