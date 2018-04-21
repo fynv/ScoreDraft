@@ -828,7 +828,12 @@ static PyObject* TellDuration(PyObject *self, PyObject *args)
 						{
 							_item = PyTuple_GetItem(item, j);
 							if (!PyObject_TypeCheck(_item, &PyTuple_Type)) break;
-							dure+= (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+
+							unsigned numCtrlPnt = (unsigned)PyTuple_Size(_item) / 2;
+							for (unsigned k = 0; k < numCtrlPnt; k++)
+							{
+								dure += (int)PyLong_AsLong(PyTuple_GetItem(_item, k * 2 + 1));
+							}
 						}
 					}
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
