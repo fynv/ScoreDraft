@@ -44,7 +44,7 @@ struct SourceDerivedInfo
 	float fixed_Weight;
 	float headerWeight;
 
-	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel);
+	void DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc);
 };
 
 class SentenceGenerator

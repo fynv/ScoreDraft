@@ -79,8 +79,12 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 
 	{
 		loc = (*m_OtoMap)[lyric];
-		if (constVC > 0.0f && loc.consonant - loc.preutterance > constVC)
-			loc.consonant = loc.preutterance + constVC;
+		if (constVC > 0.0f)
+		{
+			if (loc.consonant - loc.preutterance > constVC)
+				loc.consonant = loc.preutterance + constVC;
+			loc.cutoff = -loc.consonant;
+		}
 
 		char frq_path[2048];
 		memcpy(frq_path, loc.filename.data(), loc.filename.length() - 4);
@@ -102,7 +106,7 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 	return true;
 }
 
-void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc, bool isVowel)
+void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLen, const SourceInfo& curSrc, const SourceInfo& nextSrc)
 {
 	float total_len = curSrc.srcend - curSrc.srcbegin;
 	overlap_pos = curSrc.loc.overlap* (float)curSrc.source.m_sampleRate*0.001f;
@@ -127,7 +131,7 @@ void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLe
 		note_len = vowel_len + fixed_len;
 	}
 
-	if (isVowel)
+	if (vowel_len>0.5f) // at least 1 sample
 	{
 		float k = 1.0f;
 		if (sumLenWithoutHead > note_len)
