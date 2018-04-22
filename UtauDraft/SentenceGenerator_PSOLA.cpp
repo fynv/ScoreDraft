@@ -254,9 +254,14 @@ void SentenceGenerator_PSOLA::GeneratePiece(bool isVowel, unsigned uSumLen, cons
 				l_win_next.Interpolate(shiftedWin0_next, shiftedWin1_next, k, destHalfWinLen);
 			}
 
-			float x = (fWinPos - transitionEnd) / (transitionEnd*_transition);
-			if (x > 0.0f) x = 0.0f;
-			float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			float k2;
+			if (fWinPos - transitionEnd)
+				k2 = 1.0f;
+			else
+			{
+				float x = (fWinPos - transitionEnd) / (transitionEnd*_transition);
+				k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			}
 			win_final_dest = &l_win_transit;
 
 			l_win_transit.Interpolate(*destWin, *destWin_next, k2, destHalfWinLen);

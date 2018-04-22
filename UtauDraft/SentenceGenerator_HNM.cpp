@@ -396,9 +396,14 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 				scaledParam1_next.Scale(param1_next, destHalfWinLen);
 				l_param_next.Interpolate(scaledParam0_next, scaledParam1_next, k);
 			}
-			float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
-			if (x > 0.0f) x = 0.0f;
-			float k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			float k2;
+			if (fParamPos >= transitionEnd)
+				k2 = 1.0f;
+			else
+			{
+				float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
+				k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+			}
 			finalDestParam = &l_paramTransit;
 
 			l_paramTransit.Interpolate(*destParam, *destParam_next, k2);

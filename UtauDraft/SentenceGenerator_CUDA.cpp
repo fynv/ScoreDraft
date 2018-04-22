@@ -920,11 +920,14 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 					k = (fParamPos - sl0_next.logicalPos) / (sl1_next.logicalPos - sl0_next.logicalPos);
 				}
 				synthJob.k1_next = k;
-				float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
-				if (x > 0.0f)
+
+				if (fParamPos >= transitionEnd)
 					synthJob.k2 = 1.0f;
 				else
+				{
+					float x = (fParamPos - transitionEnd) / (transitionEnd*_transition);
 					synthJob.k2 = 0.5f*(cosf(x*(float)PI) + 1.0f);
+				}
 			}
 
 			SynthJobs.push_back(synthJob);
