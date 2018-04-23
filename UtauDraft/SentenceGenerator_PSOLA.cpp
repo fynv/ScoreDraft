@@ -295,6 +295,9 @@ void SentenceGenerator_PSOLA::GeneratePiece(bool isVowel, unsigned uSumLen, cons
 		int ipos1 = (int)ceilf(pos_tmpBuf - speed*0.5f);
 		int ipos2 = (int)floorf(pos_tmpBuf + speed*0.5f);
 
+		if (ipos1 >= tempLen) ipos1 = tempLen - 1;
+		if (ipos2 >= tempLen) ipos2 = tempLen - 1;
+
 		float sum = 0.0f;
 		for (int ipos = ipos1; ipos <= ipos2; ipos++)
 		{

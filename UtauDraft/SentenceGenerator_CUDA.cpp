@@ -1028,10 +1028,13 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 			int ipos1 = (int)ceilf(pos_tmpBuf - speed*0.5f);
 			int ipos2 = (int)floorf(pos_tmpBuf + speed*0.5f);
 
+			if (ipos1 >= uTempLen) ipos1 = uTempLen - 1;
+			if (ipos2 >= uTempLen) ipos2 = uTempLen - 1;
+
 			float sum = 0.0f;
 			for (int ipos = ipos1; ipos <= ipos2; ipos++)
 			{
-				if (ipos >= 0 && ipos < uTempLen)
+				if (ipos >= 0)
 					sum += pTmpBuf[ipos];
 			}
 			float value = sum / (float)(ipos2 - ipos1 + 1);
