@@ -17,6 +17,10 @@ def getCV(CVLyric):
 		vowel="v"
 	if CVLyric=="ye":
 		vowel="eh"
+	if CVLyric=="lv":
+		CVLyric="lyu"
+	if CVLyric=="nv":
+		CVLyric="nyu"
 
 	if vowel=="ia":
 		vowel="ya"
@@ -78,14 +82,14 @@ def getCV(CVLyric):
 		if vowel=='yu':
 			consonant="yu"
 
-	return (consonant,vowel)
+	return (consonant,vowel, CVLyric)
 
 # v1
 def XiaYYConverter(LyricForEachSyllable):	
 	CV = [getCV(lyric) for lyric in  LyricForEachSyllable]
 	ret=[]
 	for i in range(len(LyricForEachSyllable)):
-		lyric=LyricForEachSyllable[i]
+		lyric=CV[i][2]
 		if i==0:
 			lyric='- '+lyric
 		elif CV[i][0]=='':
