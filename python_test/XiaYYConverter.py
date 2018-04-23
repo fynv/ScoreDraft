@@ -98,7 +98,13 @@ def XiaYYConverter(LyricForEachSyllable):
 				ret+=[(lyric,1.0,True)]
 			else:
 				ret+=[(lyric,0.75,True, CV[i][1]+" "+CV[i+1][0], 0.25,False)]
+
 		else:
-			ret+=[(lyric,1.0,True)]
+			if CV[i][1]=='ai' or CV[i][1]=='ei' or CV[i][1]=='wai' or CV[i][1]=='wei':
+				ret+=[(lyric,0.875, True, CV[i][1]+" y", 0.125, False)]
+			elif CV[i][1]=='ou' or CV[i][1]=='you':
+				ret+=[(lyric,0.875, True, CV[i][1]+" w", 0.125, False)]
+			else:
+				ret+=[(lyric,1.0,True)]
 	return ret
 
