@@ -65,14 +65,18 @@ def getCV(CVLyric):
 		vowel="yu"
 
 	if consonant=="":
-		if vowel=="a":
+		if vowel=="a" or vowel=="ai" or vowel=="an":
+			consonant="a"
+		if vowel=="er" or vowel=="ao" or vowel=="ang":
 			consonant="ah"
-		if vowel=="er":
-			consonant="ah"
+		if vowel=="en" or vowel=="eng":
+			consonant="en"
 		if vowel=="u":
 			consonant="w"
 		if vowel=="y":
 			consonant="y"
+		if vowel=='yu':
+			consonant="yu"
 
 	return (consonant,vowel)
 
@@ -86,8 +90,10 @@ def XiaYYConverter(LyricForEachSyllable):
 			lyric='- '+lyric
 		elif CV[i][0]=='':
 			lyric=CV[i-1][1]+" "+lyric
+		elif i<len(LyricForEachSyllable)-1:
+			lyric+='*'
 		if i<len(LyricForEachSyllable)-1 and CV[i+1][0]!='':
-			if (CV[i][1]=="w" or CV[i][1]=="y") and	(CV[i+1][0]=="w" or CV[i+1][0]=="y"):
+			if (CV[i][1]==CV[i+1][0]):
 				ret+=[(lyric,1.0,True)]
 			else:
 				ret+=[(lyric,0.75,True, CV[i][1]+" "+CV[i+1][0], 0.25,False)]
