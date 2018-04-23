@@ -78,7 +78,6 @@ void SentenceGenerator_HNM::GeneratePiece(bool _isVowel, unsigned uSumLen, const
 
 	for (unsigned srcPos = startPos; srcPos < srcInfo.source.m_data.size(); srcPos++)
 	{
-		if ((float)srcPos >= srcDerInfo.fixed_end && !_isVowel) break;
 		float srcSampleFreq;
 		float srcFreqPos = (srcInfo.srcbegin + (float)srcPos) / (float)srcInfo.frq.m_window_interval;
 		unsigned uSrcFreqPos = (unsigned)srcFreqPos;

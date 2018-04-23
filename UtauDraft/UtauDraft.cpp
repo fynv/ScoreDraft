@@ -81,9 +81,8 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 		loc = (*m_OtoMap)[lyric];
 		if (constVC > 0.0f)
 		{
-			if (loc.consonant - loc.preutterance > constVC)
-				loc.consonant = loc.preutterance + constVC;
-			loc.cutoff = -loc.consonant;
+			loc.consonant = loc.preutterance;
+			loc.cutoff = -(loc.preutterance + constVC);
 		}
 
 		char frq_path[2048];
@@ -131,22 +130,14 @@ void SourceDerivedInfo::DeriveInfo(bool firstNote, bool hasNext, unsigned uSumLe
 		note_len = vowel_len + fixed_len;
 	}
 
-	if (vowel_len>0.5f) // at least 1 sample
+	float k = 1.0f;
+	if (sumLenWithoutHead > note_len)
 	{
-		float k = 1.0f;
-		if (sumLenWithoutHead > note_len)
-		{
-			float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
-			if (k2 < k) k = k2;
-		}
-		vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
-		fixed_Weight = k* vowel_Weight;
+		float k2 = vowel_len / (sumLenWithoutHead - fixed_len);
+		if (k2 < k) k = k2;
 	}
-	else
-	{
-		vowel_Weight = 0.0f;
-		fixed_Weight = 1.0f / fixed_len;
-	}
+	vowel_Weight = 1.0f / (k* fixed_len + vowel_len);
+	fixed_Weight = k* vowel_Weight;
 
 	if (firstNote)
 	{
