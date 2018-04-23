@@ -90,8 +90,9 @@ def XiaYYConverter(LyricForEachSyllable):
 			lyric='- '+lyric
 		elif CV[i][0]=='':
 			lyric=CV[i-1][1]+" "+lyric
-		elif i<len(LyricForEachSyllable)-1:
+		else
 			lyric+='*'
+			
 		if i<len(LyricForEachSyllable)-1 and CV[i+1][0]!='':
 			if (CV[i][1]==CV[i+1][0]):
 				ret+=[(lyric,1.0,True)]
