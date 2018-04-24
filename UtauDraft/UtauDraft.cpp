@@ -343,7 +343,7 @@ void UtauDraft::GenerateWave_SingConsecutive(SyllableInternalList syllableList, 
 				aveFreq += (freq1 + freq2)*ctrlPnt.fNumOfSamples;
 				sumLen += ctrlPnt.fNumOfSamples;				
 			}
-			aveFreq /= sumLen*2.0f;
+			aveFreq *= noteBuf->m_sampleRate/sumLen*0.5f;
 			prefixes[i] = m_PrefixMap->GetPrefixFromFreq(aveFreq);
 		}
 

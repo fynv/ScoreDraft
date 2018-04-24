@@ -15,8 +15,15 @@ bool PrefixMap::LoadFromFile(const char* filename)
 	{
 		char pitch[20];
 		char prefix[20];
-		sscanf(line, "%s %s", pitch, prefix);
-		(*this)[pitch]=prefix;
+		int count =sscanf(line, "%s %s", pitch, prefix);
+		if (count > 0)
+		{
+			if (count < 2)
+			{
+				prefix[0] = 0;
+			}
+			(*this)[pitch] = prefix;
+		}
 	}
 
 	return true;
