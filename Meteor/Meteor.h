@@ -31,7 +31,8 @@ struct VisSinging
 	float start;
 	float end;
 
-	float CreateFromSyllable(unsigned singerId, float pos, float sampleRate, float pitchShift, unsigned tempo, const Syllable& syllable, TempoMap *tempoMap, int tempoMapOffset);
+	float CreateFromSyllable(unsigned singerId, float pos, float pitchShift, unsigned tempo, const Syllable& syllable);
+	float CreateFromSyllable(unsigned singerId, float pos, float sampleRate, float pitchShift, const Syllable& syllable, TempoMap *tempoMap, int tempoMapOffset);
 };
 
 #include "SubListLookUp.h"

@@ -189,10 +189,72 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, floa
 	m_needUpdateSublists = true;
 }
 
-float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float sampleRate, float pitchShift, unsigned tempo, const Syllable& syllable, TempoMap *tempoMap, int tempoMapOffset)
+float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float pitchShift, unsigned tempo, const Syllable& syllable)
 {
-	bool tempo_map = tempoMap != nullptr;
+	this->singerId = singerId;
+	this->lyric = syllable.m_lyric;
+	this->start = pos;
 
+	int iTotalLen = 0;
+	for (unsigned i = 0; i < (unsigned)syllable.m_ctrlPnts.size(); i++)
+	{
+		int iDuration = syllable.m_ctrlPnts[i].m_duration;
+		iTotalLen += iDuration;
+	}
+
+	float totalLen = (float)(iTotalLen * 60) / (float)(tempo * 48);
+
+	this->end = pos + totalLen;
+
+	float pitchPerSec = 50.0f;
+	float secPerPitchSample = 1.0f / pitchPerSec;
+
+	unsigned pitchLen = (unsigned)ceilf(totalLen*pitchPerSec);
+	this->pitch.resize(pitchLen);
+	unsigned pitchPos = 0;
+	float fPitchPos = 0.0f;
+	float nextPitchPos = 0.0f;
+
+	for (unsigned i = 0; i < (unsigned)syllable.m_ctrlPnts.size(); i++)
+	{
+		int iDuration = syllable.m_ctrlPnts[i].m_duration;
+		if (iDuration <= 0) continue;
+
+		float fduration = (float)(iDuration * 60) / (float)(tempo * 48);
+
+		float freq1 = syllable.m_ctrlPnts[i].m_freq_rel;
+		float freq2 = i < syllable.m_ctrlPnts.size() - 1 ? syllable.m_ctrlPnts[i + 1].m_freq_rel : freq1;
+		float thisPitchPos = nextPitchPos;
+		nextPitchPos += fduration;
+		for (; fPitchPos < nextPitchPos && pitchPos<pitchLen; fPitchPos += secPerPitchSample, pitchPos++)
+		{
+			float k = (fPitchPos - thisPitchPos) / fduration;
+			pitch[pitchPos] = freq1*(1.0f - k) + freq2*k;
+		}
+	}
+
+	// smoothing
+	float* temp = new float[pitchLen];
+	temp[0] = pitch[0];
+	temp[pitchLen - 1] = pitch[pitchLen - 1];
+	for (unsigned i = 1; i < pitchLen - 1; i++)
+	{
+		temp[i] = 0.25f*(pitch[i - 1] + pitch[i + 1]) + 0.5f*pitch[i];
+	}
+
+	for (unsigned i = 0; i < pitchLen; i++)
+	{
+		pitch[i] = logf(temp[i])*12.0f / logf(2.0f) + pitchShift;
+	}
+
+	delete[] temp;
+
+	return totalLen;
+
+}
+
+float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float sampleRate, float pitchShift, const Syllable& syllable, TempoMap *tempoMap, int tempoMapOffset)
+{
 	this->singerId = singerId;
 	this->lyric = syllable.m_lyric;
 	this->start = pos;
@@ -205,19 +267,14 @@ float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float sampleR
 	}
 
 	float totalLen;
-	if (tempo_map)
+
 	{
 		int pos1 = tempoMapOffset;
 		int pos2 = pos1 + iTotalLen;
 		float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
 		totalLen = fNumOfSamples / sampleRate;
 	}
-	else
-	{
-		totalLen = (float)(iTotalLen * 60) / (float)(tempo * 48);
-	}
-
-
+	
 	this->end = pos + totalLen;
 
 	float pitchPerSec = 50.0f;
@@ -236,7 +293,6 @@ float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float sampleR
 		if (iDuration <= 0) continue;
 
 		float fduration;
-		if (tempo_map)
 		{
 			int pos1 = beatPos;
 			int pos2 = pos1 + iDuration;
@@ -244,10 +300,7 @@ float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float sampleR
 			fduration = fNumOfSamples / sampleRate;
 			beatPos = pos2;
 		}
-		else
-		{
-			fduration = (float)(iDuration * 60) / (float)(tempo * 48);
-		}
+		
 		float freq1 = syllable.m_ctrlPnts[i].m_freq_rel;
 		float freq2 = i < syllable.m_ctrlPnts.size() - 1 ? syllable.m_ctrlPnts[i + 1].m_freq_rel : freq1;
 		float thisPitchPos = nextPitchPos;
@@ -328,7 +381,9 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, float
 									iTotalDuration += ctrlPnt.m_duration;
 								}
 								else
+								{
 									ctrlPnt.m_duration = 0;
+								}
 
 								if (ctrlPnt.m_freq_rel > 0.0f)
 								{
@@ -339,7 +394,12 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, float
 									if (syllable.m_ctrlPnts.size() > 0)
 									{
 										VisSinging singing;
-										float syllableLen= singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
+										float syllableLen;
+										if (tempo_map)
+											syllableLen = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, syllable, tempoMap, beatPos);
+										else 
+											syllableLen = singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+
 										m_singings.push_back(singing);
 										syllable.m_ctrlPnts.clear();
 										pos += syllableLen;
@@ -376,7 +436,11 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, float
 						if (syllable.m_ctrlPnts.size() > 0)
 						{
 							VisSinging singing;
-							float syllableLen = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
+							float syllableLen;
+							if (tempo_map)
+								syllableLen=singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, syllable, tempoMap, beatPos);
+							else
+								syllableLen=singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
 							m_singings.push_back(singing);
 							pos += syllableLen;
 							beatPos += iTotalDuration;
@@ -410,7 +474,10 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, float
 							syllable.m_ctrlPnts.push_back(ctrlPnt);
 
 							VisSinging singing;
-							fduration = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
+							if (tempo_map)
+								fduration = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, syllable, tempoMap, beatPos);
+							else
+								fduration = singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
 							m_singings.push_back(singing);
 						}
 						else
@@ -452,7 +519,11 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, float
 					syllable.m_ctrlPnts.push_back(ctrlPnt);
 
 					VisSinging singing;
-					fduration = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
+					if (tempo_map)
+						fduration = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift,  syllable, tempoMap, beatPos);
+					else
+						fduration = singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+
 					m_singings.push_back(singing);
 				}
 				else
