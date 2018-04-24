@@ -34,6 +34,8 @@ struct SyllableInternal
 typedef Deferred<SyllableInternal> SyllableInternal_Deferred;
 typedef std::vector<SyllableInternal_Deferred> SyllableInternalList;
 
+typedef std::vector<std::pair<int, float>> TempoMap;
+
 class Singer
 {
 public:
@@ -41,7 +43,9 @@ public:
 	virtual ~Singer();
 
 	void SingSyllable(TrackBuffer& buffer, const Syllable& syllable, unsigned tempo = 80, float RefFreq = 261.626f);
+	void SingSyllable(TrackBuffer& buffer, const Syllable& syllable, const TempoMap& tempoMap, int tempoMapOffset=0, float RefFreq = 261.626f);
 	void SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequence& syllables, unsigned tempo = 80, float RefFreq = 261.626f);
+	void SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequence& syllables, const TempoMap& tempoMap, int tempoMapOffset = 0, float RefFreq = 261.626f);
 
 	std::string GetLyricCharset()
 	{

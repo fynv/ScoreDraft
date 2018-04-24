@@ -4,6 +4,9 @@
 #include "stdio.h"
 #include "Deferred.h"
 
+#include <utility>
+#include <vector>
+
 inline void CalcPan(float pan, float& l, float& r)
 {
 	if (pan == 0.0f) return;
@@ -44,6 +47,18 @@ public:
 
 	void Allocate();
 };
+
+typedef std::vector<std::pair<int, float>> TempoMap;
+inline float GetTempoMap(const TempoMap& tMap, int beat48)
+{
+	for (unsigned i = 1; i < tMap.size(); i++)
+	{
+		if (beat48 < tMap[i].first || i == tMap.size()-1)
+			return  ((float)beat48 - (float)tMap[i - 1].first) / ((float)tMap[i].first - (float)tMap[i - 1].first) * (tMap[i].second - (float)tMap[i - 1].second) + (float)tMap[i - 1].second;			
+	}
+	return 0.0f;
+}
+
 
 class TrackBuffer;
 class TrackBuffer_deferred : public Deferred<TrackBuffer>

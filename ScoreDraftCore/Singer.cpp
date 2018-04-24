@@ -52,7 +52,6 @@ void Singer::GenerateWave_SingConsecutive(SyllableInternalList syllableList, Not
 void Singer::SingSyllable(TrackBuffer& buffer, const Syllable& syllable, unsigned tempo, float RefFreq)
 {
 	std::vector<ControlPointInternal> ctrlpnts;
-
 	float totalDuration = 0.0f;
 
 	for (size_t i = 0; i < syllable.m_ctrlPnts.size(); i++)
@@ -120,10 +119,82 @@ void Singer::SingSyllable(TrackBuffer& buffer, const Syllable& syllable, unsigne
 
 }
 
+void Singer::SingSyllable(TrackBuffer& buffer, const Syllable& syllable, const TempoMap& tempoMap, int tempoMapOffset, float RefFreq)
+{
+	std::vector<ControlPointInternal> ctrlpnts;
+	float totalDuration = 0.0f;
+	int beatPos = tempoMapOffset;
+
+	for (size_t i = 0; i < syllable.m_ctrlPnts.size(); i++)
+	{
+		const ControlPoint& aCtrlPnt = syllable.m_ctrlPnts[i];
+		int pos1 = beatPos;
+		int pos2 = pos1 + aCtrlPnt.m_duration;
+		float fNumOfSamples = fabsf(GetTempoMap(tempoMap, pos2) - GetTempoMap(tempoMap, pos1));
+		if (aCtrlPnt.m_freq_rel < 0.0f)
+		{
+			if (ctrlpnts.size()>0)
+			{
+				std::string lyric = syllable.m_lyric;
+				if (lyric == "") lyric = m_defaultLyric;
+				SyllableInternal _syllable;
+				_syllable.lyric = lyric;
+				_syllable.ctrlPnts = ctrlpnts;
+
+				NoteBuffer noteBuf;
+				noteBuf.m_sampleRate = (float)buffer.Rate();
+				noteBuf.m_cursorDelta = totalDuration;
+				noteBuf.m_volume = m_noteVolume;
+				noteBuf.m_pan = m_notePan;
+
+				GenerateWave(_syllable, &noteBuf);
+				buffer.WriteBlend(noteBuf);
+				ctrlpnts.clear();
+				totalDuration = 0.0f;
+			}
+
+			if (aCtrlPnt.m_duration>0)
+			{
+				buffer.MoveCursor(fNumOfSamples);
+			}
+			else if (aCtrlPnt.m_duration<0)
+			{
+				buffer.MoveCursor(-fNumOfSamples);
+			}
+			continue;
+		}
+
+		ControlPointInternal ctrlpnt;
+		float freq = RefFreq*aCtrlPnt.m_freq_rel;
+		ctrlpnt.sampleFreq = freq / (float)buffer.Rate();
+		ctrlpnt.fNumOfSamples = fNumOfSamples;
+		ctrlpnts.push_back(ctrlpnt);
+		totalDuration += fNumOfSamples;
+		beatPos = pos2;
+	}
+
+	if (ctrlpnts.size()>0)
+	{
+		std::string lyric = syllable.m_lyric;
+		if (lyric == "") lyric = m_defaultLyric;
+		SyllableInternal _syllable;
+		_syllable.lyric = lyric;
+		_syllable.ctrlPnts = ctrlpnts;
+		NoteBuffer noteBuf;
+		noteBuf.m_sampleRate = (float)buffer.Rate();
+		noteBuf.m_cursorDelta = totalDuration;
+		noteBuf.m_volume = m_noteVolume;
+		noteBuf.m_pan = m_notePan;
+
+		GenerateWave(_syllable, &noteBuf);
+		buffer.WriteBlend(noteBuf);
+	}
+}
+
+
 void Singer::SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequence& syllables, unsigned tempo, float RefFreq)
 {
 	SyllableInternalList syllableList;
-
 	float totalDuration = 0.0f;
 
 	for (size_t j = 0; j < syllables.size(); j++)
@@ -201,6 +272,91 @@ void Singer::SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequenc
 		GenerateWave_SingConsecutive(syllableList, &noteBuf);
 		buffer.WriteBlend(noteBuf);
 	}
+}
+
+void Singer::SingConsecutiveSyllables(TrackBuffer& buffer, const SyllableSequence& syllables, const TempoMap& tempoMap, int tempoMapOffset, float RefFreq)
+{
+	SyllableInternalList syllableList;
+	float totalDuration = 0.0f;
+	int beatPos = tempoMapOffset;
+
+	for (size_t j = 0; j < syllables.size(); j++)
+	{
+		const Syllable& syllable = syllables[j];
+		std::vector<ControlPointInternal> ctrlpnts;
+
+		for (size_t i = 0; i < syllable.m_ctrlPnts.size(); i++)
+		{
+			const ControlPoint& aCtrlPnt = syllable.m_ctrlPnts[i];
+			int pos1 = beatPos;
+			int pos2 = pos1 + aCtrlPnt.m_duration;
+			float fNumOfSamples = fabsf(GetTempoMap(tempoMap, pos2) - GetTempoMap(tempoMap, pos1));
+			if (aCtrlPnt.m_freq_rel < 0.0f)
+			{
+				if (syllableList.size()>0 || ctrlpnts.size()>0)
+				{
+					if (ctrlpnts.size() > 0)
+					{
+						std::string lyric = syllable.m_lyric;
+						if (lyric == "") lyric = m_defaultLyric;
+						SyllableInternal_Deferred _syllable;
+						_syllable->lyric = lyric;
+						_syllable->ctrlPnts = ctrlpnts;
+						syllableList.push_back(_syllable);
+					}
+					NoteBuffer noteBuf;
+					noteBuf.m_sampleRate = (float)buffer.Rate();
+					noteBuf.m_cursorDelta = totalDuration;
+					noteBuf.m_volume = m_noteVolume;
+					noteBuf.m_pan = m_notePan;
+
+					GenerateWave_SingConsecutive(syllableList, &noteBuf);
+					buffer.WriteBlend(noteBuf);
+					ctrlpnts.clear();
+					syllableList.clear();
+					totalDuration = 0.0f;
+				}
+
+				if (aCtrlPnt.m_duration>0)
+				{
+					buffer.MoveCursor(fNumOfSamples);
+				}
+				else if (aCtrlPnt.m_duration<0)
+				{
+					buffer.MoveCursor(-fNumOfSamples);
+				}
+				continue;
+			}
+			ControlPointInternal ctrlpnt;
+			float freq = RefFreq*aCtrlPnt.m_freq_rel;
+			ctrlpnt.sampleFreq = freq / (float)buffer.Rate();
+			ctrlpnt.fNumOfSamples = fNumOfSamples;
+			ctrlpnts.push_back(ctrlpnt);
+			totalDuration += fNumOfSamples;
+			beatPos = pos2;
+		}
+		if (ctrlpnts.size()>0)
+		{
+			std::string lyric = syllable.m_lyric;
+			if (lyric == "") lyric = m_defaultLyric;
+			SyllableInternal_Deferred _syllable;
+			_syllable->lyric = lyric;
+			_syllable->ctrlPnts = ctrlpnts;
+			syllableList.push_back(_syllable);
+		}
+	}
+	if (syllableList.size() > 0)
+	{
+		NoteBuffer noteBuf;
+		noteBuf.m_sampleRate = (float)buffer.Rate();
+		noteBuf.m_cursorDelta = totalDuration;
+		noteBuf.m_volume = m_noteVolume;
+		noteBuf.m_pan = m_notePan;
+
+		GenerateWave_SingConsecutive(syllableList, &noteBuf);
+		buffer.WriteBlend(noteBuf);
+	}
+
 }
 
 

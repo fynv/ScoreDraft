@@ -55,11 +55,32 @@ void Percussion::PlayBeat(TrackBuffer& buffer, int duration, unsigned tempo)
 	buffer.WriteBlend(beatBuf);
 }
 
+void Percussion::PlayBeat(TrackBuffer& buffer, int duration, const TempoMap& tempoMap, int tempoMapOffset, float RefFreq)
+{
+	int pos1 = tempoMapOffset;
+	int pos2 = pos1 + duration;
+	float fNumOfSamples = fabsf(GetTempoMap(tempoMap, pos2) - GetTempoMap(tempoMap, pos1));
+
+	NoteBuffer beatBuf;
+	beatBuf.m_sampleRate = (float)buffer.Rate();
+	beatBuf.m_cursorDelta = fNumOfSamples;
+	beatBuf.m_volume = m_beatVolume;
+	beatBuf.m_pan = m_beatPan;
+
+	GenerateBeatWave(fNumOfSamples, &beatBuf);
+	buffer.WriteBlend(beatBuf);
+}
+
 void Percussion::PlaySilence(TrackBuffer& buffer, int duration, unsigned tempo)
 {
 	float fduration = (float)(duration * 60) / (float)(tempo * 48);
 	float fNumOfSamples = buffer.Rate()*fduration;
 	buffer.MoveCursor(fNumOfSamples);
+}
+
+void Percussion::PlaySilence(TrackBuffer& buffer, int duration, const TempoMap& tempoMap, int tempoMapOffset)
+{
+	buffer.SetCursor(GetTempoMap(tempoMap, tempoMapOffset + duration));
 }
 
 void Percussion::PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo)
@@ -68,6 +89,11 @@ void Percussion::PlayBackspace(TrackBuffer& buffer, int duration, unsigned tempo
 	float fNumOfSamples = buffer.Rate()*fduration;
 	buffer.MoveCursor(-fNumOfSamples);
 	return;
+}
+
+void Percussion::PlayBackspace(TrackBuffer& buffer, int duration, const TempoMap& tempoMap, int tempoMapOffset)
+{
+	buffer.SetCursor(GetTempoMap(tempoMap, tempoMapOffset - duration));
 }
 
 bool Percussion::Tune(const char* cmd)

@@ -73,6 +73,40 @@ void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, unsigned tempo
 		
 }
 
+void Instrument::PlayNote(TrackBuffer& buffer, const Note& aNote, const TempoMap& tempoMap, int tempoMapOffset, float RefFreq)
+{
+	int pos1 = tempoMapOffset;
+	int pos2 = pos1 + aNote.m_duration;
+	float fNumOfSamples = fabsf(GetTempoMap(tempoMap, pos2) - GetTempoMap(tempoMap, pos1));
+	if (aNote.m_freq_rel<0.0f)
+	{
+		if (aNote.m_duration>0)
+		{
+			buffer.MoveCursor(fNumOfSamples);
+			return;
+		}
+		else if (aNote.m_duration<0)
+		{
+			buffer.MoveCursor(-fNumOfSamples);
+			return;
+		}
+		else return;
+	}
+
+	float freq = RefFreq*aNote.m_freq_rel;
+	float sampleFreq = freq / (float)buffer.Rate();
+
+	NoteBuffer noteBuf;
+	noteBuf.m_sampleRate = (float)buffer.Rate();
+	noteBuf.m_cursorDelta = fNumOfSamples;
+	noteBuf.m_volume = m_noteVolume;
+	noteBuf.m_pan = m_notePan;
+
+	GenerateNoteWave(fNumOfSamples, sampleFreq, &noteBuf);
+
+	buffer.WriteBlend(noteBuf);
+}
+
 bool Instrument::Tune(const char* cmd)
 {
 	char command[1024];

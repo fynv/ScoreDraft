@@ -7,13 +7,15 @@
 
 static PyScoreDraft* s_PyScoreDraft;
 
-void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyObject *seq_py, unsigned tempo, float RefFreq)
+void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap)
 {
-	float pos = startPosition;
+	bool tempo_map = tempoMap != nullptr;
 
+	float pos = startPosition;
 	int pitchShift = (int)floorf(logf(RefFreq / 261.626f)*12.0f / logf(2.0f) + 0.5f);
 
 	size_t piece_count = PyList_Size(seq_py);
+	int beatPos = 0;
 	for (size_t i = 0; i < piece_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -38,7 +40,22 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 
 							float freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
 							int duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
-							float fduration = (float)(duration * 60) / (float)(tempo * 48);
+
+							float fduration; 
+							if (tempo_map)
+							{
+								int pos1 = beatPos;
+								int pos2 = pos1 + duration;
+								float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+								fduration = fNumOfSamples / sampleRate;
+							}
+							else
+							{
+								fduration = (float)(duration * 60) / (float)(tempo * 48);
+							}
+
+							beatPos += duration;
+
 							if (freq_rel >0.0f)
 							{
 
@@ -57,7 +74,21 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 					{
 						float freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j + 1));
 						int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, j));
-						float fduration = (float)(duration * 60) / (float)(tempo * 48);
+
+						float fduration;
+						if (tempo_map)
+						{
+							int pos1 = beatPos;
+							int pos2 = pos1 + duration;
+							float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+							fduration = fNumOfSamples / sampleRate;
+						}
+						else
+						{
+							fduration = (float)(duration * 60) / (float)(tempo * 48);
+						}
+
+						beatPos += duration;
 
 						if (freq_rel >0.0f)
 						{
@@ -81,7 +112,21 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 
 				float freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
 				int duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
-				float fduration = (float)(duration * 60) / (float)(tempo * 48);
+
+				float fduration;
+				if (tempo_map)
+				{
+					int pos1 = beatPos;
+					int pos2 = pos1 + duration;
+					float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+					fduration = fNumOfSamples / sampleRate;
+				}
+				else
+				{
+					fduration = (float)(duration * 60) / (float)(tempo * 48);
+				}
+
+				beatPos += duration;
 
 				if (freq_rel >0.0f)
 				{
@@ -99,10 +144,13 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, PyOb
 	m_needUpdateSublists = true;
 }
 
-void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyObject *seq_py, unsigned tempo)
+void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, TempoMap *tempoMap)
 {
+	bool tempo_map = tempoMap != nullptr;
+
 	float pos = startPosition;
 	size_t beat_count = PyList_Size(seq_py);
+	int beatPos = 0;
 	for (size_t i = 0; i < beat_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -112,7 +160,20 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyOb
 		if (PyObject_TypeCheck(operation, &PyLong_Type))
 		{
 			int duration = (int)PyLong_AsLong(operation);
-			float fduration = (float)(duration * 60) / (float)(tempo * 48);
+
+			float fduration;
+			if (tempo_map)
+			{
+				int pos1 = beatPos;
+				int pos2 = pos1 + duration;
+				float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+				fduration = fNumOfSamples / sampleRate;
+			}
+			else
+			{
+				fduration = (float)(duration * 60) / (float)(tempo * 48);
+			}
+			beatPos += duration;
 
 			if (percId >= 0)
 			{
@@ -128,19 +189,35 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, PyOb
 	m_needUpdateSublists = true;
 }
 
-void VisSinging::CreateFromSyllable(unsigned singerId, float pos, float pitchShift, unsigned tempo, const Syllable& syllable)
+float VisSinging::CreateFromSyllable(unsigned singerId, float pos, float sampleRate, float pitchShift, unsigned tempo, const Syllable& syllable, TempoMap *tempoMap, int tempoMapOffset)
 {
+	bool tempo_map = tempoMap != nullptr;
+
 	this->singerId = singerId;
 	this->lyric = syllable.m_lyric;
 	this->start = pos;
 
-	float totalLen = 0.0f;
+	int iTotalLen = 0;
 	for (unsigned i = 0; i < (unsigned)syllable.m_ctrlPnts.size(); i++)
 	{
 		int iDuration = syllable.m_ctrlPnts[i].m_duration;
-		float fduration = (float)(iDuration * 60) / (float)(tempo * 48);
-		totalLen += fduration;
+		iTotalLen += iDuration;
 	}
+
+	float totalLen;
+	if (tempo_map)
+	{
+		int pos1 = tempoMapOffset;
+		int pos2 = pos1 + iTotalLen;
+		float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+		totalLen = fNumOfSamples / sampleRate;
+	}
+	else
+	{
+		totalLen = (float)(iTotalLen * 60) / (float)(tempo * 48);
+	}
+
+
 	this->end = pos + totalLen;
 
 	float pitchPerSec = 50.0f;
@@ -151,11 +228,26 @@ void VisSinging::CreateFromSyllable(unsigned singerId, float pos, float pitchShi
 	unsigned pitchPos = 0;
 	float fPitchPos = 0.0f;
 	float nextPitchPos=0.0f;
+
+	int beatPos = tempoMapOffset;
 	for (unsigned i = 0; i < (unsigned)syllable.m_ctrlPnts.size(); i++)
 	{
 		int iDuration = syllable.m_ctrlPnts[i].m_duration;
 		if (iDuration <= 0) continue;
-		float fduration = (float)(iDuration * 60) / (float)(tempo * 48);
+
+		float fduration;
+		if (tempo_map)
+		{
+			int pos1 = beatPos;
+			int pos2 = pos1 + iDuration;
+			float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+			fduration = fNumOfSamples / sampleRate;
+			beatPos = pos2;
+		}
+		else
+		{
+			fduration = (float)(iDuration * 60) / (float)(tempo * 48);
+		}
 		float freq1 = syllable.m_ctrlPnts[i].m_freq_rel;
 		float freq2 = i < syllable.m_ctrlPnts.size() - 1 ? syllable.m_ctrlPnts[i + 1].m_freq_rel : freq1;
 		float thisPitchPos = nextPitchPos;
@@ -182,16 +274,20 @@ void VisSinging::CreateFromSyllable(unsigned singerId, float pos, float pitchShi
 	}
 
 	delete[] temp;
+
+	return totalLen;
 }
 
 
-void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObject *seq_py, unsigned tempo, float RefFreq)
+void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap)
 {
+	bool tempo_map = tempoMap != nullptr;
+
 	float pos = startPosition;
 	float pitchShift = floorf(logf(RefFreq / 261.626f)*12.0f / logf(2.0f) + 0.5f);
 
 	size_t piece_count = PyList_Size(seq_py);
-
+	int beatPos = 0;
 	for (size_t i = 0; i < piece_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -212,12 +308,10 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 					_item = PyTuple_GetItem(item, j);
 					if (PyObject_TypeCheck(_item, &PyTuple_Type)) // singing note
 					{
+						int iTotalDuration = 0;
 
 						Syllable syllable;
 						syllable.m_lyric = lyric;
-
-						float totalDuration = 0.0f;
-
 						for (; j<tupleSize; j++)
 						{
 							_item = PyTuple_GetItem(item, j);
@@ -229,28 +323,40 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 								ControlPoint ctrlPnt;
 								ctrlPnt.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, k * 2));
 								if (k * 2 + 1 < PyTuple_Size(_item))
+								{
 									ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, k * 2 + 1));
+									iTotalDuration += ctrlPnt.m_duration;
+								}
 								else
 									ctrlPnt.m_duration = 0;
-
-								float fduration = (float)(ctrlPnt.m_duration * 60) / (float)(tempo * 48);
 
 								if (ctrlPnt.m_freq_rel > 0.0f)
 								{
 									syllable.m_ctrlPnts.push_back(ctrlPnt);
-									totalDuration += fduration;
 								}
 								else
 								{
 									if (syllable.m_ctrlPnts.size() > 0)
 									{
 										VisSinging singing;
-										singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+										float syllableLen= singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
 										m_singings.push_back(singing);
-
 										syllable.m_ctrlPnts.clear();
-										pos += totalDuration;
-										totalDuration = 0.0f;
+										pos += syllableLen;
+										beatPos += iTotalDuration;
+										iTotalDuration = 0;
+									}
+									float fduration;
+									if (tempo_map)
+									{
+										int pos1 = beatPos;
+										int pos2 = pos1 + ctrlPnt.m_duration;
+										float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+										fduration = fNumOfSamples / sampleRate;									
+									}
+									else
+									{
+										fduration = (float)(ctrlPnt.m_duration * 60) / (float)(tempo * 48);
 									}
 									pos += fduration;
 								}
@@ -270,9 +376,11 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 						if (syllable.m_ctrlPnts.size() > 0)
 						{
 							VisSinging singing;
-							singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+							float syllableLen = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
 							m_singings.push_back(singing);
-							pos += totalDuration;
+							pos += syllableLen;
+							beatPos += iTotalDuration;
+							iTotalDuration = 0;
 						}			
 					}
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
@@ -290,7 +398,7 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 						freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
 
-						float fduration = (float)(duration * 60) / (float)(tempo * 48);
+						float fduration;
 						if (freq1 > 0.0 && freq2 > 0.0)
 						{
 							ControlPoint ctrlPnt;
@@ -302,14 +410,29 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 							syllable.m_ctrlPnts.push_back(ctrlPnt);
 
 							VisSinging singing;
-							singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+							fduration = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
 							m_singings.push_back(singing);
 						}
+						else
+						{
+							if (tempo_map)
+							{
+								int pos1 = beatPos;
+								int pos2 = pos1 + duration;
+								float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+								fduration = fNumOfSamples / sampleRate;
+							}
+							else
+							{
+								fduration = (float)(duration * 60) / (float)(tempo * 48);
+							}
+							
+						}
+						beatPos += duration;
 						pos += fduration;
 					}
 
 				}
-
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
@@ -321,7 +444,7 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 				ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
 				syllable.m_ctrlPnts.push_back(ctrlPnt);
 
-				float fduration = (float)(ctrlPnt.m_duration * 60) / (float)(tempo * 48);
+				float fduration;
 
 				if (ctrlPnt.m_freq_rel > 0.0f)
 				{
@@ -329,10 +452,25 @@ void Visualizer::ProcessSingingSeq(unsigned singerId, float startPosition, PyObj
 					syllable.m_ctrlPnts.push_back(ctrlPnt);
 
 					VisSinging singing;
-					singing.CreateFromSyllable(singerId, pos, pitchShift, tempo, syllable);
+					fduration = singing.CreateFromSyllable(singerId, pos, sampleRate, pitchShift, tempo, syllable, tempoMap, beatPos);
 					m_singings.push_back(singing);
 				}
+				else
+				{
+					if (tempo_map)
+					{
+						int pos1 = beatPos;
+						int pos2 = pos1 + ctrlPnt.m_duration;
+						float fNumOfSamples = GetTempoMap(*tempoMap, pos2) - GetTempoMap(*tempoMap, pos1);
+						fduration = fNumOfSamples / sampleRate;
+					}
+					else
+					{
+						fduration = (float)(ctrlPnt.m_duration * 60) / (float)(tempo * 48);
+					}
+				}
 
+				beatPos += ctrlPnt.m_duration;
 				pos += fduration;
 			}
 
@@ -475,13 +613,52 @@ static PyObject* ProcessNoteSeq(PyObject *args)
 {
 	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned instrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
-	float startPosition = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+
+	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
+	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
+	float sampleRate = buffer->Rate();
+	float startPosition = buffer->GetCursor() / sampleRate;
+
 	PyObject *seq_py = PyTuple_GetItem(args, 3);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
+	PyObject *tempo_obj = PyTuple_GetItem(args, 4);
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 5));
 
+	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
+
+	unsigned tempo = (unsigned)(-1);
+	TempoMap tempoMap;
+	if (tempo_map)
+	{
+		std::pair<int, float> ctrlPnt;
+		ctrlPnt.first = 0;
+		ctrlPnt.second = buffer->GetCursor();
+		tempoMap.push_back(ctrlPnt);
+
+		size_t tempo_count = PyList_Size(tempo_obj);
+		for (size_t i = 0; i < tempo_count; i++)
+		{
+			PyObject *item = PyList_GetItem(tempo_obj, i);
+			ctrlPnt.first = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+			ctrlPnt.second = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 1));
+
+			if (ctrlPnt.first == 0)
+			{
+				tempoMap[0].second = ctrlPnt.second;
+				buffer->SetCursor(tempoMap[0].second);
+			}
+			else
+			{
+				tempoMap.push_back(ctrlPnt);
+			}
+		}
+	}
+	else
+	{
+		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
+	}
+
 	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
-	visualizer->ProcessNoteSeq(instrumentId, startPosition, seq_py, tempo, RefFreq);
+	visualizer->ProcessNoteSeq(instrumentId, startPosition, sampleRate, seq_py, tempo, RefFreq, tempo_map? &tempoMap: nullptr);
 
 	return PyLong_FromUnsignedLong(0);
 }
@@ -490,9 +667,48 @@ static PyObject* ProcessBeatSeq(PyObject *args)
 {
 	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	PyObject *percId_list = PyTuple_GetItem(args, 1);
-	float startPosition = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+
+	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
+	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
+	float sampleRate = buffer->Rate();
+	float startPosition = buffer->GetCursor() / sampleRate;
+
 	PyObject *seq_py = PyTuple_GetItem(args, 3);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
+	PyObject *tempo_obj = PyTuple_GetItem(args, 4);
+
+	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
+
+	unsigned tempo = (unsigned)(-1);
+	TempoMap tempoMap;
+	if (tempo_map)
+	{
+		std::pair<int, float> ctrlPnt;
+		ctrlPnt.first = 0;
+		ctrlPnt.second = buffer->GetCursor();
+		tempoMap.push_back(ctrlPnt);
+
+		size_t tempo_count = PyList_Size(tempo_obj);
+		for (size_t i = 0; i < tempo_count; i++)
+		{
+			PyObject *item = PyList_GetItem(tempo_obj, i);
+			ctrlPnt.first = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+			ctrlPnt.second = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 1));
+
+			if (ctrlPnt.first == 0)
+			{
+				tempoMap[0].second = ctrlPnt.second;
+				buffer->SetCursor(tempoMap[0].second);
+			}
+			else
+			{
+				tempoMap.push_back(ctrlPnt);
+			}
+		}
+	}
+	else
+	{
+		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
+	}
 
 	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
 
@@ -501,7 +717,7 @@ static PyObject* ProcessBeatSeq(PyObject *args)
 	for (size_t i = 0; i < perc_count; i++)
 		percIdList[i]= (unsigned)PyLong_AsUnsignedLong(PyList_GetItem(percId_list, i));
 
-	visualizer->ProcessBeatSeq(percIdList, startPosition, seq_py, tempo);
+	visualizer->ProcessBeatSeq(percIdList, startPosition, sampleRate, seq_py, tempo, tempo_map ? &tempoMap : nullptr);
 	
 	delete[] percIdList;
 
@@ -514,13 +730,53 @@ static PyObject* ProcessSingingSeq(PyObject *args)
 {
 	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned singerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
-	float startPosition = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
+
+	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
+	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
+	float sampleRate = buffer->Rate();
+	float startPosition = buffer->GetCursor() / sampleRate;
+
 	PyObject *seq_py = PyTuple_GetItem(args, 3);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 4));
+	PyObject *tempo_obj = PyTuple_GetItem(args, 4);
+
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 5));
 
+	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
+
+	unsigned tempo = (unsigned)(-1);
+	TempoMap tempoMap;
+	if (tempo_map)
+	{
+		std::pair<int, float> ctrlPnt;
+		ctrlPnt.first = 0;
+		ctrlPnt.second = buffer->GetCursor();
+		tempoMap.push_back(ctrlPnt);
+
+		size_t tempo_count = PyList_Size(tempo_obj);
+		for (size_t i = 0; i < tempo_count; i++)
+		{
+			PyObject *item = PyList_GetItem(tempo_obj, i);
+			ctrlPnt.first = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+			ctrlPnt.second = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 1));
+
+			if (ctrlPnt.first == 0)
+			{
+				tempoMap[0].second = ctrlPnt.second;
+				buffer->SetCursor(tempoMap[0].second);
+			}
+			else
+			{
+				tempoMap.push_back(ctrlPnt);
+			}
+		}
+	}
+	else
+	{
+		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
+	}
+
 	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
-	visualizer->ProcessSingingSeq(singerId, startPosition, seq_py, tempo, RefFreq);
+	visualizer->ProcessSingingSeq(singerId, startPosition, sampleRate, seq_py, tempo, RefFreq, tempo_map ? &tempoMap : nullptr);
 
 	return PyLong_FromUnsignedLong(0);
 }
@@ -566,9 +822,9 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 
 	pyScoreDraft->RegisterInterfaceExtension("MeteorInitVisualizer", InitVisualizer);
 	pyScoreDraft->RegisterInterfaceExtension("MeteorDelVisualizer", DelVisualizer, "visualizerId", "visualizerId");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessNoteSeq", ProcessNoteSeq, "visualizerId, instrument, startPos, seq, tempo, refFreq", "visualizerId, instrument.id, startPos, seq, tempo, refFreq");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessBeatSeq", ProcessBeatSeq, "visualizerId, percList, startPos, seq, tempo", "visualizerId, ObjectToId(percList), startPos, seq, tempo");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessSingingSeq", ProcessSingingSeq, "visualizerId, singer, startPos, seq, tempo, refFreq", "visualizerId, singer.id, startPos, seq, tempo, refFreq");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessNoteSeq", ProcessNoteSeq, "visualizerId, instrument, buf, seq, tempo, refFreq", "visualizerId, instrument.id, buf.id, seq, tempo, refFreq");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessBeatSeq", ProcessBeatSeq, "visualizerId, percList, buf, seq, tempo", "visualizerId, ObjectToId(percList), buf.id, seq, tempo");
+	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessSingingSeq", ProcessSingingSeq, "visualizerId, singer, buf, seq, tempo, refFreq", "visualizerId, singer.id, buf.id, seq, tempo, refFreq");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorPlay", Play, "visualizerId, buffer", "visualizerId, buffer.id");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorSaveToFile", SaveToFile, "visualizerId, filename", "visualizerId, filename");
 	pyScoreDraft->RegisterInterfaceExtension("MeteorLoadFromFile", LoadFromFile, "visualizerId, filename", "visualizerId, filename");

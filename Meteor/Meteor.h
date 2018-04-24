@@ -21,6 +21,8 @@ struct VisBeat
 	float end;
 };
 
+typedef std::vector<std::pair<int, float>> TempoMap;
+
 struct VisSinging
 {
 	unsigned singerId;
@@ -29,7 +31,7 @@ struct VisSinging
 	float start;
 	float end;
 
-	void CreateFromSyllable(unsigned singerId, float pos, float pitchShift, unsigned tempo, const Syllable& syllable);
+	float CreateFromSyllable(unsigned singerId, float pos, float sampleRate, float pitchShift, unsigned tempo, const Syllable& syllable, TempoMap *tempoMap, int tempoMapOffset);
 };
 
 #include "SubListLookUp.h"
@@ -38,9 +40,9 @@ class Visualizer
 {
 public:
 	Visualizer() { m_needUpdateSublists = false; }
-	void ProcessNoteSeq(unsigned instrumentId, float startPosition, PyObject *seq_py, unsigned tempo, float RefFreq);	
-	void ProcessBeatSeq(unsigned percIdList[], float startPosition, PyObject *seq_py, unsigned tempo);
-	void ProcessSingingSeq(unsigned singerId, float startPosition, PyObject *seq_py, unsigned tempo, float RefFreq);
+	void ProcessNoteSeq(unsigned instrumentId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap);
+	void ProcessBeatSeq(unsigned percIdList[], float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, TempoMap *tempoMap);
+	void ProcessSingingSeq(unsigned singerId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap);
 	void Play(unsigned bufferId);
 
 	const std::vector<VisNote>& GetNotes() const { return m_notes;  }

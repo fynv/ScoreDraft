@@ -452,13 +452,50 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned InstrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+	PyObject *tempo_obj = PyTuple_GetItem(args, 3);
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
+
+	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
+
+	unsigned tempo = (unsigned)(-1);
+	TempoMap tempoMap;
+	if (tempo_map)
+	{
+		std::pair<int, float> ctrlPnt;
+		ctrlPnt.first = 0;
+		ctrlPnt.second = buffer->GetCursor();
+		tempoMap.push_back(ctrlPnt);
+
+		size_t tempo_count = PyList_Size(tempo_obj);
+		for (size_t i = 0; i < tempo_count; i++)
+		{
+			PyObject *item = PyList_GetItem(tempo_obj, i);
+			ctrlPnt.first = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+			ctrlPnt.second = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 1));
+
+			if (ctrlPnt.first == 0)
+			{
+				tempoMap[0].second = ctrlPnt.second;
+				buffer->SetCursor(tempoMap[0].second);
+			}
+			else
+			{
+				tempoMap.push_back(ctrlPnt);
+			}
+		}
+	}
+	else
+	{
+		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
+	}
+
+
 	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
 
 	size_t piece_count = PyList_Size(seq_py);
+	int beatPos = 0;
 	for (size_t i = 0; i < piece_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -467,6 +504,7 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 			PyObject* _item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
 			{
+				int totalDuration = 0;
 				size_t tupleSize = PyTuple_Size(item);
 
 				size_t j = 0;
@@ -484,8 +522,17 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 							Note note;
 							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
 							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
+
+							totalDuration += note.m_duration;
 					
-							instrument->PlayNote(*buffer, note, tempo, RefFreq);
+							if (tempo_map)
+							{
+								instrument->PlayNote(*buffer, note, tempoMap, beatPos, RefFreq);
+							}
+							else
+							{
+								instrument->PlayNote(*buffer, note, tempo, RefFreq);
+							}
 						}
 					}
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
@@ -494,13 +541,24 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 						Note note;
 						note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j + 1));
 						note.m_duration = duration;
-						instrument->PlayNote(*buffer, note, tempo, RefFreq);
+
+						totalDuration += duration;
+
+						if (tempo_map)
+						{
+							instrument->PlayNote(*buffer, note, tempoMap, beatPos, RefFreq);
+						}
+						else
+						{
+							instrument->PlayNote(*buffer, note, tempo, RefFreq);
+						}
 
 						j++; // at freq1
 						j++; // at freq2
 						j++; // at next
 					}
 				}
+				beatPos += totalDuration;
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
@@ -508,7 +566,15 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
 				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
 
-				instrument->PlayNote(*buffer, note, tempo, RefFreq);
+				if (tempo_map)
+				{
+					instrument->PlayNote(*buffer, note, tempoMap, beatPos, RefFreq);
+				}
+				else
+				{
+					instrument->PlayNote(*buffer, note, tempo, RefFreq);
+				}
+				beatPos += note.m_duration;
 			}
 		}
 		else if (PyObject_TypeCheck(item, &PyUnicode_Type))
@@ -538,9 +604,43 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	PyObject *percId_list = PyTuple_GetItem(args, 1);
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+	PyObject *tempo_obj = PyTuple_GetItem(args, 3);
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
+
+	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
+
+	unsigned tempo = (unsigned)(-1);
+	TempoMap tempoMap;
+	if (tempo_map)
+	{
+		std::pair<int, float> ctrlPnt;
+		ctrlPnt.first = 0;
+		ctrlPnt.second = buffer->GetCursor();
+		tempoMap.push_back(ctrlPnt);
+
+		size_t tempo_count = PyList_Size(tempo_obj);
+		for (size_t i = 0; i < tempo_count; i++)
+		{
+			PyObject *item = PyList_GetItem(tempo_obj, i);
+			ctrlPnt.first = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+			ctrlPnt.second = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 1));
+
+			if (ctrlPnt.first == 0)
+			{
+				tempoMap[0].second = ctrlPnt.second;
+				buffer->SetCursor(tempoMap[0].second);
+			}
+			else
+			{
+				tempoMap.push_back(ctrlPnt);
+			}
+		}
+	}
+	else
+	{
+		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
+	}
 
 	size_t perc_count = PyList_Size(percId_list);
 	Percussion_deferred *perc_List = new Percussion_deferred[perc_count];
@@ -551,6 +651,7 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 	}
 
 	size_t beat_count = PyList_Size(seq_py);
+	int beatPos = 0;
 	for (size_t i = 0; i < beat_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -561,12 +662,27 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 		{
 			int duration = (int)PyLong_AsLong(operation);
 
-			if (percId >= 0)
-				perc_List[percId]->PlayBeat(*buffer, duration, tempo);
-			else if (duration >= 0)
-				Percussion::PlaySilence(*buffer, duration, tempo);
+			if (tempo_map)
+			{
+				if (percId >= 0)
+					perc_List[percId]->PlayBeat(*buffer, duration, tempoMap, beatPos);
+				else if (duration >= 0)
+					Percussion::PlaySilence(*buffer, duration, tempoMap, beatPos);
+				else
+					Percussion::PlayBackspace(*buffer, -duration, tempoMap, beatPos);
+			}
 			else
-				Percussion::PlayBackspace(*buffer, -duration, tempo);
+			{
+
+				if (percId >= 0)
+					perc_List[percId]->PlayBeat(*buffer, duration, tempo);
+				else if (duration >= 0)
+					Percussion::PlaySilence(*buffer, duration, tempo);
+				else
+					Percussion::PlayBackspace(*buffer, -duration, tempo);
+			}
+
+			beatPos += duration;
 		}
 		else if (PyObject_TypeCheck(operation, &PyUnicode_Type))
 		{
@@ -597,16 +713,51 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 3));
+
+	PyObject *tempo_obj = PyTuple_GetItem(args, 3);
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
 
 	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
+
+	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
+
+	unsigned tempo = (unsigned)(-1);
+	TempoMap tempoMap;
+	if (tempo_map)
+	{
+		std::pair<int, float> ctrlPnt;
+		ctrlPnt.first = 0;
+		ctrlPnt.second = buffer->GetCursor();
+		tempoMap.push_back(ctrlPnt);
+
+		size_t tempo_count = PyList_Size(tempo_obj);
+		for (size_t i = 0; i < tempo_count; i++)
+		{
+			PyObject *item = PyList_GetItem(tempo_obj, i);
+			ctrlPnt.first = (int)PyLong_AsLong(PyTuple_GetItem(item, 0));
+			ctrlPnt.second = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 1));
+
+			if (ctrlPnt.first == 0)
+			{
+				tempoMap[0].second = ctrlPnt.second;
+				buffer->SetCursor(tempoMap[0].second);
+			}
+			else
+			{
+				tempoMap.push_back(ctrlPnt);
+			}
+		}
+	}
+	else
+	{
+		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
+	}
 
 	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
 	std::string lyric_charset = singer->GetLyricCharset();
 
 	size_t piece_count = PyList_Size(seq_py);
-
+	int beatPos = 0;
 	for (size_t i = 0; i < piece_count; i++)
 	{
 		PyObject *item = PyList_GetItem(seq_py, i);
@@ -615,8 +766,9 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 			PyObject *_item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
 			{
-				SyllableSequence syllables;
+				int totalDuration = 0;
 
+				SyllableSequence syllables;
 				size_t tupleSize = PyTuple_Size(item);
 
 				size_t j = 0;
@@ -645,7 +797,10 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 								ControlPoint ctrlPnt;
 								ctrlPnt.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, k*2));
 								if (k * 2 + 1 < PyTuple_Size(_item))
+								{
 									ctrlPnt.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, k * 2 + 1));
+									totalDuration += ctrlPnt.m_duration; 
+								}
 								else
 									ctrlPnt.m_duration = 0;
 								syllable.m_ctrlPnts.push_back(ctrlPnt);
@@ -676,16 +831,25 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 						freq2 = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j));
 						j++;
 
-						ControlPoint ctrlPnt;
-						ctrlPnt.m_duration = duration;
-						ctrlPnt.m_freq_rel = freq1;
-						syllable.m_ctrlPnts.push_back(ctrlPnt);
 						if (freq1 > 0.0f && freq2 > 0.0f)
 						{
+							ControlPoint ctrlPnt;
+							ctrlPnt.m_duration = duration;
+							ctrlPnt.m_freq_rel = freq1;
+							syllable.m_ctrlPnts.push_back(ctrlPnt);
 							ctrlPnt.m_duration = 0;
 							ctrlPnt.m_freq_rel = freq2;
 							syllable.m_ctrlPnts.push_back(ctrlPnt);
 						}
+						else
+						{
+							ControlPoint ctrlPnt;
+							ctrlPnt.m_duration = duration;
+							ctrlPnt.m_freq_rel = -1.0f;
+							syllable.m_ctrlPnts.push_back(ctrlPnt);
+						}
+						totalDuration += duration;
+
 						syllables.push_back(syllable);
 					}
 
@@ -694,14 +858,28 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 				{
 					if (syllables.size() < 2)
 					{
-						singer->SingSyllable(*buffer, syllables[0], tempo, RefFreq);
+						if (tempo_map)
+						{
+							singer->SingSyllable(*buffer, syllables[0], tempoMap, beatPos, RefFreq);
+						}							
+						else
+						{
+							singer->SingSyllable(*buffer, syllables[0], tempo, RefFreq);
+						}
 					}
 					else
 					{
-						singer->SingConsecutiveSyllables(*buffer, syllables, tempo, RefFreq);
+						if (tempo_map)
+						{
+							singer->SingConsecutiveSyllables(*buffer, syllables, tempoMap, beatPos, RefFreq);
+						}
+						else
+						{
+							singer->SingConsecutiveSyllables(*buffer, syllables, tempo, RefFreq);
+						}
 					}
 				}
-				
+				beatPos += totalDuration;
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
@@ -717,7 +895,15 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 					ctrlPnt.m_duration = 0;
 					syllable.m_ctrlPnts.push_back(ctrlPnt);
 				}
-				singer->SingSyllable(*buffer, syllable, tempo, RefFreq);
+				if (tempo_map)
+				{
+					singer->SingSyllable(*buffer, syllable, tempoMap, beatPos, RefFreq);
+				}
+				else
+				{
+					singer->SingSyllable(*buffer, syllable, tempo, RefFreq);
+				}
+				beatPos += ctrlPnt.m_duration;
 			}
 
 		}
@@ -725,6 +911,7 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 		{
 			singer->Tune(_PyUnicode_AsString(item));
 		}
+
 	}
 
 	return PyLong_FromUnsignedLong(0);
