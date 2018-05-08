@@ -1,7 +1,7 @@
 #include "SentenceGenerator_CPU.h"
 #include "TrackBuffer.h"
 
-void SentenceGenerator_CPU::_generatePiece(const UtauSourceFetcher& srcFetcher, const char* lyric, const char* lyric_next, unsigned uSumLen, const float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote, bool isVowel)
+void SentenceGenerator_CPU::_generatePiece(const UtauSourceFetcher& srcFetcher, const char* lyric, const char* lyric_next, unsigned uSumLen, const float* freqMap, NoteBuffer* noteBuf, unsigned noteBufPos, float& phase, bool firstNote, bool isVowel, float weight)
 {
 	SourceInfo srcInfo;
 	SourceInfo srcInfo_next;
@@ -9,7 +9,7 @@ void SentenceGenerator_CPU::_generatePiece(const UtauSourceFetcher& srcFetcher, 
 
 	bool hasNextNote = lyric_next != nullptr;
 
-	if (!srcFetcher.FetchSourceInfo(lyric, srcInfo, !isVowel? _constVC : -1.0f)) return;
+	if (!srcFetcher.FetchSourceInfo(lyric, srcInfo, !isVowel ? _constVC : -1.0f, weight)) return;
 	if (hasNextNote && !srcFetcher.FetchSourceInfo(lyric_next, srcInfo_next)) return;
 	srcDerInfo.DeriveInfo(firstNote, hasNextNote, uSumLen, srcInfo, srcInfo_next);
 
@@ -24,7 +24,7 @@ void SentenceGenerator_CPU::_generatePiece(const UtauSourceFetcher& srcFetcher, 
 }
 
 
-void SentenceGenerator_CPU::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
+void SentenceGenerator_CPU::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel, const float* weights, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
 	unsigned noteBufPos = 0;
 	float phase = 0.0f;
@@ -41,7 +41,7 @@ void SentenceGenerator_CPU::GenerateSentence(const UtauSourceFetcher& srcFetcher
 			lyric_next = lyrics[j + 1].data();
 		}
 
-		_generatePiece(srcFetcher, lyrics[j].data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0, isVowel[j] != 0);
+		_generatePiece(srcFetcher, lyrics[j].data(), lyric_next, uSumLen, freqMap, noteBuf, noteBufPos, phase, j == 0, isVowel[j] != 0, weights[j]);
 
 		noteBufPos += uSumLen;
 

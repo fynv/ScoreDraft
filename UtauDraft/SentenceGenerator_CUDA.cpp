@@ -378,13 +378,13 @@ void h_Synthesis(CUDASrcPieceInfoList cuSrcPieceInfos, unsigned halfWinLen, unsi
 
 void h_Merge2Bufs(unsigned uSumLen, float *d_destBuf1, float *d_destBuf2);
 
-void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
+void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel_list, const float* weights, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf)
 {
 	std::vector<SourceInfo> srcInfos;
 	srcInfos.resize(numPieces);
 
 	for (unsigned i = 0; i < numPieces; i++)
-		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i], !isVowel_list[i] ? _constVC : -1.0f)) return;
+		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i], !isVowel_list[i] ? _constVC : -1.0f, weights[i])) return;
 
 	CUDASrcBufList cuSourceBufs;
 	cuSourceBufs=srcInfos;

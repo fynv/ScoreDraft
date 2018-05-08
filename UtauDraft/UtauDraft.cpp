@@ -61,7 +61,7 @@ bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float
 	return true;
 }
 
-bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, float constVC) const
+bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, float constVC, float weight) const
 {
 	if (m_OtoMap->find(lyric) == m_OtoMap->end())
 	{
@@ -82,7 +82,7 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 		if (constVC > 0.0f)
 		{
 			loc.consonant = loc.preutterance;
-			loc.cutoff = -(loc.preutterance + constVC);
+			loc.cutoff = -(loc.preutterance + constVC*5.0f*weight);
 		}
 
 		char frq_path[2048];
@@ -230,6 +230,10 @@ bool UtauDraft::Tune(const char* cmd)
 			float value;
 			if (sscanf(cmd + strlen("constvc") + 1, "%f", &value))
 				m_constVC = value;
+		}
+		else if (strcmp(command, "CZMode") == 0)
+		{
+			m_constVC = 80.0f;
 		}
 	}
 	return false;
@@ -419,15 +423,18 @@ void UtauDraft::GenerateWave_SingConsecutive(SyllableInternalList syllableList, 
 
 	std::vector<std::string> lyrics;
 	std::vector<unsigned> isVowel;
+	std::vector<float> weights;
 
 	lyrics.resize(numPieces);
 	isVowel.resize(numPieces);
+	weights.resize(numPieces);
 
 	for (unsigned j = 0; j < numPieces; j++)
 	{
 		LyricPiece& piece = *lyricList[j];
 		lyrics[j] = piece.lyric;
 		isVowel[j] = piece.isVowel ? 1 : 0;
+		weights[j] = piece.weight;
 	}
 
 	UtauSourceFetcher srcFetcher;
@@ -435,7 +442,7 @@ void UtauDraft::GenerateWave_SingConsecutive(SyllableInternalList syllableList, 
 	srcFetcher.m_defaultLyric = m_defaultLyric;
 
 	SentenceGenerator* sg = createSentenceGenerator();
-	sg->GenerateSentence(srcFetcher, numPieces, lyrics.data(), isVowel.data(), lens.data(), freqAllMap, noteBuf);
+	sg->GenerateSentence(srcFetcher, numPieces, lyrics.data(), isVowel.data(), weights.data(), lens.data(), freqAllMap, noteBuf);
 	releasSentenceGenerator(sg);
 
 	delete[] freqAllMap;
@@ -503,7 +510,8 @@ UtauDraft::LyricPieceList UtauDraft::_convertLyric(UtauDraft::LyricPieceList syl
 		{
 			LyricPiece_Deferred newPiece;
 			newPiece->lyric = lyrics[j];
-			newPiece->fNumOfSamples = totalNumSamples*weights[j] / sum_weight;
+			newPiece->weight = weights[j] / sum_weight;
+			newPiece->fNumOfSamples = totalNumSamples*newPiece->weight;
 			newPiece->isVowel = isVowels[j];
 			newPiece->syllableId = i;
 
