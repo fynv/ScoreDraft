@@ -29,7 +29,7 @@ seq +=[ ("yO", mi(5,12),ti(5,36)),BL(12),("gAv", la(5,24), "t6",so(5,12), "mE", 
 # link to voicebank: https://docs.google.com/uc?id=0B8k4SxZamGmvbXc2NEExTG5rUnM&export=download
 singer = ScoreDraft.Yami_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(singer, VCCVEnglishConverter.VCCVEnglishConverter)
-singer.tune("constvc 80.0")
+singer.tune("CZMode")
 
 doc.sing(seq, singer)
 doc.mixDown('vccv.wav')
