@@ -23,6 +23,8 @@ seq += [line]
 
 seq=[ ("ming", so(5,16), "tian", so(5,16), "ni", so(5,16), "shi", so(5,16), "fou", mi(5,16), "hui", fa(5,16), "xiang", so(5,48), "qi", ti(5,32)), BL(16)]
 seq+=[ ("zuo", la(5,16), "tian", la(5,16), "ni", la(5,16), "xie", la(5,16), "de", fa(5,16), "ri", la(5,16), "ji", so(5,72)), BL(24)]
+
+# link to voicebank: https://pan.baidu.com/s/1mgFWe3e
 XiaYY = ScoreDraft.XiaYY_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(XiaYY, XiaYYConverter.XiaYYConverter)
 

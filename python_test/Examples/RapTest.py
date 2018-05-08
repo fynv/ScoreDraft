@@ -63,6 +63,7 @@ for i in range(int(len(poem[1])/divider)):
 doc=Meteor.Document()
 doc.setTempo(120)
 
+# link to voicebank: http://utau.vocalover.com/newgeping.html
 doc.sing(seq, ScoreDraft.GePing_UTAU())
 
 doc.meteor()

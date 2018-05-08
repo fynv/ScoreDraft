@@ -49,7 +49,10 @@ Freqs[:]=FreqsF
 doc=Meteor.Document()
 doc.setTempo(120)
 
+# link to voicebank: http://utau.vocalover.com/newgeping.html
 GePing = ScoreDraft.GePing_UTAU()
+
+# link to voicebank: https://bowlroll.net/file/53297
 Ayaka = ScoreDraft.Ayaka_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(Ayaka, CVVCChineseConverter.CVVCChineseConverter)
 

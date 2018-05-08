@@ -33,7 +33,8 @@ seq += [ ("mi", so(5,36), "oU", mi(5,12), "maI", so(5,24), "oU", re(5,72)), BL(4
 
 #seq = [ ('paI', 24, 2.0, 2.0, 'TAn', 24, 1.5, 1.0)]
 
-
+# Kasane Teto English Voicebank (CVVC) 
+# Link to voicebank: http://kasaneteto.jp/en/voicebank.html
 Teto = ScoreDraft.TetoEng_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(Teto, TTEnglishConverter.TTEnglishConverter)
 

@@ -30,6 +30,7 @@ seq += [line]
 
 doc.setReferenceFrequency(440.0)
 
+# link to voicebank: https://pan.baidu.com/s/1i4VkcDZ
 WanEr=  ScoreDraft.WanEr_UTAU()
 WanEr.tune ("rap_freq 2.0")
 

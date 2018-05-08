@@ -26,6 +26,7 @@ seq +=[ ("do",mi(5,24),"yO", so(5,24), "ri", la(5,24), "mem", mi(5,12),re(5,12),
 seq +=[ ("dhx",do(5,12), re(5,12), "Od", mi(5,24), "str0l", so(5,24), "h@t", so(5,72)), BL(24)]
 seq +=[ ("yO", mi(5,12),ti(5,36)),BL(12),("gAv", la(5,24), "t6",so(5,12), "mE", mi(5,96))]
 
+# link to voicebank: https://docs.google.com/uc?id=0B8k4SxZamGmvbXc2NEExTG5rUnM&export=download
 singer = ScoreDraft.Yami_UTAU()
 ScoreDraft.UtauDraftSetLyricConverter(singer, VCCVEnglishConverter.VCCVEnglishConverter)
 singer.tune("constvc 80.0")
