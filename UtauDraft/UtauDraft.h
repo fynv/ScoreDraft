@@ -28,7 +28,7 @@ public:
 	OtoMap* m_OtoMap;
 	std::string m_defaultLyric;
 
-	bool FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, float constVC=-1.0f, float weight=0.2f) const;
+	bool FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, bool czmode=false, const char* lyric_next=nullptr) const;
 	static bool ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float& begin, float& end);
 
 };
@@ -54,7 +54,7 @@ public:
 	virtual ~SentenceGenerator(){}
 	float _transition;
 	float _gender;
-	float _constVC;
+	bool _CZMode;
 
 	virtual void GenerateSentence(const UtauSourceFetcher& srcFetcher, unsigned numPieces, const std::string* lyrics, const unsigned* isVowel,  const float* weights, const unsigned* lengths, const float *freqAllMap, NoteBuffer* noteBuf) = 0;
 
@@ -102,7 +102,7 @@ private:
 
 	float m_transition;
 	float m_gender;
-	float m_constVC;
+	bool m_CZMode;
 
 	PyObject* m_LyricConverter;
 

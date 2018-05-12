@@ -1,5 +1,23 @@
 Freqs=[2.0**(v/12.0) for v in range(12)]
 
+fC=1.0
+fCS=Freqs[1]
+fDb=Freqs[1]
+fD=Freqs[2]
+fDS=Freqs[3]
+fEb=Freqs[3]
+fE=Freqs[4]
+fF=Freqs[5]
+fFS=Freqs[6]
+fGb=Freqs[6]
+fG=Freqs[7]
+fGS=Freqs[8]
+fAb=Freqs[8]
+fA=Freqs[9]
+fAS=Freqs[10]
+fBb=Freqs[10]
+fB=Freqs[11]
+
 def note(octave, freq, duration):
 	return (freq*(2.0**(octave-5.0)), duration)
 

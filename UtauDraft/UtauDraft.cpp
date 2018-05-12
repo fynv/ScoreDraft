@@ -61,7 +61,7 @@ bool UtauSourceFetcher::ReadWavLocToBuffer(VoiceLocation loc, Buffer& buf, float
 	return true;
 }
 
-bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, float constVC, float weight) const
+bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, bool czmode, const char* lyric_next) const
 {
 	if (m_OtoMap->find(lyric) == m_OtoMap->end())
 	{
@@ -79,10 +79,27 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 
 	{
 		loc = (*m_OtoMap)[lyric];
-		if (constVC > 0.0f)
+		if (czmode)
 		{
+			float next_overlap = 40.0;
+			if (lyric_next)
+			{
+				if (m_OtoMap->find(lyric_next) == m_OtoMap->end())
+				{
+					printf("missied lyic: %s\n", lyric_next);
+					lyric_next = m_defaultLyric.data();
+					if (m_OtoMap->find(lyric_next) == m_OtoMap->end())
+						return false;
+				}
+
+				VoiceLocation loc_next = (*m_OtoMap)[lyric_next];
+				next_overlap = loc_next.overlap;
+
+				if (next_overlap == 0.0f) next_overlap = 1.0f;
+			}
+
 			loc.consonant = loc.preutterance;
-			loc.cutoff = -(loc.preutterance + constVC*5.0f*weight);
+			loc.cutoff = -(loc.preutterance + next_overlap);
 		}
 
 		char frq_path[2048];
@@ -155,7 +172,7 @@ UtauDraft::UtauDraft(bool useCUDA)
 
 	m_transition = 0.1f;
 	m_gender = 0.0f;
-	m_constVC = -1.0f;
+	m_CZMode = false;
 	m_LyricConverter = nullptr;
 
 	m_use_prefix_map = true;
@@ -225,15 +242,13 @@ bool UtauDraft::Tune(const char* cmd)
 			if (sscanf(cmd + strlen("gender") + 1, "%f", &value))
 				m_gender = value;
 		}
-		else if (strcmp(command, "constvc") == 0)
+		else if (strcmp(command, "constvc") == 0) // left for compatibility to old immature design
 		{
-			float value;
-			if (sscanf(cmd + strlen("constvc") + 1, "%f", &value))
-				m_constVC = value;
+			m_CZMode = true;
 		}
 		else if (strcmp(command, "CZMode") == 0)
 		{
-			m_constVC = 80.0f;
+			m_CZMode = true;
 		}
 	}
 	return false;
@@ -255,7 +270,7 @@ SentenceGenerator* UtauDraft::createSentenceGenerator()
 	}
 	sg->_gender = m_gender;
 	sg->_transition = m_transition;
-	sg->_constVC = m_constVC;
+	sg->_CZMode = m_CZMode;
 	return sg;
 }
 

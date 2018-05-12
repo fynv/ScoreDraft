@@ -169,24 +169,6 @@ def VCCVEnglishConverter(inList):
 				pos[0]+=1
 				pos[1]=0
 
-	iSyllable=0
-	vowel_weight=0.0
-	vowel_weights=[]
-	for i in range(len(outList)):
-		outItem=outList[i]
-		if outItem[1]!=iSyllable:
-			if (vowel_weight==0.0):
-				vowel_weight=1.0
-			vowel_weights+=[vowel_weight]
-			vowel_weight=0.0
-			iSyllable=outItem[1]
-		if not outItem[2]:
-			vowel_weight+=0.4
-
-	if (vowel_weight==0.0):
-		vowel_weight=1.0
-	vowel_weights+=[vowel_weight]
-
 	ret=[]
 	syllable=()
 	iSyllable=0
@@ -199,7 +181,7 @@ def VCCVEnglishConverter(inList):
 			iSyllable=outItem[1]
 		weight=0.1
 		if outItem[2]:
-			weight=vowel_weights[iSyllable]
+			weight=0.4
 		syllable+=(outItem[0], weight, outItem[2])
 
 	ret+=[syllable]

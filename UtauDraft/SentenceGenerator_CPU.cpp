@@ -9,7 +9,7 @@ void SentenceGenerator_CPU::_generatePiece(const UtauSourceFetcher& srcFetcher, 
 
 	bool hasNextNote = lyric_next != nullptr;
 
-	if (!srcFetcher.FetchSourceInfo(lyric, srcInfo, !isVowel ? _constVC : -1.0f, weight)) return;
+	if (!srcFetcher.FetchSourceInfo(lyric, srcInfo, !isVowel && _CZMode, lyric_next)) return;
 	if (hasNextNote && !srcFetcher.FetchSourceInfo(lyric_next, srcInfo_next)) return;
 	srcDerInfo.DeriveInfo(firstNote, hasNextNote, uSumLen, srcInfo, srcInfo_next);
 
