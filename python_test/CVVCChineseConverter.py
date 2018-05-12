@@ -84,6 +84,10 @@ def CVVCChineseConverter(LyricForEachSyllable):
 				ret+=[(lyric,0.875, True, CV[i][1]+" y", 0.125, False)]
 			elif CV[i][1]=='ou':
 				ret+=[(lyric,0.875, True, CV[i][1]+" w", 0.125, False)]
+			elif CV[i][1]=='an' or CV[i][1]=='en' or CV[i][1]=='in':
+				ret+=[(lyric,0.875, True, CV[i][1]+" n", 0.125, False)]
+			elif CV[i][1]=='ang' or CV[i][1]=='eng' or CV[i][1]=='ing' or CV[i][1]=='ing':
+				ret+=[(lyric,0.875, True, CV[i][1]+" n", 0.125, False)]
 			else:
 				ret+=[(lyric,1.0, True)]
 	return ret
