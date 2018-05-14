@@ -60,6 +60,8 @@ def VCCVEnglishConverter(inList):
 			lyric_a+=[atom]
 		inList_a+=[lyric_a]
 
+	inList_a[len(inList_a)-1]+=['-']
+
 	vowelMap=[]
 
 	for inLyric in inList_a:
