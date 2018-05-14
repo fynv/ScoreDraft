@@ -152,7 +152,8 @@ def VCCVEnglishConverter(inList):
 			
 			prefix=prefix[1:len(prefix)]	
 
-		outList+=[(seg, iIn, isVowel)]
+		if len(seg)>0:
+			outList+=[(seg, iIn, isVowel)]
 
 		if not (cur[0]<len(inList_a) and cur[1]<len(inList_a[cur[0]])):
 			break
