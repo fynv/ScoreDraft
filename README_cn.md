@@ -35,7 +35,7 @@ ScoreDraft 是一个简洁的音乐和歌唱合成系统，它提供了基于Pyt
 
 ```
 
-# 关于拷贝
+## 关于拷贝
 
 本账号在GitHub上发布的全部源代码您都可以自由地使用和拷贝。这里的“自由”等同于BSD或MIT协议所
 给予的许可。
@@ -52,7 +52,7 @@ ScoreDraft 是一个简洁的音乐和歌唱合成系统，它提供了基于Pyt
 请勿使用ScoreDraft从事任何有违法律和道德的活动，一旦发生该情况， ScoreDraft的作者不负任何责任。
 ScoreDraft作者也不对ScoreDraft的功能性和安全性做任何承诺。
 
-# 内容结构
+## 内容结构
 
 首先，您最需要的可能是: 
 
@@ -121,13 +121,13 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 
 python_test 之外的内容基本上是C++代码，您可以自行编译。
 
-# 使用说明
+## 使用说明
 
 ScoreDraft 的使用说明目前已经转移到：
 
 [http://scoredraft.org/index.php/scoredraft-introduction-zh/](http://scoredraft.org/index.php/scoredraft-introduction-zh/)
 
-# 关于编译
+## 关于编译
 
 如果要自己编译ScoreDraft, 用户需要首先安装:
 

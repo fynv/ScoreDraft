@@ -45,7 +45,7 @@ using ScoreDraft.
 
 ```
 
-# About Copying
+## About Copying
 
 I'm intending to make all my source-code contribution to GitHub totally free to 
 use, like the permission granted by a BSD or MIT license.
@@ -66,7 +66,7 @@ THE AUTHOR OF SCOREDRAFT DOES NOT HAVE ANY RESPONSIBILITY IN SUCH CASE.
 NO WARRANTY OF ANY KIND FROM THE AUTHOR.
 
 
-# Repository Contents
+## Repository Contents
 
 First please check: 
 
@@ -139,7 +139,7 @@ Examples:
 Contents outside of python_test are basically C++ source-code files managed with CMake, 
 which are used to build the binaries.
 
-# Usage Introduction
+## Usage Introduction
 
 Usage introduction of ScoreDraft has been moved to:
 
@@ -149,7 +149,7 @@ Chinese version (中文使用介绍）:
 
 [http://scoredraft.org/index.php/scoredraft-introduction-zh/](http://scoredraft.org/index.php/scoredraft-introduction-zh/)
 
-# About building
+## About building
 
 To build ScoreDraft from source-code, you need to install:
 
