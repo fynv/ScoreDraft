@@ -81,7 +81,7 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 		loc = (*m_OtoMap)[lyric];
 		if (czmode)
 		{
-			float next_overlap = 40.0;
+			float next_overlap = 80.0;
 			if (lyric_next)
 			{
 				if (m_OtoMap->find(lyric_next) == m_OtoMap->end())
@@ -95,7 +95,7 @@ bool UtauSourceFetcher::FetchSourceInfo(const char* lyric, SourceInfo& srcInfo, 
 				VoiceLocation loc_next = (*m_OtoMap)[lyric_next];
 				next_overlap = loc_next.overlap;
 
-				if (next_overlap == 0.0f) next_overlap = 1.0f;
+				if (next_overlap <= 0.0f) next_overlap = 1.0f;
 			}
 
 			loc.consonant = loc.preutterance;
@@ -699,8 +699,10 @@ private:
 	OtoMap m_OtoMap;
 	PrefixMap m_PrefixMap;
 	std::string m_charset;
+
 	std::string m_name;
 	std::string m_root;
+
 	std::string m_charecter_txt;
 
 	bool m_use_cuda;
