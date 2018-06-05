@@ -504,7 +504,6 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 			PyObject* _item = PyTuple_GetItem(item, 0);
 			if (PyObject_TypeCheck(_item, &PyUnicode_Type)) // singing
 			{
-				int totalDuration = 0;
 				size_t tupleSize = PyTuple_Size(item);
 
 				size_t j = 0;
@@ -523,8 +522,6 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 							note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(_item, 0));
 							note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(_item, 1));
 
-							totalDuration += note.m_duration;
-					
 							if (tempo_map)
 							{
 								instrument->PlayNote(*buffer, note, tempoMap, beatPos, RefFreq);
@@ -533,6 +530,7 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 							{
 								instrument->PlayNote(*buffer, note, tempo, RefFreq);
 							}
+							beatPos += note.m_duration;
 						}
 					}
 					else if (PyObject_TypeCheck(_item, &PyLong_Type)) // singing rap
@@ -542,8 +540,6 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 						note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, j + 1));
 						note.m_duration = duration;
 
-						totalDuration += duration;
-
 						if (tempo_map)
 						{
 							instrument->PlayNote(*buffer, note, tempoMap, beatPos, RefFreq);
@@ -552,13 +548,13 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 						{
 							instrument->PlayNote(*buffer, note, tempo, RefFreq);
 						}
+						beatPos += note.m_duration;
 
 						j++; // at freq1
 						j++; // at freq2
 						j++; // at next
 					}
 				}
-				beatPos += totalDuration;
 			}
 			else if (PyObject_TypeCheck(_item, &PyFloat_Type)) // note
 			{
