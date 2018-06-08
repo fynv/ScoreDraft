@@ -18,7 +18,7 @@ singer = ScoreDraft.GePing_UTAU()
 '''
 import CVVCChineseConverter
 singer = ScoreDraft.YuMo_UTAU()
-ScoreDraft.UtauDraftSetLyricConverter(singer, CVVCChineseConverter.CVVCChineseConverter)
+singer.setLyricConverter(ScoreDraft.CVVCChineseConverter)
 '''
 
 tempo = 100
