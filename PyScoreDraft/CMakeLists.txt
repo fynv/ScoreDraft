@@ -12,14 +12,6 @@ PyScoreDraft.h
 WavIO.h
 )
 
-set(PYTHON
-print_generated_code.py
-print_generated_code_summary.py
-ScoreDraft.py
-ScoreDraftNotes.py
-ScoreDraftRapChinese.py
-)
-
 set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
@@ -55,6 +47,6 @@ endif()
 target_link_libraries(PyScoreDraft ${LINK_LIBS})
 
 
-install(TARGETS PyScoreDraft DESTINATION .)
-install(FILES ${PYTHON} DESTINATION .)
+install(TARGETS PyScoreDraft DESTINATION ./ScoreDraft)
+
 

@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 
+find_package(PythonLibs 3 REQUIRED)
+
 set(SOURCES
 KeLa.cpp
 FrequencyDetection.cpp
@@ -10,6 +12,7 @@ FrequencyDetection.h
 )
 
 set (INCLUDE_DIR
+${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
 ../WavUtil
@@ -18,6 +21,7 @@ set (INCLUDE_DIR
 )
 
 set (LINK_LIBS 
+${PYTHON_LIBRARIES}
 ScoreDraftCore
 WavUtil
 DSPUtil)
@@ -42,7 +46,7 @@ set_target_properties(KeLa PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(KeLa ${LINK_LIBS})
 
-install(TARGETS KeLa DESTINATION Extensions)
+install(TARGETS KeLa DESTINATION ./ScoreDraft/Extensions)
 
 
 

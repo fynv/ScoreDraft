@@ -42,18 +42,15 @@ public:
 		delete[] m_wav_samples;
 	}
 
-	bool LoadWav(const char* root, const char* name)
+	bool LoadWav(const char* wavPath)
 	{
-		char filename[1024];
-		sprintf(filename, "%s/PercussionSamples/%s.wav", root, name);
-
 		delete[] m_wav_samples;
 		m_wav_length = 0;
 		m_chn = 1;
 		m_wav_samples = nullptr;
 
 		ReadWav reader;
-		reader.OpenFile(filename);
+		reader.OpenFile(wavPath);
 		if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length, m_chn)) return false;
 
 		m_wav_samples = new float[m_wav_length*m_chn];
@@ -184,18 +181,13 @@ private:
 
 };
 
-class PercussionSamplerInitializer : public PercussionInitializer
+class PercussionSamplerInitializer
 {
 public:
-	std::string m_name;
-	std::string m_root;
-	std::string GetComment()
+	std::string m_wavPath;
+	Percussion_deferred Init()
 	{
-		return std::string("\t# A percussion based on a single sample ") + m_name + ".wav\n";
-	}
-	virtual Percussion_deferred Init()
-	{
-		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_root.data(), m_name.data());
+		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_wavPath.data());
 
 		Percussion_deferred perc = Percussion_deferred::Instance<PercussionSampler>();
 		perc.DownCast<PercussionSampler>()->SetSample(&m_sample);
@@ -205,60 +197,39 @@ private:
 	PercussionSample m_sample;
 };
 
+#include <map>
+std::map<std::string, PercussionSamplerInitializer> s_initializers;
+
+PercussionSamplerInitializer* GetInitializer(std::string path)
+{
+	if (s_initializers.find(path) == s_initializers.end())
+	{
+		PercussionSamplerInitializer initializer;
+		initializer.m_wavPath = path;
+		s_initializers[path] = initializer;
+	}
+	return &s_initializers[path];
+}
+
+
+static PyScoreDraft* s_PyScoreDraft;
+
+PyObject * InitializePercurssionSampler(PyObject *args)
+{
+	std::string path = _PyUnicode_AsString(args);
+	PercussionSamplerInitializer* initializer = GetInitializer(path);
+	Percussion_deferred perc = initializer->Init();
+	unsigned id = s_PyScoreDraft->AddPercussion(perc);
+	return PyLong_FromUnsignedLong(id);
+}
+
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
-	static std::vector<PercussionSamplerInitializer> s_initializers;
-#ifdef _WIN32
-	WIN32_FIND_DATAA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-
-	char findStr[1024];
-	sprintf(findStr, "%s/PercussionSamples/*.wav", root);
-
-	hFind = FindFirstFileA(findStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return;
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-		char name[1024];
-		memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-		name[strlen(ffd.cFileName) - 4] = 0;
-
-		PercussionSamplerInitializer initializer;
-		initializer.m_name = name;
-		initializer.m_root = root;
-		s_initializers.push_back(initializer);
-
-	} while (FindNextFile(hFind, &ffd) != 0);
-#else
-	DIR *dir;
-	struct dirent *entry;
-	char searchPath[1024];
-	sprintf(searchPath, "%s/PercussionSamples", root);
-
-	if (dir = opendir(searchPath))
-	{
-		while ((entry = readdir(dir)) != NULL)
-		{
-			const char* ext = entry->d_name + strlen(entry->d_name) - 4;
-			if (strcmp(ext, ".wav") == 0)
-			{
-				char name[1024];
-				memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
-				name[strlen(entry->d_name) - 4] = 0;
-
-				PercussionSamplerInitializer initializer;
-				initializer.m_name=name;
-				initializer.m_root = root;
-				s_initializers.push_back(initializer);
-			}
-		}
-	}
-
-#endif
-	for (unsigned i = 0; i < s_initializers.size();i++)
-		pyScoreDraft->RegisterPercussionClass(s_initializers[i].m_name.data(), &s_initializers[i], s_initializers[i].GetComment().data());
-
+	s_PyScoreDraft = pyScoreDraft;
+	pyScoreDraft->RegisterInterfaceExtension("InitializePercurssionSampler", InitializePercurssionSampler,
+		"wavPath", "wavPath",
+		"\t'''\n"
+		"\tInitialize a percussion sampler using a single .wav file.\n"
+		"\twavPath -- path to the .wav file.\n"
+		"\t'''\n");
 }

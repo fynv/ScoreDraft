@@ -1,6 +1,8 @@
 #include "InstrumentSample.h"
 #include <ReadWav.h>
 #include "FrequencyDetection.h"
+#include <string.h>
+#include <string>
 
 InstrumentSample::InstrumentSample()
 {
@@ -13,21 +15,15 @@ InstrumentSample::~InstrumentSample()
 	delete[] m_wav_samples;
 }
 
-bool InstrumentSample::LoadWav(const char* root, const char* name, const char* instrumentName)
+bool InstrumentSample::LoadWav(const char* wav_path)
 {
-	char filename[1024];
-	if (instrumentName==nullptr)
-		sprintf(filename, "%s/InstrumentSamples/%s.wav", root, name);
-	else
-		sprintf(filename, "%s/InstrumentSamples/%s/%s.wav", root, instrumentName, name);
-
 	delete[] m_wav_samples;
 	m_wav_length = 0;
 	m_chn = 1;
 	m_wav_samples = nullptr;
 
 	ReadWav reader;
-	reader.OpenFile(filename);
+	reader.OpenFile(wav_path);
 	if (!reader.ReadHeader(m_origin_sample_rate, m_wav_length, m_chn)) return false;
 
 	m_wav_samples = new float[m_wav_length*m_chn];
@@ -37,20 +33,15 @@ bool InstrumentSample::LoadWav(const char* root, const char* name, const char* i
 		return false;
 	}
 
-	_fetchOriginFreq(root, name, instrumentName);
+	_fetchOriginFreq(wav_path);
 
 	return true;
 }
 
-void InstrumentSample::_fetchOriginFreq(const char* root, const char* name, const char* instrumentName)
+void InstrumentSample::_fetchOriginFreq(const char* wav_path)
 {
-	char filename[1024];
-	if (instrumentName == nullptr)
-		sprintf(filename, "%s/InstrumentSamples/%s.freq", root, name);
-	else
-		sprintf(filename, "%s/InstrumentSamples/%s/%s.freq", root, instrumentName, name);
-
-	FILE *fp = fopen(filename, "r");
+	std::string freq_path = std::string(wav_path).substr(0, strlen(wav_path) - 4) + ".freq";
+	FILE *fp = fopen(freq_path.data(), "r");
 	if (fp)
 	{
 		fscanf(fp, "%f", &m_origin_freq);
@@ -74,8 +65,8 @@ void InstrumentSample::_fetchOriginFreq(const char* root, const char* name, cons
 			}
 		}
 		m_origin_freq = fetchFrequency(m_wav_length, pSamples, m_origin_sample_rate);
-		printf("Detected frequency of %s.wav = %fHz\n", name, m_origin_freq);
-		fp = fopen(filename, "w");
+		printf("Detected frequency of %s : %fHz\n", wav_path, m_origin_freq);
+		fp = fopen(freq_path.data(), "w");
 		fprintf(fp, "%f\n", m_origin_freq);
 		fclose(fp);
 

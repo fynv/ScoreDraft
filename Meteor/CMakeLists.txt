@@ -27,10 +27,6 @@ SubListLookUp.h
 ViewWidget.h
 )
 
-set(PYTHON
-Meteor.py
-)
-
 set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
@@ -68,7 +64,6 @@ set_target_properties(Meteor PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(Meteor ${LINK_LIBS})
 
-install(TARGETS Meteor DESTINATION Extensions)
-install(FILES ${PYTHON} DESTINATION .)
+install(TARGETS Meteor DESTINATION ./ScoreDraft/Extensions)
 
 

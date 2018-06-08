@@ -1,5 +1,3 @@
-#include <Python.h>
-
 #include "PyScoreDraft.h"
 #include <stdio.h>
 #include <cmath>

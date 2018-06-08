@@ -1,9 +1,11 @@
+#!/usr/bin/python3
+
 import sys
 sys.path+=['../']
 
 import ScoreDraft
-from ScoreDraftNotes import *
-from ScoreDraftRapChinese import *
+from ScoreDraft.Notes import *
+from ScoreDraft.RapChinese import *
 
 # https://github.com/mozillazg/python-pinyin
 # pip install pypinyin

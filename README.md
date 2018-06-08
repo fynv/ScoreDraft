@@ -34,7 +34,7 @@ using ScoreDraft.
 ```Python
 
 	import ScoreDraft
-	from ScoreDraftNotes import *
+	from ScoreDraft.Notes import *
 	
 	doc=ScoreDraft.Document()
 	
@@ -83,57 +83,39 @@ These files are being dynamically updated as the development progresses. In that
 I think there will be no need to make any formal releases. Audio sample files will
 be kept at small scale here. Users can extend that part themselves.
 
-Main Python interfaces:
-
-	/python_test/PyScoreDraft.pyd (or PyScoreDraft.so): C++ exported original interfaces
-	/python_test/ScoreDraft.py: core interfaces, a wrapper layer for PyScoreDraft.pyd
-	/python_test/ScoreDraftNotes.py: note definitions
-	/python_test/ScoreDraftRapChinese.py: define utilities to generate Mandarin Chinese 4 tone rap.
-	/python_test/print_generated_code.py: list Python code dynamically generated from C++ 
-	/python_test/print_generated_code_summary.py: list summary of the generated code 
-
 Sub-directories:
 
-	/python_test/Extensions: binary extensions to PyScoreDraft
-	/python_test/InstrumentSamples: audio samples for InstrumentSampler extension
-	/python_test/PercussionSamples: audio samples for PercussionSampler extension
-	/python_test/KeLaSamples: audio samples for KeLa voice engine 
-	/python_test/UTAUVoice: deploy your UTAU voice-banks here, the UtauDraft voice engine will use them
-	/python_test/Examples: examples 
-
-Lyric converters used for UtauDraft voice engine:
-
-	/python_test/CVVCChineseConverter.py: converting PinYin lyrics for each syllable into CVVCChinese lyrics
-	/python_test/TsuroVCVConverter.py: converting PinYin lyrics for each syllable into Tsuro style Chinese VCV lyrics
-	/python_test/JPVCVConverter.py: converting Japanese 単独音 lyrics to 連続音 lyrics
-	/python_test/TTEnglishConverter.py: simplifing the input of english lyrics for Kasane Teto English Voicebank. You'll still need TTEnglishInputHelper, but can use the "for presamp" form of phonetics.
-	/python_test/TTLyricSet.data: data file for TTEnglishConverter, dumped from the oto.ini
-	of the voice-bank.
-	/python_test/XiaYYConverter.py: converting PinYin lyrics for each syllable into lyrics specifically for XiaYuYao voice-bank
+	/python_test/ScoreDraft: the ScoreDraft package 
+	/python_test/ScoreDraft/Extensions: binary extensions
+	/python_test/ScoreDraft/InstrumentSamples: audio samples for InstrumentSampler extension
+	/python_test/ScoreDraft/PercussionSamples: audio samples for PercussionSampler extension
+	/python_test/ScoreDraft/KeLaSamples: audio samples for KeLa voice engine 
+	/python_test/ScoreDraft/UTAUVoice: deploy your UTAU voice-banks here, the UtauDraft voice engine will use
+	/python_test/zh_TTS: a simple Chinese TTS demo using pypinyin + ScoreDraft   
 
 Examples:
 
-	/python_test/Examples/Hello.py: the simplest example
-	/python_test/Examples/piano_test.py: test of instrument sampler
-	/python_test/Examples/percussion_test.py: test of percussion sampler
-	/python_test/Examples/FlyMeToTheMoon.py: fly me to the moon in just-intonation
-	/python_test/Examples/FlyMeToTheMoon_eq.py: fly me to the moon in equal-temperment
-	/python_test/Examples/NaushikaRequiem.py: Naushika Requiem using a simple voice, with accompany
-	/python_test/Examples/KeLaTest.py: a test using the Jin-Ke-La voice bank
-	/python_test/Examples/GePi.py: a 10 minute rendering of the Pi song using GePing voice-bank
-	/python_test/Examples/GePi_unlimited.py: unlimited real-time generation/playback of the Pi song. 
-	/python_test/Examples/RapTest.py: test of the the Rap function by singing Chinese Peoms. Need the full-set of "GePing" voice-bank
-	/python_test/Examples/tang300.py: the database for RapTest.py
-	/python_test/Examples/CVVCTest.py: a test using a English CVVC voice-bank, specifically:
+	/python_test/Hello.py: the simplest example
+	/python_test/piano_test.py: test of instrument sampler
+	/python_test/percussion_test.py: test of percussion sampler
+	/python_test/FlyMeToTheMoon.py: fly me to the moon in just-intonation
+	/python_test/FlyMeToTheMoon_eq.py: fly me to the moon in equal-temperment
+	/python_test/NaushikaRequiem.py: Naushika Requiem using a simple voice, with accompany
+	/python_test/KeLaTest.py: a test using the Jin-Ke-La voice bank
+	/python_test/GePi.py: a 10 minute rendering of the Pi song using GePing voice-bank
+	/python_test/GePi_unlimited.py: unlimited real-time generation/playback of the Pi song. 
+	/python_test/RapTest.py: test of the the Rap function by singing Chinese Peoms. Need the full-set of "GePing" voice-bank
+	/python_test/tang300.py: the database for RapTest.py
+	/python_test/CVVCTest.py: a test using a English CVVC voice-bank, specifically:
 		[kasaneteto, English Voicebank (CVVC) Voicebank](http://kasaneteto.jp/en/voicebank.html)
-	/python_test/Examples/CVVCTest2.py: a test using a CVVCChinese voice-bank, specifically:
+	/python_test/CVVCTest2.py: a test using a CVVCChinese voice-bank, specifically:
 		[三色あやかCVVChinese V1.0](https://bowlroll.net/file/53297)
-	/python_test/Examples/VCVTest.py: a test using a Tsuro style Chinese VCV voice-bank, specifically:
+	/python_test/VCVTest.py: a test using a Tsuro style Chinese VCV voice-bank, specifically:
 		[綰儿] (http://lindayana.lofter.com/waner)
-	/python_test/Examples/uta_test.py: a test using Japanese voice-banks, specifically:
+	/python_test/uta_test.py: a test using Japanese voice-banks, specifically:
 		a. the "uta" voice-bank that comes with UTAU
 		b. [三色あやか 連続音V2.0](https://bowlroll.net/file/69898)
-	/python_test/Examples/XiaYYTest.py: a test using XiaYuYao voice-bank, which is a 
+	/python_test/XiaYYTest.py: a test using XiaYuYao voice-bank, which is a 
         special form of CVVCChinese. [XiaYuYao](http://www.voicemith.com/download.html)
 
 Contents outside of python_test are basically C++ source-code files managed with CMake, 
@@ -141,11 +123,19 @@ which are used to build the binaries.
 
 ## Usage Introduction
 
-Usage introduction of ScoreDraft has been moved to:
+**Notice: ScoreDraft has just undergone a major structural adjustment. (6/8/2018)**
+
+**We will need some time to update the following documents.**
+
+**Sorry for the temporary inconsistency**
+
+**For now, please reference to the Examples for the detail of usage**
+
+English introduction
 
 [http://scoredraft.org/index.php/introduction-to-scoredraft/](http://scoredraft.org/index.php/introduction-to-scoredraft/)
 
-Chinese version (中文使用介绍）:
+Chinese introduction (中文使用介绍）:
 
 [http://scoredraft.org/index.php/scoredraft-introduction-zh/](http://scoredraft.org/index.php/scoredraft-introduction-zh/)
 

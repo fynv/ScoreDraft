@@ -24,7 +24,7 @@ ScoreDraft 是一个简洁的音乐和歌唱合成系统，它提供了基于Pyt
 ```Python
 
 	import ScoreDraft
-	from ScoreDraftNotes import *
+	from ScoreDraft.Notes import *
 	
 	doc=ScoreDraft.Document()
 	
@@ -68,62 +68,59 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 的打包发布，用户可以随时从python_test目录下自取所需。这里包含的音源样本将控制在极小的规模，
 用户根据自己的需求可以自行获取和部署音源。
 
-主要Python接口:
-
-	/python_test/PyScoreDraft.pyd (or PyScoreDraft.so): 由C++部分导出的原始接口
-	/python_test/ScoreDraft.py: ScoreDraft核心Python接口， 是对PyScoreDraft的封装
-	/python_test/ScoreDraftNotes.py: 音符定义
-	/python_test/ScoreDraftRapChinese.py: 用于中文四声的Rap辅助函数
-	/python_test/print_generated_code.py: 打印由C++部分动态生成的Python代码，包含扩展接口
-	/python_test/print_generated_code_summary.py: 打印动态Python代码的摘要
 
 子目录:
 
-	/python_test/Extensions: 对 PyScoreDraft 的扩展，C++模块
-	/python_test/InstrumentSamples: 乐器音频样本，用于 InstrumentSampler 扩展
-	/python_testPercussionSamples: 打击乐音频样本，用语 PercussionSampler 扩展
-	/python_test/KeLaSamples: 用语 KeLa 歌唱引擎的语音样本
-	/python_test/UTAUVoice: 符合UTAU标准的音源库，用于UtauDraft歌唱引擎，可以从Utau的voice目录下拷贝过来
-	/python_test/Examples: 例子 
+	/python_test/ScoreDraft: ScoreDraft 包 
+	/python_test/ScoreDraft/Extensions: C++扩展模块
+	/python_test/ScoreDraft/InstrumentSamples: 乐器音频样本，用于 InstrumentSampler 扩展
+	/python_test/ScoreDraft/PercussionSamples: 打击乐音频样本，用语 PercussionSampler 扩展
+	/python_test/ScoreDraft/KeLaSamples: 用语 KeLa 歌唱引擎的语音样本
+	/python_test/ScoreDraft/UTAUVoice: 符合UTAU标准的音源库，用于UtauDraft歌唱引擎，可以从Utau的voice目录下拷贝过来
+	/python_test/zh_TTS: 一个简单的中文TTS，基于pypinyin + ScoreDraft
 
-用于UtauDraft歌唱引擎的歌词转换器:
+测试样例:
 
-	/python_test/CVVCChineseConverter.py: 将汉语单独音歌词转为CVVCChinese歌词
-	/python_test/TsuroVCVConverter.py: 将汉语单独音歌词转为樗式VCV歌词
-	/python_test/JPVCVConverter.py: 将日语单独音歌词转为日语连续音歌词
-	/python_test/TTEnglishConverter.py: 英文歌词（Delta式）转换器，仍需要TTEnglishInputHelper，但可以使用“for presamp”形式
-	/python_test/TTLyricSet.data: TTEnglishConverter的数据文件, 由oto.ini转换得到
-	/python_test/XiaYYConverter.py: 将汉语单独音歌词转为夏语遥式歌词
-
-用Python写的各种测试样例:
-
-	/python_test/Examples/Hello.py: 最简单的例子
-	/python_test/Examples/piano_test.py: InstrumentSampler 测试
-	/python_test/Examples/percussion_test.py: PercussionSampler 测试
-	/python_test/Examples/FlyMeToTheMoon.py: fly me to the moon 纯律版
-	/python_test/Examples/FlyMeToTheMoon_eq.py: fly me to the moon 平均律版
-	/python_test/Examples/NaushikaRequiem.py: 那乌西卡安魂曲
-	/python_test/Examples/KeLaTest.py: 一个使用金坷垃音源的小测试
-	/python_test/Examples/GePi.py: 葛平圆周率10分钟版
-	/python_test/Examples/GePi_unlimited.py: 葛平圆周率无限版
-	/python_test/Examples/RapTest.py: Rap测试，朗读唐诗300首
-	/python_test/Examples/tang300.py: 唐诗300首，RapTest的数据库
-	/python_test/Examples/CVVCTest.py: 英文CVVC音源测试，测试所用音源:
+	/python_test/Hello.py: 最简单的例子
+	/python_test/piano_test.py: InstrumentSampler 测试
+	/python_test/percussion_test.py: PercussionSampler 测试
+	/python_test/FlyMeToTheMoon.py: fly me to the moon 纯律版
+	/python_test/FlyMeToTheMoon_eq.py: fly me to the moon 平均律版
+	/python_test/NaushikaRequiem.py: 那乌西卡安魂曲
+	/python_test/KeLaTest.py: 一个使用金坷垃音源的小测试
+	/python_test/GePi.py: 葛平圆周率10分钟版
+	/python_test/GePi_unlimited.py: 葛平圆周率无限版
+	/python_test/RapTest.py: Rap测试，朗读唐诗300首
+	/python_test/tang300.py: 唐诗300首，RapTest的数据库
+	/python_test/CVVCTest.py: 英文CVVC音源测试，测试所用音源:
 		[kasaneteto, English Voicebank (CVVC) Voicebank](http://kasaneteto.jp/en/voicebank.html)
-	/python_test/Examples/CVVCTest2.py: CVVCChinese 音源测试，测试所用音源:
+	/python_test/CVVCTest2.py: CVVCChinese 音源测试，测试所用音源:
 		[三色あやかCVVChinese V1.0](https://bowlroll.net/file/53297)
-	/python_test/Examples/VCVTest.py: 樗式中文VCV音源测试，测试所用音源：
+	/python_test/VCVTest.py: 樗式中文VCV音源测试，测试所用音源：
 		[綰儿] (http://lindayana.lofter.com/waner)
-	/python_test/Examples/uta_test.py: 日语音源测试，测试所用音源:
+	/python_test/uta_test.py: 日语音源测试，测试所用音源:
 		a. UTAU软件自带的"uta"音源
 		b. [三色あやか 連続音V2.0](https://bowlroll.net/file/69898)
-	/python_test/Examples/XiaYYTest.py: 夏语遥式中文CVVC测试 [夏语遥](http://www.voicemith.com/download.html)
+	/python_test/XiaYYTest.py: 夏语遥式中文CVVC测试 [夏语遥](http://www.voicemith.com/download.html)
 
 python_test 之外的内容基本上是C++代码，您可以自行编译。
 
 ## 使用说明
 
-ScoreDraft 的使用说明目前已经转移到：
+**请注意，ScoreDraft刚刚进行了一次重大结构性调整. (6/8/2018)**
+
+**我们需要一些时间来更新以下文档.**
+
+**目前文档和API的实际情况不完全一致，对此深感歉意**
+
+**使用细节请暂时以代码中的例子为准**
+
+英文使用说明：
+
+[http://scoredraft.org/index.php/introduction-to-scoredraft/](http://scoredraft.org/index.php/introduction-to-scoredraft/)
+
+
+中文使用说明：
 
 [http://scoredraft.org/index.php/scoredraft-introduction-zh/](http://scoredraft.org/index.php/scoredraft-introduction-zh/)
 

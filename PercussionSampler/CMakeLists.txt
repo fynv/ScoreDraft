@@ -1,10 +1,13 @@
 cmake_minimum_required (VERSION 3.0)
 
+find_package(PythonLibs 3 REQUIRED)
+
 set(SOURCES
 PercussionSampler.cpp
 )
 
 set (INCLUDE_DIR
+${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
 ../WavUtil
@@ -12,6 +15,7 @@ set (INCLUDE_DIR
 )
 
 set (LINK_LIBS 
+${PYTHON_LIBRARIES}
 ScoreDraftCore
 WavUtil
 )
@@ -36,6 +40,6 @@ set_target_properties(PercussionSampler PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(PercussionSampler ${LINK_LIBS})
 
-install(TARGETS PercussionSampler DESTINATION Extensions)
+install(TARGETS PercussionSampler DESTINATION ./ScoreDraft/Extensions)
 
 

@@ -144,15 +144,14 @@ public:
 	{
 		m_transition = 0.1f;
 	}
-	void SetName(const char* root, const char* name)
+	void SetPath(const char* path)
 	{
-		m_root = root;
-		m_name = name;
+		m_path = path;
 
 #ifdef _WIN32
 
 		char charsetFn[1024];
-		sprintf(charsetFn, "%s/KeLaSamples/%s/charset", m_root.data(), m_name.data());
+		sprintf(charsetFn, "%s/charset", m_path.data());
 		FILE* fp_charset = fopen(charsetFn, "r");
 		if (fp_charset)
 		{
@@ -166,7 +165,7 @@ public:
 		HANDLE hFind = INVALID_HANDLE_VALUE;
 
 		char searchPath[1024];
-		sprintf(searchPath, "%s/KeLaSamples/%s/*.wav", m_root.data(), m_name.data());
+		sprintf(searchPath, "%s/*.wav", m_path.data());
 
 		hFind = FindFirstFileA(searchPath, &ffd);
 		if (INVALID_HANDLE_VALUE != hFind)
@@ -187,10 +186,7 @@ public:
 		DIR *dir;
 		struct dirent *entry;
 
-		char dirPath[1024];
-		sprintf(dirPath, "%s/KeLaSamples/%s", m_root.data(), m_name.data());
-
-		if (dir = opendir(dirPath))
+		if (dir = opendir(m_path.data()))
 		{
 			while ((entry = readdir(dir)) != NULL)
 			{
@@ -318,18 +314,19 @@ private:
 			stretchingMap[pos] = pos_tmpBuf;
 		}
 
-		char path[1024];
-		sprintf(path, "%s/KeLaSamples/%s/%s.wav", m_root.data(), m_name.data(), lyric);
+		char wav_path[1024];
+		sprintf(wav_path, "%s/%s.wav", m_path.data(), lyric);
 
 		Buffer source;
 		float maxv;
-		if (!ReadWavToBuffer(path, source, maxv)) return;
+		if (!ReadWavToBuffer(wav_path, source, maxv)) return;
 
 		unsigned freq_step = 256;
 		std::vector<float> frequencies;
 		
-		sprintf(path, "%s/KeLaSamples/%s/%s.freq", m_root.data(), m_name.data(), lyric);
-		FILE* fp = fopen(path, "r");
+		char freq_path[1024];
+		sprintf(freq_path, "%s/%s.freq", m_path.data(), lyric);
+		FILE* fp = fopen(freq_path, "r");
 		if (fp)
 		{
 			while (!feof(fp))
@@ -346,7 +343,7 @@ private:
 		else
 		{
 			DetectFreqs(source, frequencies, freq_step);
-			fp = fopen(path, "w");
+			fp = fopen(freq_path, "w");
 			for (size_t i = 0; i < frequencies.size(); i++)
 			{
 				fprintf(fp, "%f\n", frequencies[i]);
@@ -588,79 +585,59 @@ private:
 
 	}
 
-	std::string m_name;
-	std::string m_root;
+	std::string m_path;
 
 	float m_transition;
 };
 
-class KeLaInitializer : public SingerInitializer
+class KeLaInitializer 
 {
 public:
-	std::string m_name;
-	std::string m_root;
-	std::string GetComment()
-	{
-		return std::string("\t# A singer based on KeLa engine and samples in the directory ") + m_name + "\n";
-	}
-	virtual Singer_deferred Init()
+	std::string m_path;
+
+	Singer_deferred Init()
 	{
 		Singer_deferred singer = Singer_deferred::Instance<KeLa>();
-		singer.DownCast<KeLa>()->SetName(m_root.data(), m_name.data());
+		singer.DownCast<KeLa>()->SetPath(m_path.data());
 		return singer;
 	}
 };
 
+
+#include <map>
+std::map<std::string, KeLaInitializer> s_initializers;
+
+KeLaInitializer* GetInitializer(std::string path)
+{
+	if (s_initializers.find(path) == s_initializers.end())
+	{
+		KeLaInitializer initializer;
+		initializer.m_path = path;
+		s_initializers[path] = initializer;
+	}
+	return &s_initializers[path];
+}
+
+
+static PyScoreDraft* s_PyScoreDraft;
+
+PyObject * InitializeKeLa(PyObject *args)
+{
+	std::string path = _PyUnicode_AsString(args);
+	KeLaInitializer* initializer = GetInitializer(path);
+	Singer_deferred singer = initializer->Init();
+	unsigned id = s_PyScoreDraft->AddSinger(singer);
+	return PyLong_FromUnsignedLong(id);
+}
+
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
-	static std::vector<KeLaInitializer> s_initializers;
-
-#ifdef _WIN32
-	WIN32_FIND_DATAA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-
-	char findStr[1024];
-	sprintf(findStr, "%s/KeLaSamples/*", root);
-
-	hFind = FindFirstFileA(findStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return;
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
-		{
-			KeLaInitializer initializer;
-			initializer.m_name = ffd.cFileName;
-			initializer.m_root = root;
-			s_initializers.push_back(initializer);
-		}
-
-	} while (FindNextFile(hFind, &ffd) != 0);
-
-#else
-	DIR *dir;
-	struct dirent *entry;
-	char searchPath[1024];
-	sprintf(searchPath, "%s/KeLaSamples", root);
-
-	if (dir = opendir(searchPath))
-	{
-		while ((entry = readdir(dir)) != NULL)
-		{
-			if (entry->d_type == DT_DIR)
-			{
-				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-				{
-					KeLaInitializer initializer;
-					initializer.m_name = entry->d_name;
-					initializer.m_root = root;
-					s_initializers.push_back(initializer);
-				}	
-			}
-		}
-	}
-#endif
-	for (unsigned i = 0; i < s_initializers.size(); i++)
-		pyScoreDraft->RegisterSingerClass(s_initializers[i].m_name.data(), &s_initializers[i], s_initializers[i].GetComment().data());
+	s_PyScoreDraft = pyScoreDraft;
+	pyScoreDraft->RegisterInterfaceExtension("InitializeKeLa", InitializeKeLa,
+		"path", "path",
+		"\t'''\n"
+		"\tInitialize a KeLa based singer.\n"
+		"\tpath -- path to folder containing the samples.\n"
+		"\t'''\n");
 }
 

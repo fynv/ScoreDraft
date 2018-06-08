@@ -28,15 +28,6 @@ SentenceGenerator_PSOLA.h
 SentenceGenerator_HNM.h
 )
 
-set(PYTHON
-CVVCChineseConverter.py
-JPVCVConverter.py
-TsuroVCVConverter.py
-TTEnglishConverter.py
-XiaYYConverter.py
-VCCVEnglishConverter.py
-)
-
 set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
@@ -95,6 +86,6 @@ set_target_properties(UtauDraft PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(UtauDraft ${LINK_LIBS})
 
-install(TARGETS UtauDraft DESTINATION Extensions)
-install(FILES ${PYTHON} DESTINATION .)
+install(TARGETS UtauDraft DESTINATION ./ScoreDraft/Extensions)
+
 

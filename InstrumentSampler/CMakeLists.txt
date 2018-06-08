@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 
+find_package(PythonLibs 3 REQUIRED)
+
 set(SOURCES
 InstrumentSample.cpp
 InstrumentSingleSampler.cpp
@@ -16,6 +18,7 @@ FrequencyDetection.h
 )
 
 set (INCLUDE_DIR
+${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
 ../WavUtil
@@ -24,6 +27,7 @@ set (INCLUDE_DIR
 )
 
 set (LINK_LIBS 
+${PYTHON_LIBRARIES}
 ScoreDraftCore
 WavUtil
 DSPUtil)
@@ -48,7 +52,7 @@ set_target_properties(InstrumentSampler PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(InstrumentSampler ${LINK_LIBS})
 
-install(TARGETS InstrumentSampler DESTINATION Extensions)
+install(TARGETS InstrumentSampler DESTINATION ./ScoreDraft/Extensions)
 
 
 

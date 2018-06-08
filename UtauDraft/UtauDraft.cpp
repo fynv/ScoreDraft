@@ -553,6 +553,27 @@ float UtauDraft::getFirstNoteHeadSamples(const char* lyric)
 
 }
 
+
+#if HAVE_CUDA
+#include <cuda_runtime.h>
+#endif
+
+static bool s_have_cuda = false;
+
+static bool HaveCUDA()
+{
+#if HAVE_CUDA
+	int count;
+	cudaGetDeviceCount(&count);
+	if (count > 0 && cudaGetLastError() == 0)
+	{
+		cudaFree(nullptr);
+		if (cudaGetLastError() == 0) s_have_cuda = true;
+	}
+#endif
+	return s_have_cuda;
+}
+
 class UtauDraftDeferred : public Singer_deferred
 {
 public:
@@ -560,15 +581,14 @@ public:
 	UtauDraftDeferred(const UtauDraftDeferred & in) : Singer_deferred(in){}
 };
 
-class UtauDraftInitializer : public SingerInitializer
+class UtauDraftInitializer
 {
 public:
-	void SetName(const char* root, const char *name)
+	void SetPath(const char* path)
 	{
-		m_root = root;
-		m_name = name;
+		m_path = path;
 		char charFileName[1024];
-		sprintf(charFileName, "%s/UTAUVoice/%s/character.txt", root, name);
+		sprintf(charFileName, "%s/character.txt", m_path.data());
 		FILE *fp = fopen(charFileName, "r");
 		if (fp)
 		{
@@ -580,16 +600,6 @@ public:
 			m_charecter_txt += "\n";
 			fclose(fp);
 		}
-	}
-	std::string GetDirName()
-	{
-		return m_name;
-	}
-	std::string GetComment()
-	{
-		std::string comment = std::string("\t# A singer based on UtauDraft engine and UTAU voice bank in the directory ") + m_name + "\n";
-		comment += m_charecter_txt;
-		return comment;
 	}
 
 	void BuildOtoMap(const char* path)
@@ -648,16 +658,15 @@ public:
 #endif
 	}
 
-	virtual Singer_deferred Init()
+	Singer_deferred Init(bool useCuda)
 	{
+		if (useCuda && !HaveCUDA())	useCuda = false;
 		if (m_OtoMap.size() == 0)
 		{
-			char rootPath[1024];
-			sprintf(rootPath, "%s/UTAUVoice/%s", m_root.data(), m_name.data());
-			BuildOtoMap(rootPath);
+			BuildOtoMap(m_path.data());
 
 			char prefixMapFn[1024];
-			sprintf(prefixMapFn, "%s/UTAUVoice/%s/prefix.map", m_root.data(), m_name.data());
+			sprintf(prefixMapFn, "%s/prefix.map", m_path.data());
 			m_PrefixMap.LoadFromFile(prefixMapFn);
 
 #ifdef _WIN32
@@ -666,7 +675,7 @@ public:
 			m_charset = "utf-8";
 #endif
 			char charsetFn[1024];
-			sprintf(charsetFn, "%s/charset", rootPath);
+			sprintf(charsetFn, "%s/charset", m_path.data());
 
 			FILE* fp_charset = fopen(charsetFn, "r");
 			if (fp_charset)
@@ -677,7 +686,7 @@ public:
 				fclose(fp_charset);
 			}
 		}
-		UtauDraftDeferred singer(m_use_cuda);
+		UtauDraftDeferred singer(useCuda);
 		singer.DownCast<UtauDraft>()->SetOtoMap(&m_OtoMap);
 		singer.DownCast<UtauDraft>()->SetCharset(m_charset.data());
 		if (m_PrefixMap.size() > 0)
@@ -685,31 +694,42 @@ public:
 		return singer;
 	}
 
-	UtauDraftInitializer()
-	{
-		m_use_cuda = false;
-	}
-
-	void setUseCuda(bool use = true)
-	{
-		m_use_cuda = use;
-	}
-
 private:
 	OtoMap m_OtoMap;
 	PrefixMap m_PrefixMap;
 	std::string m_charset;
 
-	std::string m_name;
-	std::string m_root;
+	std::string m_path;
 
 	std::string m_charecter_txt;
-
-	bool m_use_cuda;
 };
+
+#include <map>
+std::map<std::string, UtauDraftInitializer> s_initializers;
+
+UtauDraftInitializer* GetInitializer(std::string path)
+{
+	if (s_initializers.find(path) == s_initializers.end())
+	{
+		UtauDraftInitializer initializer;
+		initializer.SetPath(path.data());
+		s_initializers[path] = initializer;
+	}
+	return &s_initializers[path];
+}
+
 
 static PyScoreDraft* s_PyScoreDraft;
 
+PyObject * InitializeUtauDraft(PyObject *args)
+{
+	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args,0));
+	bool useCuda = PyObject_IsTrue(PyTuple_GetItem(args, 1))!=0;
+	UtauDraftInitializer* initializer = GetInitializer(path);
+	Singer_deferred singer = initializer->Init(useCuda);
+	unsigned id = s_PyScoreDraft->AddSinger(singer);
+	return PyLong_FromUnsignedLong(id);
+}
 
 PyObject* UtauDraftSetLyricConverter(PyObject *args)
 {
@@ -722,92 +742,41 @@ PyObject* UtauDraftSetLyricConverter(PyObject *args)
 	return PyLong_FromUnsignedLong(0);
 }
 
-#if HAVE_CUDA
-#include <cuda_runtime.h>
-#endif
+PyObject* UtauDraftSetUsePrefixMap(PyObject *args)
+{
+	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	bool use_prefix_map = PyObject_IsTrue(PyTuple_GetItem(args, 1))!=0;
+
+	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
+	singer.DownCast<UtauDraft>()->SetUsePrefixMap(use_prefix_map);
+
+	return PyLong_FromUnsignedLong(0);
+}
+
+PyObject* UtauDraftSetCZMode(PyObject *args)
+{
+	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	bool czmode = PyObject_IsTrue(PyTuple_GetItem(args, 1)) != 0;
+
+	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
+	singer.DownCast<UtauDraft>()->SetCZMode(czmode);
+
+	return PyLong_FromUnsignedLong(0);
+}
+
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	s_PyScoreDraft = pyScoreDraft;
 
-	static std::vector<UtauDraftInitializer> s_initializers;
-	static std::vector<UtauDraftInitializer> s_initializers_cuda;
+	pyScoreDraft->RegisterInterfaceExtension("InitializeUtauDraft", InitializeUtauDraft,
+		"path, useCUDA", "path, useCUDA",
+		"\t'''\n"
+		"\tInitialize a UtauDraft based singer.\n"
+		"\tpath -- path to the UTAU voicebank.\n"
+		"\t'''\n");
 
-	bool use_cuda = false;
-#if HAVE_CUDA
-	int count;
-	cudaGetDeviceCount(&count);
-	if (count > 0 && cudaGetLastError()==0)
-	{
-		cudaFree(nullptr);
-		if (cudaGetLastError() == 0) use_cuda = true;
-	}
-#endif
-
-#ifdef _WIN32
-	WIN32_FIND_DATAA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-
-	char findStr[1024];
-	sprintf(findStr, "%s/UTAUVoice/*", root);
-
-	hFind = FindFirstFileA(findStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return;
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
-		{
-			UtauDraftInitializer initializer;
-			initializer.SetName(root, ffd.cFileName);
-			s_initializers.push_back(initializer);
-			if (use_cuda)
-			{
-				initializer.setUseCuda();
-				s_initializers_cuda.push_back(initializer);
-			}
-		}
-
-	} while (FindNextFile(hFind, &ffd) != 0);
-
-#else
-	DIR *dir;
-	struct dirent *entry;
-
-	char searchPath[1024];
-	sprintf(searchPath, "%s/UTAUVoice", root);
-
-	if (dir = opendir(searchPath))
-	{
-		while ((entry = readdir(dir)) != NULL)
-		{
-			if (entry->d_type == DT_DIR)
-			{
-				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-				{
-					UtauDraftInitializer initializer;
-					initializer.SetName(root, entry->d_name);
-					s_initializers.push_back(initializer);
-					if (use_cuda)
-					{
-						initializer.setUseCuda();
-						s_initializers_cuda.push_back(initializer);
-					}
-				}
-			}
-		}
-	}
-#endif
-
-	for (unsigned i = 0; i < s_initializers.size(); i++)
-	{
-		pyScoreDraft->RegisterSingerClass((s_initializers[i].GetDirName() + "_UTAU").data(), &s_initializers[i], s_initializers[i].GetComment().data());
-	}
-	for (unsigned i = 0; i < s_initializers_cuda.size(); i++)
-	{
-		pyScoreDraft->RegisterSingerClass((s_initializers_cuda[i].GetDirName() + "_CUDA").data(), &s_initializers_cuda[i], s_initializers_cuda[i].GetComment().data());
-	}
-
+	
 	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetLyricConverter", UtauDraftSetLyricConverter, "singer, LyricConverterFunc", "singer.id, LyricConverterFunc",
 		"\t'''\n"
 		"\tSet a lyric-converter function for a UtauDraft singer used to generate VCV/CVVC lyrics\n"
@@ -819,4 +788,8 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable,\n"
 		"\tplus a bool value indicating whether it is the vowel part of the syllable.\n"
 		"\t'''\n");
+
+	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetUsePrefixMap", UtauDraftSetUsePrefixMap, "singer, use", "singer.id, use");
+	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetCZMode", UtauDraftSetCZMode, "singer, czmode", "singer.id, czmode");
+
 }

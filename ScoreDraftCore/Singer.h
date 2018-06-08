@@ -54,6 +54,10 @@ public:
 
 	virtual bool Tune(const char* cmd);
 
+	void SetDefaultLyric(const char* defaultLyric) { m_defaultLyric = defaultLyric; }
+	void SetNoteVolume(float volume) { m_noteVolume = volume; }
+	void SetNotePan(float pan) { m_notePan = pan; }
+
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);
 	virtual void GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf);

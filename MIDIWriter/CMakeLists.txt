@@ -38,7 +38,7 @@ set_target_properties(MIDIWriter PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(MIDIWriter ${LINK_LIBS})
 
-install(TARGETS MIDIWriter DESTINATION Extensions)
+install(TARGETS MIDIWriter DESTINATION ./ScoreDraft/Extensions)
 
 
 

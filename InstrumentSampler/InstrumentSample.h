@@ -14,10 +14,10 @@ public:
 	float m_origin_freq;
 	unsigned m_origin_sample_rate;
 
-	bool LoadWav(const char* root, const char* name, const char* instrumentName = nullptr);
+	bool LoadWav(const char* wav_path);
 
 private:
-	void _fetchOriginFreq(const char* root, const char* name, const char* instrumentName = nullptr);
+	void _fetchOriginFreq(const char* wav_path);
 };
 
 #endif

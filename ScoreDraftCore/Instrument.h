@@ -21,6 +21,9 @@ public:
 	void PlayNote(TrackBuffer& buffer, const Note& aNote, const TempoMap& tempoMap, int tempoMapOffset = 0, float RefFreq = 261.626f);
 
 	virtual bool Tune(const char* cmd);
+
+	void SetNoteVolume(float volume) {	m_noteVolume = volume;	}
+	void SetNotePan(float pan) { m_notePan = pan;  }
 	
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);

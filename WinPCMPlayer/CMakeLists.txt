@@ -34,7 +34,7 @@ add_definitions(${DEFINES})
 add_library (WinPCMPlayer SHARED ${SOURCES} ${HEADERS})
 target_link_libraries(WinPCMPlayer ${LINK_LIBS})
 
-install(TARGETS WinPCMPlayer DESTINATION Extensions)
+install(TARGETS WinPCMPlayer DESTINATION ./ScoreDraft/Extensions)
 
 
 

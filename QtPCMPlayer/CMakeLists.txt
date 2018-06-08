@@ -56,7 +56,7 @@ add_definitions(${DEFINES})
 add_executable (QtPCMPlayer ${SOURCES} ${HEADERS} resources/resources.qrc)
 target_link_libraries(QtPCMPlayer ${LINK_LIBS})
 
-install(TARGETS QtPCMPlayer DESTINATION .)
+install(TARGETS QtPCMPlayer DESTINATION ./ScoreDraft)
 
 
 set(SOURCES
@@ -92,4 +92,4 @@ set_target_properties(QtPCMPlayerExt PROPERTIES SUFFIX ".so")
 endif()
 target_link_libraries(QtPCMPlayerExt ${LINK_LIBS})
 
-install(TARGETS QtPCMPlayerExt DESTINATION Extensions)
+install(TARGETS QtPCMPlayerExt DESTINATION ./ScoreDraft/Extensions)

@@ -30,6 +30,9 @@ public:
 
 	virtual bool Tune(const char* cmd);
 
+	void SetBeatVolume(float volume) { m_beatVolume = volume; }
+	void SetBeatPan(float pan) { m_beatPan = pan; }
+
 
 protected:
 	static void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);

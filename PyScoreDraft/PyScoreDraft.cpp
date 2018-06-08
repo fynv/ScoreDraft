@@ -1,5 +1,3 @@
-#include <Python.h>
-
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -57,22 +55,6 @@ public:
 static StdLogger s_logger;
 static PyScoreDraft s_PyScoreDraft;
 
-static void s_RegisterDefaultClasses()
-{
-	static t_InstInitializer<PureSin> s_PureSin;
-	s_PyScoreDraft.RegisterInstrumentClass("PureSin", &s_PureSin, "\t# A sin-wav generator\n");
-	static t_InstInitializer<Square> s_Square;
-	s_PyScoreDraft.RegisterInstrumentClass("Square", &s_Square, "\t# A square-wav generator\n");
-	static t_InstInitializer<Triangle> s_Triangle;
-	s_PyScoreDraft.RegisterInstrumentClass("Triangle", &s_Triangle, "\t# A triangle-wav generator\n");
-	static t_InstInitializer<Sawtooth> s_Sawtooth;
-	s_PyScoreDraft.RegisterInstrumentClass("Sawtooth", &s_Sawtooth, "\t# A sawtooth-wav generator\n");
-	static t_InstInitializer<NaivePiano> s_NaivePiano;
-	s_PyScoreDraft.RegisterInstrumentClass("NaivePiano", &s_NaivePiano, "\t# A naive piano tone by algebra formulas\n" );
-	static t_InstInitializer<BottleBlow> s_BottleBlow;
-	s_PyScoreDraft.RegisterInstrumentClass("BottleBlow", &s_BottleBlow, "\t# A bottle-blow tone using a noise signal passing a BPF\n");
-
-}
 
 static PyObject* ScanExtensions(PyObject *self, PyObject *args)
 {
@@ -159,67 +141,13 @@ static PyObject* GenerateCode(PyObject *self, PyObject *args)
 	std::string generatedCode = "";
 	std::string summary = "";
 	
-	// Instruments 
 	generatedCode += "# PyScoreDraft Generated Code\n\n";
-	generatedCode += "# Instruments\n\n";
-
-	summary += "=====================================\n";
-	summary += "PyScoreDraft Generated Code - Summary\n";
-	summary += "=====================================\n\n";
-	summary += "Instruments:\n";
-
-	unsigned count = s_PyScoreDraft.NumOfIntrumentClasses();
-	for (unsigned i = 0; i < count; i++)
-	{
-		InstrumentClass instCls = s_PyScoreDraft.GetInstrumentClass(i);
-		generatedCode +=
-			std::string("def ") + instCls.m_name.data() + "():\n"
-			+ instCls.m_comment +
-			+ "\treturn Instrument(" + std::to_string(i) + ")\n\n";
-
-		summary += std::to_string(i) + ": " + s_PyScoreDraft.GetInstrumentClass(i).m_name.data()+"\n";
-	}
-	summary += "\n";
-
-	//Percussions
-	generatedCode += "# Percussions\n\n";
-	summary += "Percussions:\n";
-
-	count = s_PyScoreDraft.NumOfPercussionClasses();
-	for (unsigned i = 0; i < count; i++)
-	{
-		PercussionClass percCls = s_PyScoreDraft.GetPercussionClass(i);
-		generatedCode +=
-			std::string("def ") + percCls.m_name.data() + "():\n"
-			+ percCls.m_comment +
-			+ "\treturn Percussion(" + std::to_string(i) + ")\n\n";
-
-		summary += std::to_string(i) + ": " + s_PyScoreDraft.GetPercussionClass(i).m_name.data() + "\n";
-	}
-	summary += "\n";
-
-	//Singers
-	generatedCode += "# Singers\n\n";
-	summary += "Singers:\n";
-
-	count = s_PyScoreDraft.NumOfSingerClasses();
-	for (unsigned i = 0; i < count; i++)
-	{
-		SingerClass singerCls = s_PyScoreDraft.GetSingerClass(i);
-		generatedCode +=
-			std::string("def ") + singerCls.m_name.data() + "():\n"
-			+ singerCls.m_comment +
-			+ "\treturn Singer(" + std::to_string(i) + ")\n\n";
-
-		summary += std::to_string(i) + ": " + s_PyScoreDraft.GetSingerClass(i).m_name.data() + "\n";
-	}
-	summary += "\n";
 
 	//Interfaces
 	generatedCode += "# Interfaces\n\n";
 	summary += "Interfaces:\n";
 	
-	count = s_PyScoreDraft.NumOfInterfaceExtensions();
+	unsigned count = s_PyScoreDraft.NumOfInterfaceExtensions();
 	for (unsigned i = 0; i < count; i++)
 	{
 		InterfaceExtension ext = s_PyScoreDraft.GetInterfaceExtension(i);
@@ -268,19 +196,6 @@ static PyObject* DelTrackBuffer(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
-static PyObject* InitInstrument(PyObject *self, PyObject *args)
-{
-	unsigned clsId;
-	if (!PyArg_ParseTuple(args, "I", &clsId))
-		return NULL;
-
-	InstrumentClass InstCls = s_PyScoreDraft.GetInstrumentClass(clsId);
-	Instrument_deferred inst = InstCls.m_initializer->Init();
-	unsigned id = s_PyScoreDraft.AddInstrument(inst);
-
-	return PyLong_FromUnsignedLong(id);
-}
-
 static PyObject* DelInstrument(PyObject *self, PyObject *args)
 {
 	unsigned InstrumentId;
@@ -293,19 +208,6 @@ static PyObject* DelInstrument(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
-static PyObject* InitPercussion(PyObject *self, PyObject *args)
-{
-	unsigned clsId;
-	if (!PyArg_ParseTuple(args, "I", &clsId))
-		return NULL;
-
-	PercussionClass PercCls = s_PyScoreDraft.GetPercussionClass(clsId);
-	Percussion_deferred perc = PercCls.m_initializer->Init();
-	unsigned id = s_PyScoreDraft.AddPercussion(perc);
-
-	return PyLong_FromUnsignedLong(id);
-}
-
 static PyObject* DelPercussion(PyObject *self, PyObject *args)
 {
 	unsigned PercussionId;
@@ -316,19 +218,6 @@ static PyObject* DelPercussion(PyObject *self, PyObject *args)
 	perc.Abondon();
 
 	return PyLong_FromLong(0);
-}
-
-static PyObject* InitSinger(PyObject *self, PyObject *args)
-{
-	unsigned clsId;
-	if (!PyArg_ParseTuple(args, "I", &clsId))
-		return NULL;
-
-	SingerClass SingerCls = s_PyScoreDraft.GetSingerClass(clsId);
-	Singer_deferred singer = SingerCls.m_initializer->Init();
-	unsigned id = s_PyScoreDraft.AddSinger(singer);
-
-	return PyLong_FromUnsignedLong(id);
 }
 
 static PyObject* DelSinger(PyObject *self, PyObject *args)
@@ -595,6 +484,32 @@ static PyObject* InstrumentTune(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
+static PyObject* InstrumentSetNoteVolume(PyObject *self, PyObject *args)
+{
+	unsigned InstrumentId;
+	float volume;
+
+	if (!PyArg_ParseTuple(args, "If", &InstrumentId, &volume))
+		return NULL;
+
+	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
+	instrument->SetNoteVolume(volume);
+	return PyLong_FromLong(0);
+}
+
+static PyObject* InstrumentSetNotePan(PyObject *self, PyObject *args)
+{
+	unsigned InstrumentId;
+	float pan;
+
+	if (!PyArg_ParseTuple(args, "If", &InstrumentId, &pan))
+		return NULL;
+
+	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
+	instrument->SetNotePan(pan);
+	return PyLong_FromLong(0);
+}
+
 static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 {
 	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
@@ -701,6 +616,33 @@ static PyObject* PercussionTune(PyObject *self, PyObject *args)
 
 	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
 	perc->Tune(cmd);
+	return PyLong_FromLong(0);
+}
+
+
+static PyObject* PercussionSetBeatVolume(PyObject *self, PyObject *args)
+{
+	unsigned PercussionId;
+	float volume;
+
+	if (!PyArg_ParseTuple(args, "If", &PercussionId, &volume))
+		return NULL;
+
+	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
+	perc->SetBeatVolume(volume);
+	return PyLong_FromLong(0);
+}
+
+static PyObject* PercussionSetBeatPan(PyObject *self, PyObject *args)
+{
+	unsigned PercussionId;
+	float pan;
+
+	if (!PyArg_ParseTuple(args, "If", &PercussionId, &pan))
+		return NULL;
+
+	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
+	perc->SetBeatPan(pan);
 	return PyLong_FromLong(0);
 }
 
@@ -926,6 +868,46 @@ static PyObject* SingerTune(PyObject *self, PyObject *args)
 	return PyLong_FromLong(0);
 }
 
+static PyObject* SingerSetDefaultLyric(PyObject *self, PyObject *args)
+{
+	unsigned SingerId;
+	const char* lyric;
+
+	if (!PyArg_ParseTuple(args, "Is", &SingerId, &lyric))
+		return NULL;
+
+	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	singer->SetDefaultLyric(lyric);
+	return PyLong_FromLong(0);
+}
+
+
+static PyObject* SingerSetNoteVolume(PyObject *self, PyObject *args)
+{
+	unsigned SingerId;
+	float volume;
+
+	if (!PyArg_ParseTuple(args, "If", &SingerId, &volume))
+		return NULL;
+
+	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	singer->SetNoteVolume(volume);
+	return PyLong_FromLong(0);
+}
+
+static PyObject* SingerSetNotePan(PyObject *self, PyObject *args)
+{
+	unsigned SingerId;
+	float pan;
+
+	if (!PyArg_ParseTuple(args, "If", &SingerId, &pan))
+		return NULL;
+
+	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	singer->SetNotePan(pan);
+	return PyLong_FromLong(0);
+}
+
 static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 {
 	unsigned TargetTrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
@@ -1044,6 +1026,46 @@ static PyObject* TellDuration(PyObject *self, PyObject *args)
 
 }
 
+enum InternalInstrument_Type
+{
+	PureSin_Type,
+	Square_Type,
+	Triangle_Type,
+	Sawtooth_Type,
+	NaivePiano_Type,
+	BottleBlow_Type
+};
+
+
+static PyObject* InitializeInternalInstrument(PyObject *self, PyObject *args)
+{
+	InternalInstrument_Type instrument_cls = (InternalInstrument_Type)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	Instrument_deferred inst;
+	switch (instrument_cls)
+	{
+	case PureSin_Type:
+		inst = Instrument_deferred::Instance<PureSin>();
+		break;
+	case Square_Type:
+		inst = Instrument_deferred::Instance<Square>();
+		break;
+	case Triangle_Type:
+		inst = Instrument_deferred::Instance<Triangle>();
+		break;
+	case Sawtooth_Type:
+		inst = Instrument_deferred::Instance<Sawtooth>();
+		break;
+	case NaivePiano_Type:
+		inst = Instrument_deferred::Instance<NaivePiano>();
+		break;
+	case BottleBlow_Type:
+		inst = Instrument_deferred::Instance<BottleBlow>();
+		break;
+	}
+	unsigned id = s_PyScoreDraft.AddInstrument(inst);
+	return PyLong_FromUnsignedLong(id);
+}
+
 static PyMethodDef s_PyScoreDraftMethods[] = {
 	{
 		"ScanExtensions",
@@ -1070,32 +1092,14 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 		""
 	},
 	{
-		"InitInstrument",
-		InitInstrument,
-		METH_VARARGS,
-		""
-	},
-	{
 		"DelInstrument",
 		DelInstrument,
 		METH_VARARGS,
 		""
 	},
 	{
-		"InitPercussion",
-		InitPercussion,
-		METH_VARARGS,
-		""
-	},
-	{
 		"DelPercussion",
 		DelPercussion,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitSinger",
-		InitSinger,
 		METH_VARARGS,
 		""
 	},
@@ -1172,6 +1176,18 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 		""
 	},
 	{
+		"InstrumentSetNoteVolume",
+		InstrumentSetNoteVolume,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InstrumentSetNotePan",
+		InstrumentSetNotePan,
+		METH_VARARGS,
+		""
+	},
+	{
 		"PercussionPlay",
 		PercussionPlay,
 		METH_VARARGS,
@@ -1184,6 +1200,18 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 		""
 	},
 	{
+		"PercussionSetBeatVolume",
+		PercussionSetBeatVolume,
+		METH_VARARGS,
+		""
+	},
+	{
+		"PercussionSetBeatPan",
+		PercussionSetBeatPan,
+		METH_VARARGS,
+		""
+	},
+	{
 		"Sing",
 		Sing,
 		METH_VARARGS,
@@ -1192,6 +1220,24 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 	{
 		"SingerTune",
 		SingerTune,
+		METH_VARARGS,
+		""
+	},
+	{
+		"SingerSetDefaultLyric",
+		SingerSetDefaultLyric,
+		METH_VARARGS,
+		""
+	},
+	{
+		"SingerSetNoteVolume",
+		SingerSetNoteVolume,
+		METH_VARARGS,
+		""
+	},
+	{
+		"SingerSetNotePan",
+		SingerSetNotePan,
 		METH_VARARGS,
 		""
 	},
@@ -1225,6 +1271,12 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 		METH_VARARGS,
 		""
 	},
+	{
+		"InitializeInternalInstrument",
+		InitializeInternalInstrument,
+		METH_VARARGS,
+		""
+	},
 	{ NULL, NULL, 0, NULL }
 };
 
@@ -1244,6 +1296,5 @@ static struct PyModuleDef cModPyDem =
 }; 
 
 PyMODINIT_FUNC PyInit_PyScoreDraft(void) {
-	s_RegisterDefaultClasses();
 	return PyModule_Create(&cModPyDem);
 }

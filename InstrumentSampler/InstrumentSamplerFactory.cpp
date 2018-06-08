@@ -17,38 +17,13 @@
 
 #include <Deferred.h>
 
-class InstrumentSamplerInitializer : public InstrumentInitializer
+class InstrumentSingleSamplerInitializer 
 {
 public:
-	std::string m_name;
-	std::string m_root;
-	bool m_IsMultiSampler;
-
-	InstrumentSamplerInitializer(){}
-	virtual ~InstrumentSamplerInitializer(){}
-
-	std::string GetComment()
+	std::string m_wav_path;
+	Instrument_deferred Init()
 	{
-		if (!m_IsMultiSampler)
-			return std::string("\t# An instrument based on a single sample ") + m_name + ".wav\n";
-		else
-			return std::string("\t# An instrument based on samples in directory ") + m_name + "\n";
-	}
-};
-
-typedef Deferred<InstrumentSamplerInitializer> InstrumentSamplerInitializer_Deferred;
-
-class InstrumentSingleSamplerInitializer : public InstrumentSamplerInitializer
-{
-public:
-	InstrumentSingleSamplerInitializer()
-	{
-		m_IsMultiSampler = false;
-	}
-	virtual ~InstrumentSingleSamplerInitializer(){}
-	virtual Instrument_deferred Init()
-	{
-		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_root.data(), m_name.data());
+		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_wav_path.data());
 
 		Instrument_deferred inst = Instrument_deferred::Instance<InstrumentSingleSampler>();
 		inst.DownCast<InstrumentSingleSampler>()->SetSample(&m_sample);
@@ -60,14 +35,10 @@ private:
 };
 
 
-class InstrumentMultiSamplerInitializer : public InstrumentSamplerInitializer
+class InstrumentMultiSamplerInitializer
 {
 public:
-	InstrumentMultiSamplerInitializer()
-	{
-		m_IsMultiSampler = true;
-	}
-	virtual ~InstrumentMultiSamplerInitializer(){}
+	std::string m_folder_path;
 
 	static int compareSampleWav(const void* a, const void* b)
 	{
@@ -81,7 +52,7 @@ public:
 	}
 
 
-	virtual Instrument_deferred Init()
+	Instrument_deferred Init()
 	{
 		if (m_SampleWavList.size() < 1)
 		{
@@ -91,7 +62,7 @@ public:
 			HANDLE hFind = INVALID_HANDLE_VALUE;
 
 			char searchPath[1024];
-			sprintf(searchPath, "%s/InstrumentSamples/%s/*.wav", m_root.data(), m_name.data());
+			sprintf(searchPath, "%s/*.wav", m_folder_path.data());
 
 			hFind = FindFirstFileA(searchPath, &ffd);
 			if (INVALID_HANDLE_VALUE != hFind)
@@ -99,12 +70,10 @@ public:
 				do
 				{
 					if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-					char name[1024];
-					memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-					name[strlen(ffd.cFileName) - 4] = 0;
-
+					char wav_path[1024];
+					sprintf(wav_path, "%s/%s", m_folder_path.data(), ffd.cFileName);
 					InstrumentSample_deferred wav;
-					wav->LoadWav(m_root.data(), name, m_name.data());
+					wav->LoadWav(wav_path);
 					m_SampleWavList.push_back(wav);
 
 				} while (FindNextFile(hFind, &ffd) != 0);
@@ -113,10 +82,7 @@ public:
 			DIR *dir;
 			struct dirent *entry;
 
-			char dirPath[1024];
-			sprintf(dirPath, "%s/InstrumentSamples/%s", m_root.data(), m_name.data());
-
-			if (dir = opendir(dirPath))
+			if (dir = opendir(m_folder_path.data()))
 			{
 				while ((entry = readdir(dir)) != NULL)
 				{
@@ -125,12 +91,10 @@ public:
 						const char* ext = entry->d_name + strlen(entry->d_name) - 4;
 						if (strcmp(ext, ".wav") == 0)
 						{
-							char name[1024];
-							memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
-							name[strlen(entry->d_name) - 4] = 0;
-
+							char wav_path[1024];
+							sprintf(wav_path, "%s/%s", m_folder_path.data(), entry->d_name);
 							InstrumentSample_deferred wav;
-							wav->LoadWav(m_root.data(), name, m_name.data());
+							wav->LoadWav(wav_path);
 							m_SampleWavList.push_back(wav);
 						}
 					}
@@ -151,105 +115,66 @@ private:
 	std::vector<InstrumentSample_deferred> m_SampleWavList;
 };
 
+#include <map>
+std::map<std::string, InstrumentSingleSamplerInitializer> s_initializers_single;
+std::map<std::string, InstrumentMultiSamplerInitializer> s_initializers_multi;
+
+InstrumentSingleSamplerInitializer* GetInitializer_Single(std::string path)
+{
+	if (s_initializers_single.find(path) == s_initializers_single.end())
+	{
+		InstrumentSingleSamplerInitializer initializer;
+		initializer.m_wav_path = path;
+		s_initializers_single[path] = initializer;
+	}
+	return &s_initializers_single[path];
+}
+
+InstrumentMultiSamplerInitializer* GetInitializer_Multi(std::string path)
+{
+	if (s_initializers_multi.find(path) == s_initializers_multi.end())
+	{
+		InstrumentMultiSamplerInitializer initializer;
+		initializer.m_folder_path = path;
+		s_initializers_multi[path] = initializer;
+	}
+	return &s_initializers_multi[path];
+}
+
+static PyScoreDraft* s_PyScoreDraft;
+
+PyObject * InitializeInstrumentSingleSampler(PyObject *args)
+{
+	std::string path = _PyUnicode_AsString(args);
+	InstrumentSingleSamplerInitializer* initializer = GetInitializer_Single(path);
+	Instrument_deferred inst = initializer->Init();
+	unsigned id = s_PyScoreDraft->AddInstrument(inst);
+	return PyLong_FromUnsignedLong(id);
+}
+
+PyObject * InitializeInstrumentMultiSampler(PyObject *args)
+{
+	std::string path = _PyUnicode_AsString(args);
+	InstrumentMultiSamplerInitializer* initializer = GetInitializer_Multi(path);
+	Instrument_deferred inst = initializer->Init();
+	unsigned id = s_PyScoreDraft->AddInstrument(inst);
+	return PyLong_FromUnsignedLong(id);
+}
 
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
-	static std::vector<InstrumentSamplerInitializer_Deferred> s_initializers;
+	s_PyScoreDraft = pyScoreDraft;
+	pyScoreDraft->RegisterInterfaceExtension("InitializeInstrumentSingleSampler", InitializeInstrumentSingleSampler,
+		"wavPath", "wavPath",
+		"\t'''\n"
+		"\tInitialize a instrument sampler using a single .wav file.\n"
+		"\twavPath -- path to the .wav file.\n"
+		"\t'''\n");
+	pyScoreDraft->RegisterInterfaceExtension("InitializeInstrumentMultiSampler", InitializeInstrumentMultiSampler,
+		"folderPath", "folderPath",
+		"\t'''\n"
+		"\tInitialize a instrument sampler using multiple .wav files.\n"
+		"\folderPath -- path containining the .wav files\n"
+		"\t'''\n");
 
-#ifdef _WIN32
-	WIN32_FIND_DATAA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-
-	char findStr[1024];
-	sprintf(findStr, "%s/InstrumentSamples/*.wav", root);
-
-	hFind = FindFirstFileA(findStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return;
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-		char name[1024];
-		memcpy(name, ffd.cFileName, strlen(ffd.cFileName) - 4);
-		name[strlen(ffd.cFileName) - 4] = 0;
-
-		InstrumentSamplerInitializer_Deferred initializer=
-			InstrumentSamplerInitializer_Deferred::Instance<InstrumentSingleSamplerInitializer>();
-	
-		initializer->m_name = name;
-		initializer->m_root = root;
-		s_initializers.push_back(initializer);
-
-	} while (FindNextFile(hFind, &ffd) != 0);
-
-
-	// build multi-samplers
-	sprintf(findStr, "%s/InstrumentSamples/*", root);
-	hFind = FindFirstFileA(findStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return;
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0)
-		{
-			InstrumentSamplerInitializer_Deferred initializer =
-				InstrumentSamplerInitializer_Deferred::Instance<InstrumentMultiSamplerInitializer>();
-
-			initializer->m_name = ffd.cFileName;
-			initializer->m_root = root;
-			s_initializers.push_back(initializer);
-		}
-
-	} while (FindNextFile(hFind, &ffd) != 0);
-
-#else
-	DIR *dir;
-	struct dirent *entry;
-
-	char searchPath[1024];
-	sprintf(searchPath, "%s/InstrumentSamples", root);
-
-	if (dir = opendir(searchPath))
-	{
-		while ((entry = readdir(dir)) != NULL)
-		{
-			if (entry->d_type == DT_DIR)
-			{
-				if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-				{
-					InstrumentSamplerInitializer_Deferred initializer=
-						InstrumentSamplerInitializer_Deferred::Instance<InstrumentMultiSamplerInitializer>();
-					initializer->m_name = entry->d_name;
-					initializer->m_root = root;
-					s_initializers.push_back(initializer);
-				}
-			}
-			else
-			{
-				const char* ext = entry->d_name + strlen(entry->d_name) - 4;
-				if (strcmp(ext, ".wav") == 0)
-				{
-					char name[1024];
-					memcpy(name, entry->d_name, strlen(entry->d_name) - 4);
-					name[strlen(entry->d_name) - 4] = 0;
-
-					InstrumentSamplerInitializer_Deferred initializer =
-						InstrumentSamplerInitializer_Deferred::Instance<InstrumentSingleSamplerInitializer>();
-					initializer->m_name = name;
-					initializer->m_root = root;
-					s_initializers.push_back(initializer);
-
-				}
-			}
-
-		}
-
-	}
-	
-
-#endif
-
-	for (unsigned i = 0; i < s_initializers.size(); i++)
-		pyScoreDraft->RegisterInstrumentClass(s_initializers[i]->m_name.data(), s_initializers[i], s_initializers[i]->GetComment().data());
 }
