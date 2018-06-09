@@ -107,14 +107,6 @@ python_test 之外的内容基本上是C++代码，您可以自行编译。
 
 ## 使用说明
 
-**请注意，ScoreDraft刚刚进行了一次重大结构性调整. (6/8/2018)**
-
-**我们需要一些时间来更新以下文档.**
-
-**目前文档和API的实际情况不完全一致，对此深感歉意**
-
-**使用细节请暂时以代码中的例子为准**
-
 英文使用说明：
 
 [http://scoredraft.org/index.php/introduction-to-scoredraft/](http://scoredraft.org/index.php/introduction-to-scoredraft/)

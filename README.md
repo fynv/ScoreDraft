@@ -123,14 +123,6 @@ which are used to build the binaries.
 
 ## Usage Introduction
 
-**Notice: ScoreDraft has just undergone a major structural adjustment. (6/8/2018)**
-
-**We will need some time to update the following documents.**
-
-**Sorry for the temporary inconsistency**
-
-**For now, please reference to the Examples for the detail of usage**
-
 English introduction
 
 [http://scoredraft.org/index.php/introduction-to-scoredraft/](http://scoredraft.org/index.php/introduction-to-scoredraft/)
