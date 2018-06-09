@@ -14,6 +14,7 @@ add_subdirectory(InstrumentSampler)
 add_subdirectory(KeLa)
 add_subdirectory(UtauDraft)
 add_subdirectory(Meteor)
+add_subdirectory(SF2Instrument)
 
 add_subdirectory(python_src)
 

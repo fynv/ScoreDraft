@@ -24,12 +24,12 @@ public:
 		m_SampleWavList = sampleWavList;
 	}
 
+protected:
+	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
+
 private:
 	void _generateNoteWave(unsigned index, float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
-
 	void _interpolateBuffers(const float* src1, const float* src2, float* dst, unsigned length, float freq1, float freq2, float freq);
-
-	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
 	unsigned m_chn;
 	std::vector<InstrumentSample_deferred>* m_SampleWavList;

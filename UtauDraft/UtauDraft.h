@@ -76,6 +76,7 @@ public:
 	void SetUsePrefixMap(bool use) { m_use_prefix_map = use; }
 	void SetCZMode(bool czmode) { m_CZMode = czmode; }
 
+protected:
 	virtual void GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf);
 	virtual void GenerateWave_SingConsecutive(SyllableInternalList syllableList, NoteBuffer* noteBuf);
 

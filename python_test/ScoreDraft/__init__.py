@@ -149,3 +149,9 @@ except ImportError:
 	pass
 
 
+try:
+	from .SF2Instrument import ListPresets as ListPresetsSF2
+	from .SF2Instrument import SF2Instrument
+
+except ImportError:
+	pass	

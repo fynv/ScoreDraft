@@ -16,9 +16,10 @@ public:
 		m_sample = sample;
 	}
 
-private:
+protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf);
 
+private:
 	InstrumentSample *m_sample;
 };
 

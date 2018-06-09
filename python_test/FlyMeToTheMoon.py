@@ -146,7 +146,9 @@ seq1 = seq1 + [do(6,192)]
 seq2 = seq2 + [do(3,192), BK(180), so(3,180), BK(168), do(4,168), BK(156), mi(4,156), BK(144), so(4,144), BK(132), do(5,132) ]	
 
 
-instrument=ScoreDraft.Piano()
+# instrument=ScoreDraft.Piano()
+instrument = ScoreDraft.SF2Instrument('florestan-subset.sf2', 0)
+
 
 doc.playNoteSeq(seq1, instrument)
 doc.playNoteSeq(seq2, instrument)

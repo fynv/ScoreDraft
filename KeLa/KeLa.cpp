@@ -210,6 +210,8 @@ public:
 
 	}
 
+protected:
+
 	virtual void GenerateWave(SyllableInternal syllable, NoteBuffer* noteBuf)
 	{
 		if (syllable.ctrlPnts.size() < 1) return;

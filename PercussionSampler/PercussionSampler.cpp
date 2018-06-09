@@ -1,14 +1,5 @@
 ﻿#include "PyScoreDraft.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <dlfcn.h>
-#endif
-
 #include <string.h>
 #include <math.h>
 #include <ReadWav.h>
@@ -82,6 +73,7 @@ public:
 		m_sample = sample;
 	}
 
+protected:
 	virtual void GenerateBeatWave(float fNumOfSamples, NoteBuffer* beatBuf)
 	{
 		if (!m_sample) return;

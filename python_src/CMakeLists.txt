@@ -15,6 +15,7 @@ InstrumentSampler.py
 KeLa.py
 UtauDraft.py
 Meteor.py
+SF2Instrument.py
 
 CVVCChineseConverter.py
 JPVCVConverter.py
