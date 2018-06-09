@@ -42,6 +42,7 @@ ScoreDraft 是一个简洁的音乐和歌唱合成系统，它提供了基于Pyt
 
 但请注意，本项目在二进制部分包含混合内容。
 
+* 涉及到SoundFont2支持的部分移植了来自TinySoundFont(https://github.com/schellingb/TinySoundFont) 的代码，在MIT协议框架下使用。
 * Qtxxx.dll 版权属于 [The Qt Company](https://www.qt.io/), 使用和拷贝需遵守LGPL协议。
 * Alesis-Fusion-Bright-Acoustic-Piano-xx.wav, BassDrum.wav, ClosedHitHat.wav, Snare.wav来自
 [https://freewavesamples.com](https://freewavesamples.com)
