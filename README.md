@@ -50,13 +50,16 @@ using ScoreDraft.
 I'm intending to make all my source-code contribution to GitHub totally free to 
 use, like the permission granted by a BSD or MIT license.
 
-However, the repository itself contains mixed content. I wrote all the 
-C/C++/Python/CMake source code. Basically, you can use and copy these files freely.
-The SoundFonts related code is ported from TinySoundFont 
+However, the repository itself contains mixed content.
+
+* The SoundFonts related code is ported from TinySoundFont 
 (https://github.com/schellingb/TinySoundFont), used under MIT license, 
 with a lot of modifications.
-There are dlls from Qt5 in the binary part, which are in LGPL license. 
-Be careful when using them. There are also a few audio samples from:
+
+* There are dlls from Qt5 in the binary part, which are in LGPL license. 
+Be careful when using them. 
+
+* There are also a few audio samples from:
 
 [https://freewavesamples.com](https://freewavesamples.com)
 
