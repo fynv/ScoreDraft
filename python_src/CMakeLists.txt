@@ -10,6 +10,7 @@ Singer.py
 Document.py
 InternalInstruments.py
 Notes.py
+RapChinese.py
 PercussionSampler.py
 InstrumentSampler.py
 KeLa.py
@@ -19,7 +20,6 @@ SF2Instrument.py
 
 CVVCChineseConverter.py
 JPVCVConverter.py
-RapChinese.py
 TsuroVCVConverter.py
 TTEnglishConverter.py
 TTLyricSet.data
