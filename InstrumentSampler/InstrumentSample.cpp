@@ -64,7 +64,10 @@ void InstrumentSample::_fetchOriginFreq(const char* wav_path)
 				localMono[i] = 0.5f*(m_wav_samples[i * 2] + m_wav_samples[i * 2 + 1]);
 			}
 		}
-		m_origin_freq = fetchFrequency(m_wav_length, pSamples, m_origin_sample_rate);
+		Buffer buf;
+		buf.m_size = m_wav_length;
+		buf.m_data = pSamples;
+		m_origin_freq = fetchFrequency(buf, m_origin_sample_rate);
 		printf("Detected frequency of %s : %fHz\n", wav_path, m_origin_freq);
 		fp = fopen(freq_path.data(), "w");
 		fprintf(fp, "%f\n", m_origin_freq);
