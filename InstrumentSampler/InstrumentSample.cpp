@@ -57,7 +57,7 @@ void InstrumentSample::_fetchOriginFreq(const char* wav_path)
 		}
 		else if (m_chn == 2)
 		{
-			float* localMono = new float[m_wav_length];
+			localMono = new float[m_wav_length];
 			pSamples = localMono;
 			for (unsigned i = 0; i < m_wav_length; i++)
 			{
