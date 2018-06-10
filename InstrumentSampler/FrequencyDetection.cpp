@@ -118,109 +118,75 @@ public:
 
 };
 
-
-void fetchFrequency(unsigned length, float *samples, unsigned sampleRate, float& freq, float& dyn)
-{
-	unsigned len = 1;
-	unsigned l = 0;
-	while (len < length * 2)
-	{
-		l++;
-		len <<= 1;
-	}
-
-	DComp* fftData = new DComp[len];
-	memset(fftData, 0, sizeof(DComp)*len);
-
-	for (unsigned i = 0; i<length; i++)
-	{
-		fftData[i].Re = (double)samples[i];
-		fftData[i].Im = 0.0;
-	}
-	fft(fftData, l);
-
-	// self-correlation
-	for (unsigned i = 0; i<len; i++)
-	{
-		DComp c = fftData[i];
-		fftData[i].Re = c.Re*c.Re + c.Im*c.Im;
-		fftData[i].Im = 0.0;
-	}
-
-	ifft(fftData, l);
-
-	dyn = (float)fftData[0].Re*700.0f;
-	freq = -1.0f;
-
-	if (fftData[0].Re > 0.01)
-	{
-		unsigned maxi = (unsigned)(-1);
-
-		double lastV = fftData[0].Re;
-		double maxV = 0.0f;
-		bool ascending = false;
-
-		for (unsigned i = sampleRate / 2000; i < min(sampleRate / 30, len / 2); i++)
-		{
-			double v = fftData[i].Re;
-			if (!ascending)
-			{
-				if (v > lastV) ascending = true;
-			}
-			else
-			{
-				if (v < lastV)
-				{
-					if (fftData[i - 1].Re>maxV)
-					{
-						maxV = fftData[i - 1].Re;
-						maxi = i - 1;
-					}
-					ascending = false;
-				}
-			}
-			lastV = v;
-		}
-
-		if (maxi != (unsigned)(-1) && maxV > 0.3f* fftData[0].Re)
-		{
-			freq = (float)sampleRate / (float)maxi;
-		}
-	}
-
-	delete[] fftData;
-
-}
-
 float fetchFrequency(const Buffer& buf, unsigned sampleRate)
 {
-	unsigned halfWinLen = 2048;
-	float* temp = new float[halfWinLen * 2];
+	unsigned l = 12;
+	unsigned halfWinLen = 1<<(l-1);
 
-	float aveFreq = 0.0f;
-	float count = 0.0f;
+	float* fft_acc = new float[halfWinLen];
+	memset(fft_acc, 0, sizeof(float)*halfWinLen);
+
+	DComp* fftData = new DComp[halfWinLen * 2];
+	fftData[0].Re = 0.0;
+	fftData[0].Im = 0.0;
+
 	for (unsigned center = 0; center < buf.m_size; center += halfWinLen)
 	{
 		Window win;
 		win.CreateFromBuffer(buf, (float)center, (float)halfWinLen);
 
-		for (int i = -(int)halfWinLen; i < (int)halfWinLen; i++)
-			temp[i + halfWinLen] = win.GetSample(i);
-
-		float freq;
-		float dyn;
-		fetchFrequency(halfWinLen * 2, temp, sampleRate, freq, dyn);
-
-		if (freq > 0)
+		for (unsigned i = 1; i<halfWinLen*2; i++)
 		{
-			aveFreq += freq;
-			count += 1.0f;
+			fftData[i].Re = (double)win.GetSample(i - halfWinLen);
+			fftData[i].Im = 0.0;
+		}
+		fft(fftData, l);
+
+		for (unsigned i = 0; i < halfWinLen; i++)
+		{
+			DComp c = fftData[i];
+			fft_acc[i] += c.Re*c.Re + c.Im*c.Im;
 		}
 	}
 
-	aveFreq /= count;
+	for (unsigned i = 0; i < halfWinLen; i++)
+	{
+		fftData[i].Re = (double)fft_acc[i];
+		fftData[i].Im = 0.0;
+	}
+	ifft(fftData, l);
 
-	delete[] temp;
+	unsigned maxi = (unsigned)(-1);
 
-	return aveFreq;
+	double lastV = fftData[0].Re;
+	double maxV = 0.0f;
+	bool ascending = false;
+
+	for (unsigned i = sampleRate / 2000; i < min(sampleRate / 30, halfWinLen); i++)
+	{
+		double v = fftData[i].Re;
+		if (!ascending)
+		{
+			if (v > lastV) ascending = true;
+		}
+		else
+		{
+			if (v < lastV)
+			{
+				if (fftData[i - 1].Re>maxV)
+				{
+					maxV = fftData[i - 1].Re;
+					maxi = i - 1;
+				}
+				ascending = false;
+			}
+		}
+		lastV = v;
+	}
+
+	float freq = (float)sampleRate / (float)maxi;
+
+	delete[] fft_acc;
+
+	return freq;
 }
