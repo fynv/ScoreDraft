@@ -153,5 +153,21 @@ try:
 	from .SF2Instrument import ListPresets as ListPresetsSF2
 	from .SF2Instrument import SF2Instrument
 
+	SF2_ROOT=ScoreDraftPath+'/SF2'
+	if os.path.isdir(SF2_ROOT):
+		for item in os.listdir(SF2_ROOT):
+			sf2_path = SF2_ROOT+'/'+item
+			if os.path.isfile(sf2_path) and item.endswith(".sf2"):
+				name = item[0:len(item)-4]
+				definition="""
+def """+name+"""(preset_index):
+	return SF2Instrument('"""+sf2_path+"""', preset_index)
+
+def """+name+"""_List():
+	ListPresetsSF2('"""+sf2_path+"""')
+"""
+				exec(definition)
+				Catalog['Instruments'] += [name+' - SF2Instrument']
+
 except ImportError:
 	pass	
