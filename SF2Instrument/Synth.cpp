@@ -1,4 +1,5 @@
 #include "Synth.h"
+#include <cmath>
 
 void Synth(const float* input, float* outputBuffer, unsigned numSamples, NoteState& noteState, const SynthCtrl& control)
 {
