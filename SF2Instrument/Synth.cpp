@@ -31,7 +31,7 @@ void Synth(const float* input, float* outputBuffer, unsigned numSamples, NoteSta
 
 		float gainMono = ctrlPnt.gainMono;
 		double pitchRatio = ctrlPnt.pitchRatio;
-		bool interpolation = pitchRatio < 1.0f;
+		bool interpolation = pitchRatio <= 1.0f;
 
 		gainLeft = gainMono *control.panFactorLeft;
 		gainRight = gainMono  * control.panFactorRight;
@@ -71,15 +71,18 @@ void Synth(const float* input, float* outputBuffer, unsigned numSamples, NoteSta
 			{
 				int ipos1 = (int)ceil(tmpSourceSamplePosition - 0.5* pitchRatio);
 				int ipos2 = (int)floor(tmpSourceSamplePosition + 0.5* pitchRatio);
-				if (ipos1 < 0) ipos1 = 0;
-				if (!ctrlPnt.looping && ipos2 >= (int)tmpEnd) ipos2 = tmpEnd - 1;
 				int count = ipos2 - ipos1 + 1;
 				for (int ipos = ipos1; ipos <= ipos2; ipos++)
 				{
 					int _ipos = ipos;
+					if (_ipos < 0) _ipos = 0;
 					if (_ipos > (int)tmpLoopEnd && ctrlPnt.looping)
 					{
 						_ipos += (int)tmpLoopStart - (int)tmpLoopEnd -1;
+					}
+					if (_ipos >= (int)tmpEnd)
+					{
+						_ipos = tmpEnd - 1;
 					}
 					val += input[_ipos];
 				}
