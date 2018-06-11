@@ -136,7 +136,7 @@ static void tsf_voice_envelope_nextsegment(struct tsf_voice_envelope* e, short a
 	}
 }
 
-static void tsf_voice_envelope_setup(struct tsf_voice_envelope* e, struct tsf_envelope* new_parameters, float midiNoteNumber, short midiVelocity, TSF_BOOL isAmpEnv, float outSampleRate)
+static void tsf_voice_envelope_setup(struct tsf_voice_envelope* e, const struct tsf_envelope* new_parameters, float midiNoteNumber, short midiVelocity, TSF_BOOL isAmpEnv, float outSampleRate)
 {
 	e->parameters = *new_parameters;
 	if (e->parameters.keynumToHold!=0.0f)
@@ -200,9 +200,12 @@ static void tsf_voice_lfo_process(struct tsf_voice_lfo* e, int blockSamples)
 #define TSF_RENDER_EFFECTSAMPLEBLOCK 64
 #endif
 
-F32Samples_deferred  SynthRegion(F32Samples& input, tsf_region& region, float key, float vel,
+F32Samples_deferred SynthRegion(F32Samples& input, const tsf_region& region, float key, float vel,
 	unsigned& numSamples, OutputMode outputmode, float samplerate, float global_gain_db)
 {
+	/*FILE *fp = fopen("dump.txt", "a");
+	region.print(fp);
+	fclose(fp);*/
 	int midiVelocity = (int)(vel * 127);
 
 	float noteGainDB =global_gain_db - region.attenuation - tsf_gainToDecibels(1.0f / vel);
