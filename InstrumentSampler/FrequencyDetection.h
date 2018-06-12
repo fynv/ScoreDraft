@@ -1,6 +1,8 @@
 #ifndef _FrequencyDetection_h
 #define _FrequencyDetection_h
 
+#include <memory.h>
+#include <math.h>
 #include <vector>
 
 class Buffer

@@ -1,5 +1,3 @@
-#include <memory.h>
-#include <math.h>
 #include "FrequencyDetection.h"
 #include "fft.h"
 
