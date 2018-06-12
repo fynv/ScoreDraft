@@ -358,18 +358,19 @@ F32Samples_deferred  SF2Synth(F32Samples& input, tsf_preset& preset, float key, 
 	std::vector<tsf_region>::iterator region, regionEnd;
 	std::vector<F32Samples_deferred> results;
 
-	numSamples = 0;
+	unsigned max_numSamples = 0;
 	for (region = preset.regions.begin(), regionEnd = region + preset.regions.size();
 		region != regionEnd; region++)
 	{
 		if (iKey < region->lokey || iKey > region->hikey || midiVelocity < region->lovel || midiVelocity > region->hivel) continue;
 
-		unsigned region_numSamples;
+		unsigned region_numSamples = numSamples;
 		F32Samples_deferred result=SynthRegion(input, *region, key, vel, region_numSamples, outputmode, samplerate, global_gain_db);
 		results.push_back(result);
-		if (region_numSamples > numSamples)
-			numSamples = region_numSamples;
+		if (region_numSamples > max_numSamples)
+			max_numSamples = region_numSamples;
 	}
+	numSamples = max_numSamples;
 
 	if (results.size() < 1)
 		return F32Samples_deferred();
@@ -380,8 +381,8 @@ F32Samples_deferred  SF2Synth(F32Samples& input, tsf_preset& preset, float key, 
 		unsigned chn = outputmode == MONO ? 1 : 2;
 
 		F32Samples_deferred outBuf;
-		outBuf->resize(numSamples*chn);
-		memset(outBuf->data(), 0, sizeof(float)* numSamples*chn);
+		outBuf->resize(max_numSamples*chn);
+		memset(outBuf->data(), 0, sizeof(float)* max_numSamples*chn);
 
 		for (unsigned i = 0; i < results.size(); i++)
 		{
