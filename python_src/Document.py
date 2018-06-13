@@ -14,7 +14,7 @@ class Document:
 	def __init__ (self):
 		self.bufferList=[]
 		self.tempo=80
-		self.refFreq=264.0
+		self.refFreq=261.626
 
 	def getBuffer(self, bufferIndex):
 		return self.bufferList[bufferIndex]
