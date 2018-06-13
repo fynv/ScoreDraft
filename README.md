@@ -47,25 +47,31 @@ using ScoreDraft.
 
 ## About Copying
 
-I'm intending to make all my source-code contribution to GitHub totally free to 
-use, like the permission granted by a BSD or MIT license.
+I'm intending to make all my source-code contribution to GitHub totally free to use.
 
-However, the repository itself contains mixed content.
+ScoreDraft is now formally available under [MIT license](https://choosealicense.com/licenses/mit/).
 
-* The SoundFonts related code is ported from TinySoundFont 
-(https://github.com/schellingb/TinySoundFont), used under MIT license, 
-with a lot of modifications.
+With
 
-* There are dlls from Qt5 in the binary part, which are in LGPL license. 
-Be careful when using them. 
+**Dependecies**
 
-* There are also a few audio samples from:
+Source code under /ScoreDraft_local/SF2Instrument is based on 
+TinySoundFont, Copyright (C) 2017 Bernhard Schelling (https://github.com/schellingb/TinySoundFont)
 
-[https://freewavesamples.com](https://freewavesamples.com)
+**Exclusions**
 
-[http://utau.vocalover.com/](http://utau.vocalover.com/)
+The above licenses only applie to the source code within the repository.
+Binaries under /python_test are not included in the license. Including (not limited to):
 
-Please refer to the original copyright information when using/copying these files.
+* Dlls from Qt5 are in LGPL license
+* Audio samples from
+
+https://freewavesamples.com
+http://utau.vocalover.com/
+
+have their own licenses.
+
+Users are on their own responsibility to properly use binaries under /python_test. 
 
 DON'T USE THE CONTENT OF THIS REPOSITORY TO DO ANY BAD THINGS.
 THE AUTHOR OF SCOREDRAFT DOES NOT HAVE ANY RESPONSIBILITY IN SUCH CASE.

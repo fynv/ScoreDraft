@@ -40,7 +40,9 @@ ScoreDraft 是一个简洁的音乐和歌唱合成系统，它提供了基于Pyt
 本账号在GitHub上发布的全部源代码您都可以自由地使用和拷贝。这里的“自由”等同于BSD或MIT协议所
 给予的许可。
 
-但请注意，本项目包含以下混合内容。
+ScoreDraft 目前已正式基于MIT协议授权。
+
+注意事项：
 
 * 涉及到SoundFont2支持的部分移植了来自TinySoundFont(https://github.com/schellingb/TinySoundFont) 的代码，在MIT协议框架下使用。
 * Qtxxx.dll 版权属于 [The Qt Company](https://www.qt.io/), 使用和拷贝需遵守LGPL协议。
