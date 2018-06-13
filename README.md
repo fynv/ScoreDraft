@@ -60,7 +60,7 @@ TinySoundFont, Copyright (C) 2017 Bernhard Schelling (https://github.com/schelli
 
 **Exclusions**
 
-The above licenses only applie to the source code within the repository.
+The above licenses only apply to the source code within the repository.
 Binaries under /python_test are not included in the license. Including (not limited to):
 
 * Dlls from Qt5 are in LGPL license
