@@ -10,8 +10,9 @@ inline float rand01()
 	return f;
 }
 
-Deferred<std::vector<float>> GeneratePinkNoise(unsigned uLen)
+Deferred<std::vector<float>> GeneratePinkNoise(float period)
 {
+	unsigned uLen = (unsigned)ceilf(period);
 	unsigned l = 0;
 	unsigned fftLen = 1;
 	while (fftLen < uLen)
@@ -23,7 +24,7 @@ Deferred<std::vector<float>> GeneratePinkNoise(unsigned uLen)
 	std::vector<DComp> fftData(fftLen);
 	memset(&fftData[0], 0, sizeof(DComp)*fftLen);
 
-	for (unsigned i = 1; i < uLen / 2; i++)
+	for (unsigned i = 1; i < (unsigned)(period) / 2; i++)
 	{
 		float amplitude = (float)fftLen / sqrtf((float)i);
 		float phase = rand01()*(float)(2.0*PI);
@@ -36,22 +37,25 @@ Deferred<std::vector<float>> GeneratePinkNoise(unsigned uLen)
 
 	ifft(&fftData[0], l);
 
-	Deferred<std::vector<float>> ret;
-	ret->resize(uLen);
+	unsigned pnLen = (unsigned)ceilf(period*2.0f);
 
-	float rate = (float)fftLen / (float)uLen;
-	for (unsigned i = 0; i < uLen; i++)
+	Deferred<std::vector<float>> ret;
+	ret->resize(pnLen);
+
+	float rate = (float)fftLen / period;
+	for (unsigned i = 0; i < pnLen; i++)
 	{
 		int ipos1 = (int)ceilf(((float)i - 0.5f)*rate);
 		if (ipos1 < 0) ipos1 = 0;
 		int ipos2 = (int)floorf(((float)i + 0.5f)*rate);
-		if (ipos2 >=(int) fftLen) ipos2 = fftLen - 1;
 		int count = ipos2 - ipos1 + 1;
 
 		float sum = 0.0f;
 		for (int ipos = ipos1; ipos <= ipos2; ipos++)
 		{
-			sum += (float)fftData[ipos].Re;
+			int _ipos = ipos;
+			while (_ipos >= fftLen) _ipos -= fftLen;
+			sum += (float)fftData[_ipos].Re;
 		}
 		(*ret)[i]=sum / (float)count;
 	}
@@ -91,7 +95,7 @@ protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 	{
 		float period = 1.0f / sampleFreq;
-		Deferred<std::vector<float>> pinkNoise = GeneratePinkNoise((unsigned)ceilf(period));
+		Deferred<std::vector<float>> pinkNoise = GeneratePinkNoise(period);
 		
 		float sustainLen = m_sustain_periods*period;
 		unsigned totalLen = (unsigned)ceilf(fNumOfSamples + sustainLen);
@@ -100,25 +104,47 @@ protected:
 		noteBuf->m_channelNum = 1;
 		noteBuf->Allocate();
 
-		memcpy(noteBuf->m_data, pinkNoise->data(), sizeof(float)*pinkNoise->size());
-
-		unsigned pos = (unsigned)pinkNoise->size();
-
 		float cut_freq = m_cut_freq/261.626f* sampleFreq;
 		float a = (float)(1.0 - exp(-2.0*PI* cut_freq));
 
+		unsigned pos = 0;
+
 		while (pos < totalLen)
 		{
-			float gain = (float)pos < fNumOfSamples ? m_loop_gain : m_sustain_gain;
+			float value = 0.0f;
+			if ((float)pos < period*2.0f)
+				value += (*pinkNoise)[pos] * 0.5f*(cosf(((float)pos - period) / period*PI) + 1.0f);
 
-			float refPos = (float)pos - period;
-			unsigned refPos0 = (unsigned)refPos;
-			unsigned refPos1 = refPos0 + 1;
-			float k = refPos - (float)refPos0;
-			float ref = noteBuf->m_data[refPos0] * (1.0f - k) + noteBuf->m_data[refPos1] * k;
+			if ((float)pos >= period)
+			{
+				float gain = (float)pos < fNumOfSamples ? m_loop_gain : m_sustain_gain;
+
+				float refPos = (float)pos - period;
+
+				int refPos1 = (int)refPos;
+				int refPos2 = refPos1 + 1;
+				float frac = refPos - (float)refPos1;
+
+				// linear interpolation
+				float ref = noteBuf->m_data[refPos1] * (1.0f - frac) + noteBuf->m_data[refPos2] * frac;
+
+				// cubic interpolation
+				/*int refPos0 = refPos1 - 1;
+				if (refPos0 < 0) refPos0 = 0;
+
+				int refPos3 = refPos1 + 2;
+				float p0 = noteBuf->m_data[refPos0];
+				float p1 = noteBuf->m_data[refPos1];
+				float p2 = noteBuf->m_data[refPos2];
+				float p3 = noteBuf->m_data[refPos3];
+				float ref = (-0.5f*p0 + 1.5f*p1 - 1.5f*p2 + 0.5f*p3)*powf(frac, 3.0f) +
+					(p0 - 2.5f*p1 + 2.0f*p2 - 0.5f*p3)*powf(frac, 2.0f) +
+					(-0.5f*p0 + 0.5f*p2)*frac + p1;*/
+
+				value += gain*a*ref + (1.0f - a)*noteBuf->m_data[pos - 1];
+			}
 			
-			noteBuf->m_data[pos] = gain*a*ref + (1.0f - a)*noteBuf->m_data[pos - 1];
-
+			noteBuf->m_data[pos] = value;
 			pos++;
 		}
 
