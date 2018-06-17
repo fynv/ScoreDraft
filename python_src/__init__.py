@@ -171,3 +171,8 @@ def """+name+"""_List():
 
 except ImportError:
 	pass	
+
+try:
+	from .KarplusStrongInstrument import KarplusStrongInstrument
+except ImportError:
+	pass	

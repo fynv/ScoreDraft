@@ -17,6 +17,7 @@ KeLa.py
 UtauDraft.py
 Meteor.py
 SF2Instrument.py
+KarplusStrongInstrument.py
 
 CVVCChineseConverter.py
 JPVCVConverter.py
