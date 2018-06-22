@@ -2,7 +2,7 @@
 
 ScoreDraft
 ================
-ScoreDraft is a simple music/singing synthesizer that provides a Python based 
+ScoreDraft is a music/singing synthesizer that provides a Python based 
 score authoring interface. 
 
 Historically, there have been changes in the design goal of ScoreDraft.
