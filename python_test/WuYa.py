@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import ScoreDraft
-#from ScoreDraft.Notes import *
+from ScoreDraft.Notes import *
 
 Freqs=[1.0, 9.0/8.0, 81.0/64.0, 4.0/3.0, 3.0/2.0, 27.0/16.0, 243.0/128.0]
 
@@ -44,10 +44,8 @@ Freqs[:]=FreqsF
 doc=ScoreDraft.MeteorDocument()
 doc.setTempo(120)
 
-# link to voicebank: http://utau.vocalover.com/newgeping.html
 GePing = ScoreDraft.GePing_UTAU()
 
-# link to voicebank: https://bowlroll.net/file/53297
 Ayaka = ScoreDraft.Ayaka_UTAU()
 Ayaka.setLyricConverter(ScoreDraft.CVVCChineseConverter)
 
@@ -60,16 +58,18 @@ Piano=ScoreDraft.Piano()
 BassDrum=ScoreDraft.BassDrum()
 Snare=ScoreDraft.Snare()
 
-perc_list=[BassDrum,Snare]
+# perc_list=[BassDrum,Snare]
+
+GMDrum = ScoreDraft.Arachno(128)
 
 def dong(duration=48):
-	return (0,duration)
+	return note(3,fC,duration)
 
 def cha(duration=48):
-	return (1,duration)
+	return note(3,fD,duration)
 
 def Bl(duration=48):
-	return (-1,duration)
+	return (-1.0,duration)
 
 
 track=doc.newBuf()
@@ -357,7 +357,10 @@ doc.playNoteSeq(seq_gm, GuitarMute, track_gm)
 doc.playNoteSeq(seq_g,Guitar, track_g)
 doc.playNoteSeq(seq_pi,Piano, track_pi)
 doc.playNoteSeq(seq_b,Bass, track_b)
-doc.playBeatSeq(seq_p, perc_list, track_p)
+
+# doc.playBeatSeq(seq_p, perc_list, track_p)
+
+doc.playNoteSeq(seq_p, GMDrum, track_p)
 
 
 doc.setTrackVolume(track_gm, 0.5)
@@ -366,5 +369,6 @@ doc.setTrackVolume(track_pi, 0.5)
 doc.setTrackVolume(track_b, 0.5)
 doc.setTrackVolume(track_p, 0.5)
 
+doc.saveToFile('WuYa.meteor')
 doc.meteor()
 doc.mixDown('WuYa.wav')

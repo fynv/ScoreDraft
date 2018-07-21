@@ -18,6 +18,12 @@ public:
 
 	void setSF2(F32Samples* input, tsf_preset* preset) { m_input = input; m_preset = preset; }
 
+	virtual bool IsGMDrum()
+	{
+		if (!m_preset) return false;
+		return m_preset->bank == 128;
+	}
+
 protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 	{

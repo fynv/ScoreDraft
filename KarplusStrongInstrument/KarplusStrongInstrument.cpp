@@ -10,7 +10,7 @@ inline float rand01()
 	return f;
 }
 
-Deferred<std::vector<float>> GeneratePinkNoise(float period)
+static Deferred<std::vector<float>> GeneratePinkNoise(float period)
 {
 	unsigned uLen = (unsigned)ceilf(period);
 	unsigned l = 0;

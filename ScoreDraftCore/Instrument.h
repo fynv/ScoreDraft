@@ -24,6 +24,8 @@ public:
 
 	void SetNoteVolume(float volume) {	m_noteVolume = volume;	}
 	void SetNotePan(float pan) { m_notePan = pan;  }
+
+	virtual bool IsGMDrum() { return false; }
 	
 protected:
 	void Silence(unsigned numOfSamples, NoteBuffer* noteBuf);

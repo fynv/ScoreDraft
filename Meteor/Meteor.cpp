@@ -7,7 +7,7 @@
 
 static PyScoreDraft* s_PyScoreDraft;
 
-void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap)
+void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap, bool isGMDrum)
 {
 	bool tempo_map = tempoMap != nullptr;
 
@@ -56,15 +56,28 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, floa
 
 							beatPos += duration;
 
-							if (freq_rel >0.0f)
+							if (freq_rel > 0.0f)
 							{
-
-								VisNote note;
-								note.instrumentId = instrumentId;
-								note.pitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift;
-								note.start = pos;
-								note.end = pos + fduration;
-								m_notes.push_back(note);
+								if (!isGMDrum)
+								{
+									VisNote note;
+									note.instrumentId = instrumentId;
+									note.pitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift;
+									note.start = pos;
+									note.end = pos + fduration;
+									m_notes.push_back(note);
+								}
+								else
+								{
+									int midiPitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift + 60;
+									if (midiPitch < 0) midiPitch = 0;
+									else if (midiPitch>127) midiPitch = 127;
+									VisBeat beat;
+									beat.percId = midiPitch;
+									beat.start = pos;
+									beat.end = pos + fduration;
+									m_beats.push_back(beat);
+								}
 							}
 							pos += fduration;
 
@@ -90,14 +103,28 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, floa
 
 						beatPos += duration;
 
-						if (freq_rel >0.0f)
+						if (freq_rel > 0.0f)
 						{
-							VisNote note;
-							note.instrumentId = instrumentId;
-							note.pitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift;
-							note.start = pos;
-							note.end = pos + fduration;
-							m_notes.push_back(note);
+							if (!isGMDrum)
+							{
+								VisNote note;
+								note.instrumentId = instrumentId;
+								note.pitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift;
+								note.start = pos;
+								note.end = pos + fduration;
+								m_notes.push_back(note);
+							}
+							else
+							{
+								int midiPitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift + 60;
+								if (midiPitch < 0) midiPitch = 0;
+								else if (midiPitch>127) midiPitch = 127;
+								VisBeat beat;
+								beat.percId = midiPitch;
+								beat.start = pos;
+								beat.end = pos + fduration;
+								m_beats.push_back(beat);
+							}
 						}
 						pos += fduration;
 
@@ -130,12 +157,26 @@ void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, floa
 
 				if (freq_rel >0.0f)
 				{
-					VisNote note;
-					note.instrumentId = instrumentId;
-					note.pitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift;
-					note.start = pos;
-					note.end = pos + fduration;
-					m_notes.push_back(note);
+					if (!isGMDrum)
+					{
+						VisNote note;
+						note.instrumentId = instrumentId;
+						note.pitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift;
+						note.start = pos;
+						note.end = pos + fduration;
+						m_notes.push_back(note);
+					}
+					else
+					{
+						int midiPitch = (int)floorf(logf(freq_rel)*12.0f / logf(2.0f) + 0.5f) + pitchShift + 60;
+						if (midiPitch < 0) midiPitch = 0;
+						else if (midiPitch>127) midiPitch = 127;
+						VisBeat beat;
+						beat.percId = midiPitch;
+						beat.start = pos;
+						beat.end = pos + fduration;
+						m_beats.push_back(beat);
+					}
 				}
 				pos += fduration;
 			}
@@ -178,7 +219,7 @@ void Visualizer::ProcessBeatSeq(unsigned percIdList[], float startPosition, floa
 			if (percId >= 0)
 			{
 				VisBeat beat;
-				beat.percId = percId;
+				beat.percId = percId+128;
 				beat.start = pos;
 				beat.end = pos + fduration;
 				m_beats.push_back(beat);
@@ -685,6 +726,9 @@ static PyObject* ProcessNoteSeq(PyObject *args)
 	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
 	unsigned instrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
 
+	Instrument_deferred inst = s_PyScoreDraft->GetInstrument(instrumentId);
+	bool isGMDrum = inst->IsGMDrum();
+
 	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
 	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
 	float sampleRate = buffer->Rate();
@@ -729,7 +773,7 @@ static PyObject* ProcessNoteSeq(PyObject *args)
 	}
 
 	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
-	visualizer->ProcessNoteSeq(instrumentId, startPosition, sampleRate, seq_py, tempo, RefFreq, tempo_map? &tempoMap: nullptr);
+	visualizer->ProcessNoteSeq(instrumentId, startPosition, sampleRate, seq_py, tempo, RefFreq, tempo_map ? &tempoMap : nullptr, isGMDrum);
 
 	return PyLong_FromUnsignedLong(0);
 }
