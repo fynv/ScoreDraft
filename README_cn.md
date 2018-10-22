@@ -49,7 +49,7 @@ ScoreDraft 目前已正式基于MIT协议授权。
 * Alesis-Fusion-Bright-Acoustic-Piano-xx.wav, BassDrum.wav, ClosedHitHat.wav, Snare.wav来自
 [https://freewavesamples.com](https://freewavesamples.com)
 在使用和拷贝时请遵守其原始版权声明。
-* 来自葛平音源和金坷垃jklex音源的少量内容，在使用和拷贝时请参照其原始版权声明
+* 来自金坷垃jklex音源的少量内容，在使用和拷贝时请参照其原始版权声明
 [http://utau.vocalover.com/](http://utau.vocalover.com/)
 
 请勿使用ScoreDraft从事任何有违法律和道德的活动，一旦发生该情况， ScoreDraft的作者不负任何责任。
