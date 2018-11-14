@@ -1,6 +1,15 @@
 import os
 from . import PyScoreDraft
-ScoreDraftPath= os.path.dirname(__file__)
+
+ScoreDraftPath_old= os.path.dirname(__file__)
+ScoreDraftPath=""
+#\\escaping fix
+for ch in ScoreDraftPath_old:
+	if ch=="\\":
+		ScoreDraftPath+="/"
+	else:
+		ScoreDraftPath+=ch
+
 if os.name == 'nt':
 	os.environ["PATH"]+=";"+ScoreDraftPath
 elif os.name == "posix":
@@ -98,6 +107,7 @@ def """+name+"""():
 				exec(definition)
 				Catalog['Instruments'] += [name+' - InstrumentSampler_Single']
 			elif os.path.isdir(inst_path):
+				name = item
 				definition="""
 def """+item+"""():
 	return InstrumentSampler_Multi('"""+inst_path+"""')
