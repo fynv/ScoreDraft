@@ -7,22 +7,57 @@ from .Percussion import Percussion
 from .Singer import Singer
 
 try:
-	from .Extensions import MeteorInitVisualizer
-	from .Extensions import MeteorDelVisualizer
-	from .Extensions import MeteorProcessNoteSeq
-	from .Extensions import MeteorProcessBeatSeq
-	from .Extensions import MeteorProcessSingingSeq
-	from .Extensions import MeteorPlay
-	from .Extensions import MeteorSaveToFile
+	from .PyMeteor import MeteorInitVisualizer, MeteorDelVisualizer
+	from .PyMeteor import MeteorProcessNoteSeq
+	from .PyMeteor import MeteorProcessBeatSeq
+	from .PyMeteor import MeteorProcessSingingSeq
+	from .PyMeteor import MeteorPlay
+	from .PyMeteor import MeteorSaveToFile
+
+	class Visualizer:
+		def __init__ (self):
+			self.m_cptr = MeteorInitVisualizer()
+			self.m_last_id = 0
+			self.m_id_map = {}
+
+		def __del__ (self):
+			MeteorDelVisualizer(self.m_cptr)
+
+		def ProcessNoteSeq(self, instrument, buf, seq, tempo, refFreq):
+			if not instrument in self.m_id_map:
+				self.m_id_map[instrument]=self.m_last_id
+				self.m_last_id+=1
+			inst_id = self.m_id_map[instrument]
+			MeteorProcessNoteSeq(self.m_cptr, inst_id, instrument.isGMDrum(), buf.m_cptr, seq, tempo, refFreq)
+
+		def ProcessBeatSeq(self, percList, buf, seq, tempo):
+			percIds = []
+			for perc in percList:
+				if not perc in self.m_id_map:
+					self.m_id_map[perc]=self.m_last_id
+					self.m_last_id+=1
+				percIds += [ self.m_id_map[perc] ]
+			MeteorProcessBeatSeq(self.m_cptr, percIds, buf.m_cptr, seq, tempo)
+
+		def ProcessSingingSeq(self, singer, buf, seq, tempo, refFreq):
+			if not singer in self.m_id_map:
+				self.m_id_map[singer]=self.m_last_id
+				self.m_last_id+=1
+			singer_id = self.m_id_map[singer]
+			MeteorProcessSingingSeq(self.m_cptr, singer_id,  buf.m_cptr, seq, tempo, refFreq)
+
+		def Play(self, buf):
+			MeteorPlay(self.m_cptr, buf.m_cptr)
+
+		def SaveToFile(self, filename):
+			MeteorSaveToFile(self.m_cptr, filename)
 
 	class Document:
 		def __init__ (self):
-			self.visualizerId=MeteorInitVisualizer()
+			self.visualizer = Visualizer()
 			self.bufferList=[]
 			self.tempo=80
 			self.refFreq=261.626
-		def __del__(self):
-			MeteorDelVisualizer(self.visualizerId)
 
 		def getBuffer(self, bufferIndex):
 			return self.bufferList[bufferIndex]
@@ -54,7 +89,7 @@ try:
 			if bufferIndex==-1:
 				bufferIndex= self.newBuf()		
 			buf=self.bufferList[bufferIndex]
-			MeteorProcessNoteSeq(self.visualizerId, instrument, buf, seq, self.tempo, self.refFreq)
+			self.visualizer.ProcessNoteSeq( instrument, buf, seq, self.tempo, self.refFreq)
 			instrument.play(buf, seq, self.tempo, self.refFreq)
 			return bufferIndex	
 
@@ -62,7 +97,7 @@ try:
 			if bufferIndex==-1:
 				bufferIndex= self.newBuf()		
 			buf=self.bufferList[bufferIndex]	
-			MeteorProcessBeatSeq(self.visualizerId, percList, buf, seq, self.tempo)	
+			self.visualizer.ProcessBeatSeq( percList, buf, seq, self.tempo)	
 			Percussion.play(percList, buf, seq, self.tempo)
 			return bufferIndex
 
@@ -70,7 +105,7 @@ try:
 			if bufferIndex==-1:
 				bufferIndex= self.newBuf()		
 			buf=self.bufferList[bufferIndex]
-			MeteorProcessSingingSeq(self.visualizerId, singer, buf, seq, self.tempo, self.refFreq)
+			self.visualizer.ProcessSingingSeq( singer, buf, seq, self.tempo, self.refFreq)
 			singer.sing( buf, seq, self.tempo, self.refFreq)
 			return bufferIndex
 
@@ -80,7 +115,7 @@ try:
 		def mix(self, targetBuf):
 			MixTrackBufferList(targetBuf,self.bufferList)
 
-		def mixDown(self,filename,chn=-1):
+		def mixDown(self, filename, chn=-1):
 			targetBuf=TrackBuffer(chn)
 			self.mix(targetBuf)
 			WriteTrackBufferToWav(targetBuf, filename)
@@ -88,10 +123,11 @@ try:
 		def meteor(self,chn=-1):
 			targetBuf=TrackBuffer(chn)
 			self.mix(targetBuf)
-			MeteorPlay(self.visualizerId, targetBuf)
+			self.visualizer.Play(targetBuf)
 
 		def saveToFile(self, filename):
-			MeteorSaveToFile(self.visualizerId, filename)
+			self.visualizer.SaveToFile(filename)
+
 except ImportError:
 	pass
 	

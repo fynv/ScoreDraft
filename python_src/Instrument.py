@@ -5,9 +5,6 @@ class Instrument:
 	Structure to define an instrument object 
 	An instrument object can be used to play note-sequences to a track-buffer object
 	'''
-	def __del__ (self):
-		PyScoreDraft.DelInstrument(self.id)
-
 	def tune(self, cmd):
 		'''
 		Sending a tuning command to an instrument.
@@ -18,7 +15,7 @@ class Instrument:
 		       Another command common to all instruments is "pan",  the value range is [-1.0, 1.0] example: 
 		       inst.tune("pan -0.5")
 		'''
-		PyScoreDraft.InstrumentTune(self.id, cmd)
+		PyScoreDraft.InstrumentTune(self.m_cptr, cmd)
 
 	def play(self, buf, seq, tempo=80, refFreq=261.626):
 		'''
@@ -43,11 +40,14 @@ class Instrument:
 		refFreq  --  a floating point defining the reference-frequency in Hz.
 
 		'''
-		PyScoreDraft.InstrumentPlay(buf.id, self.id, seq, tempo, refFreq)
+		PyScoreDraft.InstrumentPlay(buf.m_cptr, self.m_cptr, seq, tempo, refFreq)
 
 	def setNoteVolume(self,volume):
-		PyScoreDraft.InstrumentSetNoteVolume(self.id, volume)
+		PyScoreDraft.InstrumentSetNoteVolume(self.m_cptr, volume)
 
 	def setNotePan(self,pan):
-		PyScoreDraft.InstrumentSetNotePan(self.id, pan)
+		PyScoreDraft.InstrumentSetNotePan(self.m_cptr, pan)
+
+	def isGMDrum(self):
+		return PyScoreDraft.InstrumentIsGMDrum(self.m_cptr)
 		

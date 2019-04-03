@@ -1,9 +1,10 @@
 #ifndef _InstrumentMultiSampler_h
 #define _InstrumentMultiSampler_h
 
-#include "PyScoreDraft.h"
 #include <vector>
 
+#include "TrackBuffer.h"
+#include "Instrument.h"
 #include "InstrumentSample.h"
 
 #include <Deferred.h>

@@ -2,8 +2,6 @@
 #define _scoredraft_TrackBuffer_h
 
 #include "stdio.h"
-#include "Deferred.h"
-
 #include <utility>
 #include <vector>
 
@@ -59,16 +57,6 @@ inline float GetTempoMap(const TempoMap& tMap, int beat48)
 	return 0.0f;
 }
 
-
-class TrackBuffer;
-class TrackBuffer_deferred : public Deferred<TrackBuffer>
-{
-public:
-	TrackBuffer_deferred();
-	TrackBuffer_deferred(const TrackBuffer_deferred & in);
-	TrackBuffer_deferred(unsigned rate, unsigned chn=1);
-};
-
 class TrackBuffer
 {
 public:
@@ -113,7 +101,7 @@ public:
 
 	void GetSamples(unsigned startIndex, unsigned length, float* buffer);
 
-	bool CombineTracks(unsigned num, TrackBuffer_deferred* tracks);
+	bool CombineTracks(unsigned num, TrackBuffer** tracks);
 	unsigned GetLocalBufferSize();
 
 private:

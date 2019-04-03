@@ -1,6 +1,8 @@
-#include "PyScoreDraft.h"
+#include "Python.h"
 #include "fft.h"
 #include <vector>
+#include "Instrument.h"
+#include "TrackBuffer.h"
 
 inline float rand01()
 {
@@ -10,7 +12,7 @@ inline float rand01()
 	return f;
 }
 
-static Deferred<std::vector<float>> GeneratePinkNoise(float period)
+static void GeneratePinkNoise(float period, std::vector<float>& ret)
 {
 	unsigned uLen = (unsigned)ceilf(period);
 	unsigned l = 0;
@@ -39,8 +41,7 @@ static Deferred<std::vector<float>> GeneratePinkNoise(float period)
 
 	unsigned pnLen = (unsigned)ceilf(period*2.0f);
 
-	Deferred<std::vector<float>> ret;
-	ret->resize(pnLen);
+	ret.resize(pnLen);
 
 	float rate = (float)fftLen / period;
 	for (unsigned i = 0; i < pnLen; i++)
@@ -57,9 +58,8 @@ static Deferred<std::vector<float>> GeneratePinkNoise(float period)
 			while (_ipos >= fftLen) _ipos -= fftLen;
 			sum += (float)fftData[_ipos].Re;
 		}
-		(*ret)[i]=sum / (float)count;
+		ret[i] = sum / (float)count;
 	}
-	return ret;
 }
 
 class KarplusStrongInstrument : public Instrument
@@ -95,7 +95,8 @@ protected:
 	virtual void GenerateNoteWave(float fNumOfSamples, float sampleFreq, NoteBuffer* noteBuf)
 	{
 		float period = 1.0f / sampleFreq;
-		Deferred<std::vector<float>> pinkNoise = GeneratePinkNoise(period);
+		std::vector<float> pinkNoise;
+		GeneratePinkNoise(period, pinkNoise);
 		
 		float sustainLen = m_sustain_periods*period;
 		unsigned totalLen = (unsigned)ceilf(fNumOfSamples + sustainLen);
@@ -113,7 +114,7 @@ protected:
 		{
 			float value = 0.0f;
 			if ((float)pos < period*2.0f)
-				value += (*pinkNoise)[pos] * 0.5f*(cosf(((float)pos - period) / period*PI) + 1.0f);
+				value += pinkNoise[pos] * 0.5f*(cosf(((float)pos - period) / period*PI) + 1.0f);
 
 			if ((float)pos >= period)
 			{
@@ -158,62 +159,90 @@ private:
 	float m_cut_freq;
 };
 
-static PyScoreDraft* s_PyScoreDraft;
-
-PyObject * InitializeKarplusStrongInstrument(PyObject *args)
+static PyObject* InitializeKarplusStrongInstrument(PyObject *self, PyObject *args)
 {
-	Instrument_deferred inst = Instrument_deferred::Instance<KarplusStrongInstrument>();
-	unsigned id = s_PyScoreDraft->AddInstrument(inst);
-	return PyLong_FromUnsignedLong(id);
+	KarplusStrongInstrument* inst = new KarplusStrongInstrument;
+	return PyLong_FromVoidPtr(inst);
 }
 
-PyObject* KarplusStrongSetCutFrequency(PyObject *args)
+
+static PyObject* DestroyKarplusStrongInstrument(PyObject *self, PyObject *args)
 {
-	unsigned InstId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	KarplusStrongInstrument* inst = (KarplusStrongInstrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete inst;
+	return PyLong_FromLong(0);
+}
+
+static PyObject* KarplusStrongSetCutFrequency(PyObject *self, PyObject *args)
+{
+	KarplusStrongInstrument* inst = (KarplusStrongInstrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	float cut_freq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
-
-	Instrument_deferred inst = s_PyScoreDraft->GetInstrument(InstId);
-	inst.DownCast<KarplusStrongInstrument>()->SetCutFrequency(cut_freq);
-
+	inst->SetCutFrequency(cut_freq);
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject* KarplusStrongSetLoopGain(PyObject *args)
+static PyObject* KarplusStrongSetLoopGain(PyObject *self, PyObject *args)
 {
-	unsigned InstId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	KarplusStrongInstrument* inst = (KarplusStrongInstrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	float loop_gain = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
-
-	Instrument_deferred inst = s_PyScoreDraft->GetInstrument(InstId);
-	inst.DownCast<KarplusStrongInstrument>()->SetLoopGain(loop_gain);
-
+	inst->SetLoopGain(loop_gain);
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject* KarplusStrongSetSustainGain(PyObject *args)
+static PyObject* KarplusStrongSetSustainGain(PyObject *self, PyObject *args)
 {
-	unsigned InstId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	KarplusStrongInstrument* inst = (KarplusStrongInstrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	float sustain_gain = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
-
-	Instrument_deferred inst = s_PyScoreDraft->GetInstrument(InstId);
-	inst.DownCast<KarplusStrongInstrument>()->SetSustainGain(sustain_gain);
-
+	inst->SetSustainGain(sustain_gain);
 	return PyLong_FromUnsignedLong(0);
 }
 
 
+static PyMethodDef s_Methods[] = {
+	{
+		"InitializeKarplusStrongInstrument",
+		InitializeKarplusStrongInstrument,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DestroyKarplusStrongInstrument",
+		DestroyKarplusStrongInstrument,
+		METH_VARARGS,
+		""
+	},
+	{
+		"KarplusStrongSetCutFrequency",
+		KarplusStrongSetCutFrequency,
+		METH_VARARGS,
+		""
+	},
+	{
+		"KarplusStrongSetLoopGain",
+		KarplusStrongSetLoopGain,
+		METH_VARARGS,
+		""
+	},
+	{
+		"KarplusStrongSetSustainGain",
+		KarplusStrongSetSustainGain,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static struct PyModuleDef cModPyDem =
 {
-	s_PyScoreDraft = pyScoreDraft;
-	pyScoreDraft->RegisterInterfaceExtension("InitializeKarplusStrongInstrument", InitializeKarplusStrongInstrument,
-		"", "",
-		"\t'''\n"
-		"\tInitialize a KarplusStrongInstrument.\n"
-		"\t'''\n");
+	PyModuleDef_HEAD_INIT,
+	"KarplusStrong_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
 
-	pyScoreDraft->RegisterInterfaceExtension("KarplusStrongSetCutFrequency", KarplusStrongSetCutFrequency, "inst, cut_freq", "inst.id, cut_freq");
-	pyScoreDraft->RegisterInterfaceExtension("KarplusStrongSetLoopGain", KarplusStrongSetLoopGain, "inst, loop_gain", "inst.id, loop_gain");
-	pyScoreDraft->RegisterInterfaceExtension("KarplusStrongSetSustainGain", KarplusStrongSetSustainGain, "inst, sustain_gain", "inst.id, sustain_gain");
-
+PyMODINIT_FUNC PyInit_PyKarplusStrongInstrument(void) {
+	return PyModule_Create(&cModPyDem);
 }
+
 

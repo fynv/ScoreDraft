@@ -1,7 +1,8 @@
 #ifndef _InstrumentSingleSampler_h
 #define _InstrumentSingleSampler_h
 
-#include "PyScoreDraft.h"
+#include "TrackBuffer.h"
+#include "Instrument.h"
 
 class InstrumentSample;
 

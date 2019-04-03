@@ -14,7 +14,6 @@ ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
 ../DSPUtil
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -34,15 +33,16 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (KarplusStrongInstrument SHARED ${SOURCES} ${HEADERS})
+add_library (PyKarplusStrongInstrument SHARED ${SOURCES} ${HEADERS})
 if (WIN32) 
-set_target_properties(KarplusStrongInstrument PROPERTIES SUFFIX ".dll")
+set_target_properties(PyKarplusStrongInstrument PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(KarplusStrongInstrument PROPERTIES SUFFIX ".so")
+set_target_properties(PyKarplusStrongInstrument PROPERTIES SUFFIX ".so")
+set_target_properties(PyKarplusStrongInstrument PROPERTIES PREFIX "")
 endif()
-target_link_libraries(KarplusStrongInstrument ${LINK_LIBS})
+target_link_libraries(PyKarplusStrongInstrument ${LINK_LIBS})
 
-install(TARGETS KarplusStrongInstrument DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyKarplusStrongInstrument DESTINATION ./ScoreDraft)
 
 
 

@@ -1,4 +1,4 @@
-#include "PyScoreDraft.h"
+#include "Python.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -8,6 +8,9 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #endif
+
+#include "Singer.h"
+#include "TrackBuffer.h"
 
 #include <string.h>
 #include <cmath>
@@ -597,10 +600,10 @@ class KeLaInitializer
 public:
 	std::string m_path;
 
-	Singer_deferred Init()
+	KeLa* Init()
 	{
-		Singer_deferred singer = Singer_deferred::Instance<KeLa>();
-		singer.DownCast<KeLa>()->SetPath(m_path.data());
+		KeLa* singer = new KeLa();
+		singer->SetPath(m_path.data());
 		return singer;
 	}
 };
@@ -620,26 +623,51 @@ KeLaInitializer* GetInitializer(std::string path)
 	return &s_initializers[path];
 }
 
-
-static PyScoreDraft* s_PyScoreDraft;
-
-PyObject * InitializeKeLa(PyObject *args)
+static PyObject* InitializeKeLa(PyObject *self, PyObject *args)
 {
-	std::string path = _PyUnicode_AsString(args);
+	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args, 0));
 	KeLaInitializer* initializer = GetInitializer(path);
-	Singer_deferred singer = initializer->Init();
-	unsigned id = s_PyScoreDraft->AddSinger(singer);
-	return PyLong_FromUnsignedLong(id);
+	KeLa* singer = initializer->Init();
+	return PyLong_FromVoidPtr(singer);
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static PyObject* DestroyKeLa(PyObject *self, PyObject *args)
 {
-	s_PyScoreDraft = pyScoreDraft;
-	pyScoreDraft->RegisterInterfaceExtension("InitializeKeLa", InitializeKeLa,
-		"path", "path",
-		"\t'''\n"
-		"\tInitialize a KeLa based singer.\n"
-		"\tpath -- path to folder containing the samples.\n"
-		"\t'''\n");
+	KeLa* singer = (KeLa*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete singer;
+	return PyLong_FromLong(0);
 }
+
+
+static PyMethodDef s_Methods[] = {
+	{
+		"InitializeKeLa",
+		InitializeKeLa,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DestroyKeLa",
+		DestroyKeLa,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+
+static struct PyModuleDef cModPyDem =
+{
+	PyModuleDef_HEAD_INIT,
+	"KeLa_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
+
+PyMODINIT_FUNC PyInit_PyKeLa(void) {
+	return PyModule_Create(&cModPyDem);
+}
+
+
 

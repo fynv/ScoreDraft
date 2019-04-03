@@ -1,4 +1,4 @@
-#include "PyScoreDraft.h"
+#include <Python.h>
 #include <stdio.h>
 #include <cmath>
 #include "Note.h"
@@ -114,7 +114,7 @@ static void AddNoteEvent(NoteEventList& list, const NoteEvent& nevent)
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-void WriteToMidi(const SequenceList& seqList, unsigned tempo, float refFreq, const char* fileName)
+static void s_WriteToMidi(const SequenceList& seqList, unsigned tempo, float refFreq, const char* fileName)
 {
 	size_t numOfTracks = seqList.size();
 
@@ -226,7 +226,7 @@ void WriteToMidi(const SequenceList& seqList, unsigned tempo, float refFreq, con
 	fclose(fp);
 }
 
-PyObject * WriteToMidi(PyObject *args)
+static PyObject* WriteToMidi(PyObject *self, PyObject *args)
 {
 	PyObject *pySeqList = PyTuple_GetItem(args, 0);
 	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
@@ -254,11 +254,36 @@ PyObject * WriteToMidi(PyObject *args)
 		}
 		seqList.push_back(seq);
 	}
-	WriteToMidi(seqList, tempo, refFreq, fileName);
+	s_WriteToMidi(seqList, tempo, refFreq, fileName);
 
 	return PyLong_FromUnsignedLong(0);
 }
 
+static PyMethodDef s_Methods[] = {
+	{
+		"WriteToMidi",
+		WriteToMidi,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef cModPyDem =
+{
+	PyModuleDef_HEAD_INIT,
+	"MIDIWriter_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
+
+PyMODINIT_FUNC PyInit_PyMIDIWriter(void) {
+	return PyModule_Create(&cModPyDem);
+}
+
+
+/*
 PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
 {
 	pyScoreDraft->RegisterInterfaceExtension("WriteNoteSequencesToMidi", WriteToMidi,
@@ -271,4 +296,5 @@ PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, co
 		"\tfileName -- a string.\n"
 		"\t'''\n");
 
-}
+}*/
+

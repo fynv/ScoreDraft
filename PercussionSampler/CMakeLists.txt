@@ -11,7 +11,6 @@ ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
 ../WavUtil
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -32,14 +31,15 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (PercussionSampler SHARED ${SOURCES})
+add_library (PyPercussionSampler SHARED ${SOURCES})
 if (WIN32) 
-set_target_properties(PercussionSampler PROPERTIES SUFFIX ".dll")
+set_target_properties(PyPercussionSampler PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(PercussionSampler PROPERTIES SUFFIX ".so")
+set_target_properties(PyPercussionSampler PROPERTIES SUFFIX ".so")
+set_target_properties(PyPercussionSampler PROPERTIES PREFIX "")
 endif()
-target_link_libraries(PercussionSampler ${LINK_LIBS})
+target_link_libraries(PyPercussionSampler ${LINK_LIBS})
 
-install(TARGETS PercussionSampler DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyPercussionSampler DESTINATION ./ScoreDraft)
 
 

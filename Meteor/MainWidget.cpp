@@ -75,7 +75,7 @@ qint64 BufferFeeder::bytesAvailable() const
 }
 
 
-MainWidget::MainWidget(const Visualizer* visualizer, TrackBuffer_deferred trackBuf)
+MainWidget::MainWidget(const Visualizer* visualizer, TrackBuffer* trackBuf)
 	: QWidget(nullptr),
 	m_TrackBuf(trackBuf),
 	m_samples_per_sec(44100.0f)

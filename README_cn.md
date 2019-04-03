@@ -75,7 +75,6 @@ Python用户可以利用此目录进行快速的测试和二次开发而无需�
 子目录:
 
 	/python_test/ScoreDraft: ScoreDraft 包 
-	/python_test/ScoreDraft/Extensions: C++扩展模块
 	/python_test/ScoreDraft/InstrumentSamples: 乐器音频样本，用于 InstrumentSampler 扩展
 	/python_test/ScoreDraft/PercussionSamples: 打击乐音频样本，用语 PercussionSampler 扩展
 	/python_test/ScoreDraft/KeLaSamples: 用语 KeLa 歌唱引擎的语音样本

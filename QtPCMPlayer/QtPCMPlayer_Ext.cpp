@@ -1,5 +1,5 @@
 #include <Python.h>
-#include "PyScoreDraft.h"
+#include <TrackBuffer.h>
 #include <QApplication>
 #include <QtNetwork/QLocalSocket>
 #include <QProcess>
@@ -15,7 +15,6 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-static PyScoreDraft* s_pPyScoreDraft;
 static QString s_root;
 
 void SendString(QLocalSocket& socket, const char* str)
@@ -55,13 +54,21 @@ bool GetString(QLocalSocket& socket, QByteArray& str)
 	return true;
 }
 
+static PyObject* QPlaySetRoot(PyObject *self, PyObject *args)
+{
+	const char* root = PyUnicode_AsUTF8(PyTuple_GetItem(args, 0));
+	s_root = root;
+	char QtPluginPath[1024];
+	sprintf(QtPluginPath, "%s/QtPlugins", root);
+	QApplication::addLibraryPath(QtPluginPath);
+	return PyLong_FromUnsignedLong(0);
+}
 
-PyObject * QPlayTrackBuffer(PyObject *args)
+static PyObject* QPlayTrackBuffer(PyObject *self, PyObject *args)
 {
 	static unsigned count = 0;
 
-	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(args);
-	TrackBuffer_deferred buffer = s_pPyScoreDraft->GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	buffer->SeekToCursor();
 
 	unsigned AlignPos = buffer->AlignPos();
@@ -105,7 +112,7 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 
 	int argc = 0;
 	QApplication app(argc, nullptr);
-	
+
 	QLocalSocket socket;
 	socket.connectToServer("QtPCMPlayer");
 
@@ -143,7 +150,7 @@ PyObject * QPlayTrackBuffer(PyObject *args)
 }
 
 
-PyObject * QPlayGetRemainingTime(PyObject *args)
+static PyObject* QPlayGetRemainingTime(PyObject *self, PyObject *args)
 {
 	int argc = 0;
 	QApplication app(argc, nullptr);
@@ -167,26 +174,37 @@ PyObject * QPlayGetRemainingTime(PyObject *args)
 }
 
 
+static PyMethodDef s_Methods[] = {
+	{
+		"QPlaySetRoot",
+		QPlaySetRoot,
+		METH_VARARGS,
+		""
+	},
+	{
+		"QPlayTrackBuffer",
+		QPlayTrackBuffer,
+		METH_VARARGS,
+		""
+	},
+	{
+		"QPlayGetRemainingTime",
+		QPlayGetRemainingTime,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static struct PyModuleDef cModPyDem =
 {
-	s_pPyScoreDraft = pyScoreDraft;
-	s_root = root;
+	PyModuleDef_HEAD_INIT,
+	"QtPCMPlayer_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
 
-	pyScoreDraft->RegisterInterfaceExtension("QPlayTrackBuffer", QPlayTrackBuffer, "buf", "buf.id",
-		"\t'''\n"
-		"\tUsing Qt Multimedia API to playback a track-buffer.\n"
-		"\tbuf -- an instance of TrackBuffer.\n"
-		"\t'''\n");
-
-	pyScoreDraft->RegisterInterfaceExtension("QPlayGetRemainingTime", QPlayGetRemainingTime, "", "",
-		"\t'''\n"
-		"\tMonitoring how much time in seconds is remaining in current play-back.\n"
-		"\t'''\n");
-
-	char QtPluginPath[1024];
-	sprintf(QtPluginPath, "%s/QtPlugins", root);
-
-	QApplication::addLibraryPath(QtPluginPath);
+PyMODINIT_FUNC PyInit_PyQtPCMPlayerExt(void) {
+	return PyModule_Create(&cModPyDem);
 }
-

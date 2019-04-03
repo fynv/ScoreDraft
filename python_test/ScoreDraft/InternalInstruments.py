@@ -1,5 +1,6 @@
 from .Instrument import Instrument
-from .PyScoreDraft import InitializeInternalInstrument
+from .PyScoreDraft import CreateInternalInstrument, DelInternalInstrument
+from .Catalog import Catalog
 
 PureSin_Type = 0
 Square_Type = 1
@@ -8,27 +9,37 @@ Sawtooth_Type = 3
 NaivePiano_Type = 4
 BottleBlow_Type = 5
 
-class PureSin(Instrument):
-	def __init__(self):
-		self.id = InitializeInternalInstrument(PureSin_Type)
+class InternalInstrument(Instrument):
+	def __del__(self):
+		DelInternalInstrument(self.m_cptr)
 
-class Square(Instrument):
+Catalog['Instruments'] += ['PureSin'+' - internal']
+class PureSin(InternalInstrument):
 	def __init__(self):
-		self.id = InitializeInternalInstrument(Square_Type)
+		self.m_cptr = CreateInternalInstrument(PureSin_Type)
 
-class Triangle(Instrument):
+Catalog['Instruments'] += ['Square'+' - internal']
+class Square(InternalInstrument):
 	def __init__(self):
-		self.id = InitializeInternalInstrument(Triangle_Type)
+		self.m_cptr = CreateInternalInstrument(Square_Type)
 
-class Sawtooth(Instrument):
+Catalog['Instruments'] += ['Triangle'+' - internal']
+class Triangle(InternalInstrument):
 	def __init__(self):
-		self.id = InitializeInternalInstrument(Sawtooth_Type)
+		self.m_cptr = CreateInternalInstrument(Triangle_Type)
 
-class NaivePiano(Instrument):
+Catalog['Instruments'] += ['Sawtooth'+' - internal']
+class Sawtooth(InternalInstrument):
 	def __init__(self):
-		self.id = InitializeInternalInstrument(NaivePiano_Type)
+		self.m_cptr = CreateInternalInstrument(Sawtooth_Type)
 
-class BottleBlow(Instrument):
+Catalog['Instruments'] += ['NaivePiano'+' - internal']
+class NaivePiano(InternalInstrument):
 	def __init__(self):
-		self.id = InitializeInternalInstrument(BottleBlow_Type)
+		self.m_cptr = CreateInternalInstrument(NaivePiano_Type)
+
+Catalog['Instruments'] += ['BottleBlow'+' - internal']
+class BottleBlow(InternalInstrument):
+	def __init__(self):
+		self.m_cptr = CreateInternalInstrument(BottleBlow_Type)
 

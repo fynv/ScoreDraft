@@ -1,14 +1,4 @@
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <dlfcn.h>
-#endif
-
-#include "PyScoreDraft.h"
-
+#include <Python.h>
 #include <Note.h>
 #include <Beat.h>
 #include <Syllable.h>
@@ -16,8 +6,6 @@
 #include <Instrument.h>
 #include <Percussion.h>
 #include <Singer.h>
-
-#include <Deferred.h>
 #include <TrackBuffer.h>
 #include <instruments/PureSin.h>
 #include <instruments/Square.h>
@@ -43,308 +31,93 @@
 #endif
 
 
-class StdLogger : public Logger
-{
-public:
-	virtual void PrintLine(const char* line) const
-	{
-		printf("%s\n", line);
-	}
-};
-
-static StdLogger s_logger;
-static PyScoreDraft s_PyScoreDraft;
-
-
-static PyObject* ScanExtensions(PyObject *self, PyObject *args)
-{
-	const char* root;
-	if (!PyArg_ParseTuple(args, "s", &root))
-		return PyLong_FromLong(0);
-
-#ifdef _WIN32
-	WIN32_FIND_DATAA ffd;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-
-	char extSearchStr[1024];
-	sprintf(extSearchStr, "%s/Extensions/*.dll", root);
-
-	hFind = FindFirstFileA(extSearchStr, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) return PyLong_FromLong(0);
-
-	do
-	{
-		if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-		char path[1024];
-		sprintf(path, "%s/Extensions/%s", root, ffd.cFileName);
-
-		HINSTANCE hinstLib;
-		hinstLib = LoadLibraryA(path);
-
-		if (hinstLib != NULL)
-		{
-			typedef void (InitializeFunc)(PyScoreDraft* pyScoreDraft, const char* root);
-			InitializeFunc* initFunc = (InitializeFunc*)GetProcAddress(hinstLib, "Initialize");
-			if (initFunc != NULL)
-			{
-				printf("Loading extension: %s\n", ffd.cFileName);
-				initFunc(&s_PyScoreDraft, root);
-			}
-		}
-
-	} while (FindNextFile(hFind, &ffd) != 0);
-#else
-	DIR *dir;
-	struct dirent *entry;
-
-	char extPath[1024];
-	sprintf(extPath, "%s/Extensions", root);
-
-	if (dir = opendir(extPath))
-	{
-		while ((entry = readdir(dir)) != NULL)
-		{
-			const char* ext = entry->d_name + strlen(entry->d_name) - 3;
-			if (strcmp(ext, ".so") == 0)
-			{
-				char path[1024];
-				sprintf(path, "%s/Extensions/%s", root, entry->d_name);
-
-				void *handle = dlopen(path, RTLD_LAZY);
-				if (handle)
-				{
-					dlerror();
-					typedef void (InitializeFunc)(PyScoreDraft* pyScoreDraft, const char* root);
-					InitializeFunc* initFunc;
-					*(void **)(&initFunc) = dlsym(handle, "Initialize");
-					if (!dlerror())
-					{
-						printf("Loading extension: %s\n", entry->d_name);
-						initFunc(&s_PyScoreDraft, root);
-					}
-
-				}
-
-			}
-		}
-	}
-
-#endif
-
-
-	return PyLong_FromLong(0);
-}
-
-static PyObject* GenerateCode(PyObject *self, PyObject *args)
-{
-	std::string generatedCode = "";
-	std::string summary = "";
-	
-	generatedCode += "# PyScoreDraft Generated Code\n\n";
-
-	//Interfaces
-	generatedCode += "# Interfaces\n\n";
-	summary += "Interfaces:\n";
-	
-	unsigned count = s_PyScoreDraft.NumOfInterfaceExtensions();
-	for (unsigned i = 0; i < count; i++)
-	{
-		InterfaceExtension ext = s_PyScoreDraft.GetInterfaceExtension(i);
-
-		generatedCode +=
-			std::string("def ") + ext.m_name + "(" + ext.m_input_params + "):\n"
-			+ ext.m_comment
-			+ "\treturn PyScoreDraft.CallExtension(" + std::to_string(i);
-
-		if (ext.m_call_params != "") generatedCode += ",(" + ext.m_call_params + ")";
-
-		generatedCode += ")\n\n";
-
-		summary += std::to_string(i) + ": " + ext.m_name + "\n";
-	}
-	summary += "\n";
-
-	PyObject* list = PyList_New(0);
-	PyList_Append(list, _PyUnicode_FromASCII(generatedCode.data(), generatedCode.length()));
-	PyList_Append(list, _PyUnicode_FromASCII(summary.data(), summary.length()));
-
-	return list;
-
-}
-
-static PyObject* InitTrackBuffer(PyObject *self, PyObject *args)
+static PyObject* CreateTrackBuffer(PyObject *self, PyObject *args)
 {
 	unsigned chn;
 	if (!PyArg_ParseTuple(args, "I", &chn))
 		return NULL;
 
-	TrackBuffer_deferred buffer(44100,chn);
-	unsigned id = s_PyScoreDraft.AddTrackBuffer(buffer);
-	return PyLong_FromUnsignedLong((unsigned long)(id));
+	TrackBuffer* buffer= new TrackBuffer(44100,chn);
+	return PyLong_FromVoidPtr(buffer);
 }
 
 static PyObject* DelTrackBuffer(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
-	buffer.Abondon();
-
-	return PyLong_FromLong(0);
-}
-
-static PyObject* DelInstrument(PyObject *self, PyObject *args)
-{
-	unsigned InstrumentId;
-	if (!PyArg_ParseTuple(args, "I", &InstrumentId))
-		return NULL;
-
-	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
-	instrument.Abondon();
-
-	return PyLong_FromLong(0);
-}
-
-static PyObject* DelPercussion(PyObject *self, PyObject *args)
-{
-	unsigned PercussionId;
-	if (!PyArg_ParseTuple(args, "I", &PercussionId))
-		return NULL;
-
-	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
-	perc.Abondon();
-
-	return PyLong_FromLong(0);
-}
-
-static PyObject* DelSinger(PyObject *self, PyObject *args)
-{
-	unsigned SingerId;
-	if (!PyArg_ParseTuple(args, "I", &SingerId))
-		return NULL;
-
-	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
-	singer.Abondon();
-
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete buffer;
 	return PyLong_FromLong(0);
 }
 
 static PyObject* TrackBufferSetVolume(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	float volume;
-	if (!PyArg_ParseTuple(args, "If", &BufferId, &volume))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	buffer->SetVolume(volume);
-
 	return PyLong_FromLong(0);
 }
 
 static PyObject* TrackBufferGetVolume(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	return PyFloat_FromDouble((double)buffer->Volume());
 }
 
 
 static PyObject* TrackBufferSetPan(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	float pan;
-	if (!PyArg_ParseTuple(args, "If", &BufferId, &pan))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float pan = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	buffer->SetPan(pan);
-
 	return PyLong_FromLong(0);
 }
 
 static PyObject* TrackBufferGetPan(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	return PyFloat_FromDouble((double)buffer->Pan());
 }
 
-
 static PyObject* TrackBufferGetNumberOfSamples(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	return PyLong_FromLong((long)buffer->NumberOfSamples());
 }
 
 static PyObject* TrackBufferGetNumberOfChannels(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	return PyLong_FromLong((long)buffer->NumberOfChannels());
 }
 
 static PyObject* TrackBufferGetCursor(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	if (!PyArg_ParseTuple(args, "I", &BufferId))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	return PyFloat_FromDouble((double)buffer->GetCursor());
 }
 
 static PyObject* TrackBufferSetCursor(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	float cursor;
-	if (!PyArg_ParseTuple(args, "If", &BufferId, &cursor))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float cursor = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	buffer->SetCursor(cursor);
-
 	return PyLong_FromLong(0);
 }
 
 static PyObject* TrackBufferMoveCursor(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	float cursor_delta;
-	if (!PyArg_ParseTuple(args, "If", &BufferId, &cursor_delta))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float cursor_delta = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	buffer->MoveCursor(cursor_delta);
-
 	return PyLong_FromLong(0);
 }
 
 static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 {
-	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	unsigned InstrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	Instrument* instrument = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 1));
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
 	PyObject *tempo_obj = PyTuple_GetItem(args, 3);
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 
 	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
 
@@ -379,9 +152,6 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 	{
 		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
 	}
-
-
-	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
 
 	size_t piece_count = PyList_Size(seq_py);
 	int beatPos = 0;
@@ -473,51 +243,41 @@ static PyObject* InstrumentPlay(PyObject *self, PyObject *args)
 
 static PyObject* InstrumentTune(PyObject *self, PyObject *args)
 {
-	unsigned InstrumentId;
-	const char* cmd;
-
-	if (!PyArg_ParseTuple(args, "Is", &InstrumentId, &cmd))
-		return NULL;
-
-	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
+	Instrument* instrument = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* cmd = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	instrument->Tune(cmd);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* InstrumentSetNoteVolume(PyObject *self, PyObject *args)
 {
-	unsigned InstrumentId;
-	float volume;
-
-	if (!PyArg_ParseTuple(args, "If", &InstrumentId, &volume))
-		return NULL;
-
-	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
+	Instrument* instrument = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	instrument->SetNoteVolume(volume);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* InstrumentSetNotePan(PyObject *self, PyObject *args)
 {
-	unsigned InstrumentId;
-	float pan;
-
-	if (!PyArg_ParseTuple(args, "If", &InstrumentId, &pan))
-		return NULL;
-
-	Instrument_deferred instrument = s_PyScoreDraft.GetInstrument(InstrumentId);
+	Instrument* instrument = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float pan = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	instrument->SetNotePan(pan);
 	return PyLong_FromLong(0);
 }
 
+static PyObject* InstrumentIsGMDrum(PyObject *self, PyObject *args)
+{
+	Instrument* instrument = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	return PyBool_FromLong(instrument->IsGMDrum() ? 1 : 0);
+}
+
+
 static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 {
-	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	PyObject *percId_list = PyTuple_GetItem(args, 1);
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
 	PyObject *tempo_obj = PyTuple_GetItem(args, 3);
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 
 	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
 
@@ -554,12 +314,9 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 	}
 
 	size_t perc_count = PyList_Size(percId_list);
-	Percussion_deferred *perc_List = new Percussion_deferred[perc_count];
+	Percussion **perc_List = new Percussion *[perc_count];
 	for (size_t i = 0; i < perc_count; i++)
-	{
-		unsigned long percId = PyLong_AsUnsignedLong(PyList_GetItem(percId_list, i));
-		perc_List[i] = s_PyScoreDraft.GetPercussion(percId);
-	}
+		perc_List[i] = (Percussion*)PyLong_AsVoidPtr(PyList_GetItem(percId_list, i));
 
 	size_t beat_count = PyList_Size(seq_py);
 	int beatPos = 0;
@@ -608,13 +365,8 @@ static PyObject* PercussionPlay(PyObject *self, PyObject *args)
 
 static PyObject* PercussionTune(PyObject *self, PyObject *args)
 {
-	unsigned PercussionId;
-	const char* cmd;
-
-	if (!PyArg_ParseTuple(args, "Is", &PercussionId, &cmd))
-		return NULL;
-
-	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
+	Percussion* perc = (Percussion*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* cmd = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	perc->Tune(cmd);
 	return PyLong_FromLong(0);
 }
@@ -622,40 +374,28 @@ static PyObject* PercussionTune(PyObject *self, PyObject *args)
 
 static PyObject* PercussionSetBeatVolume(PyObject *self, PyObject *args)
 {
-	unsigned PercussionId;
-	float volume;
-
-	if (!PyArg_ParseTuple(args, "If", &PercussionId, &volume))
-		return NULL;
-
-	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
+	Percussion* perc = (Percussion*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	perc->SetBeatVolume(volume);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* PercussionSetBeatPan(PyObject *self, PyObject *args)
 {
-	unsigned PercussionId;
-	float pan;
-
-	if (!PyArg_ParseTuple(args, "If", &PercussionId, &pan))
-		return NULL;
-
-	Percussion_deferred perc = s_PyScoreDraft.GetPercussion(PercussionId);
+	Percussion* perc = (Percussion*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float pan = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	perc->SetBeatPan(pan);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* Sing(PyObject *self, PyObject *args)
 {
-	unsigned TrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	Singer* singer = (Singer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 1));
 	PyObject *seq_py = PyTuple_GetItem(args, 2);
 
 	PyObject *tempo_obj = PyTuple_GetItem(args, 3);
 	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 4));
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(TrackBufferId);
 
 	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
 
@@ -691,7 +431,6 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
 	}
 
-	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
 	std::string lyric_charset = singer->GetLyricCharset();
 
 	size_t piece_count = PyList_Size(seq_py);
@@ -857,26 +596,16 @@ static PyObject* Sing(PyObject *self, PyObject *args)
 
 static PyObject* SingerTune(PyObject *self, PyObject *args)
 {
-	unsigned SingerId;
-	const char* cmd;
-
-	if (!PyArg_ParseTuple(args, "Is", &SingerId, &cmd))
-		return NULL;
-
-	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	Singer* singer = (Singer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* cmd = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	singer->Tune(cmd);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* SingerSetDefaultLyric(PyObject *self, PyObject *args)
 {
-	unsigned SingerId;
-	const char* lyric;
-
-	if (!PyArg_ParseTuple(args, "Is", &SingerId, &lyric))
-		return NULL;
-
-	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	Singer* singer = (Singer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* lyric = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	singer->SetDefaultLyric(lyric);
 	return PyLong_FromLong(0);
 }
@@ -884,45 +613,29 @@ static PyObject* SingerSetDefaultLyric(PyObject *self, PyObject *args)
 
 static PyObject* SingerSetNoteVolume(PyObject *self, PyObject *args)
 {
-	unsigned SingerId;
-	float volume;
-
-	if (!PyArg_ParseTuple(args, "If", &SingerId, &volume))
-		return NULL;
-
-	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	Singer* singer = (Singer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float volume = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	singer->SetNoteVolume(volume);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* SingerSetNotePan(PyObject *self, PyObject *args)
 {
-	unsigned SingerId;
-	float pan;
-
-	if (!PyArg_ParseTuple(args, "If", &SingerId, &pan))
-		return NULL;
-
-	Singer_deferred singer = s_PyScoreDraft.GetSinger(SingerId);
+	Singer* singer = (Singer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	float pan = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 1));
 	singer->SetNotePan(pan);
 	return PyLong_FromLong(0);
 }
 
 static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 {
-	unsigned TargetTrackBufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	TrackBuffer* targetBuffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	PyObject *list = PyTuple_GetItem(args, 1);
-
-	TrackBuffer_deferred targetBuffer = s_PyScoreDraft.GetTrackBuffer(TargetTrackBufferId);
 	
 	size_t bufferCount = PyList_Size(list);
-	TrackBuffer_deferred* bufferList = new TrackBuffer_deferred[bufferCount];
+	TrackBuffer** bufferList = new TrackBuffer*[bufferCount];
 	for (size_t i = 0; i < bufferCount; i++)
-	{
-		unsigned long listId = PyLong_AsUnsignedLong(PyList_GetItem(list, i));
-		bufferList[i] = s_PyScoreDraft.GetTrackBuffer(listId);
-	}
-
+		bufferList[i] = (TrackBuffer*)PyLong_AsVoidPtr(PyList_GetItem(list, i));
 	targetBuffer->CombineTracks((unsigned)bufferCount, bufferList);
 	delete[] bufferList;
 
@@ -931,40 +644,18 @@ static PyObject* MixTrackBufferList(PyObject *self, PyObject *args)
 
 static PyObject* WriteTrackBufferToWav(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	const char* fn;
-	if (!PyArg_ParseTuple(args, "Is", &BufferId, &fn))
-		return NULL;
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* fn = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	WriteToWav(*buffer, fn);
-
 	return PyLong_FromUnsignedLong(0);
 }
 
 static PyObject* ReadTrackBufferFromWav(PyObject *self, PyObject *args)
 {
-	unsigned BufferId;
-	const char* fn;
-	if (!PyArg_ParseTuple(args, "Is", &BufferId, &fn))
-		return NULL;
-	TrackBuffer_deferred buffer = s_PyScoreDraft.GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* fn = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	ReadFromWav(*buffer, fn);
-
 	return PyLong_FromUnsignedLong(0);
-}
-
-static PyObject* CallExtension(PyObject *self, PyObject *args)
-{
-	unsigned extId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	PyObject* params;
-	if (PyTuple_Size(args)<2) params = PyTuple_New(0);
-	else params = PyTuple_GetItem(args, 1);
-
-	InterfaceExtension ext = s_PyScoreDraft.GetInterfaceExtension(extId);
-	PyObject* ret=ext.m_func(params);
-	
-	return ret;
 }
 
 static PyObject* TellDuration(PyObject *self, PyObject *args)
@@ -1037,75 +728,51 @@ enum InternalInstrument_Type
 };
 
 
-static PyObject* InitializeInternalInstrument(PyObject *self, PyObject *args)
+static PyObject* CreateInternalInstrument(PyObject *self, PyObject *args)
 {
 	InternalInstrument_Type instrument_cls = (InternalInstrument_Type)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	Instrument_deferred inst;
+	Instrument* inst = nullptr;
 	switch (instrument_cls)
 	{
 	case PureSin_Type:
-		inst = Instrument_deferred::Instance<PureSin>();
+		inst = new PureSin();
 		break;
 	case Square_Type:
-		inst = Instrument_deferred::Instance<Square>();
+		inst = new Square();
 		break;
 	case Triangle_Type:
-		inst = Instrument_deferred::Instance<Triangle>();
+		inst = new Triangle();
 		break;
 	case Sawtooth_Type:
-		inst = Instrument_deferred::Instance<Sawtooth>();
+		inst = new Sawtooth();
 		break;
 	case NaivePiano_Type:
-		inst = Instrument_deferred::Instance<NaivePiano>();
+		inst = new NaivePiano();
 		break;
 	case BottleBlow_Type:
-		inst = Instrument_deferred::Instance<BottleBlow>();
+		inst = new BottleBlow();
 		break;
 	}
-	unsigned id = s_PyScoreDraft.AddInstrument(inst);
-	return PyLong_FromUnsignedLong(id);
+	return PyLong_FromVoidPtr(inst);
+}
+
+static PyObject* DelInternalInstrument(PyObject *self, PyObject *args)
+{
+	Instrument* instrument = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete instrument;
+	return PyLong_FromLong(0);
 }
 
 static PyMethodDef s_PyScoreDraftMethods[] = {
 	{
-		"ScanExtensions",
-		ScanExtensions,
-		METH_VARARGS,
-		""
-	},
-	{
-		"GenerateCode",
-		GenerateCode,
-		METH_VARARGS,
-		""
-	},
-	{
-		"InitTrackBuffer",
-		InitTrackBuffer,
+		"CreateTrackBuffer",
+		CreateTrackBuffer,
 		METH_VARARGS,
 		""
 	},
 	{
 		"DelTrackBuffer",
 		DelTrackBuffer,
-		METH_VARARGS,
-		""
-	},
-	{
-		"DelInstrument",
-		DelInstrument,
-		METH_VARARGS,
-		""
-	},
-	{
-		"DelPercussion",
-		DelPercussion,
-		METH_VARARGS,
-		""
-	},
-	{
-		"DelSinger",
-		DelSinger,
 		METH_VARARGS,
 		""
 	},
@@ -1188,6 +855,12 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 		""
 	},
 	{
+		"InstrumentIsGMDrum",
+		InstrumentIsGMDrum,
+		METH_VARARGS,
+		""
+	},
+	{
 		"PercussionPlay",
 		PercussionPlay,
 		METH_VARARGS,
@@ -1260,31 +933,25 @@ static PyMethodDef s_PyScoreDraftMethods[] = {
 		""
 	},
 	{
-		"CallExtension",
-		CallExtension,
-		METH_VARARGS,
-		""
-	},
-	{
 		"TellDuration",
 		TellDuration,
 		METH_VARARGS,
 		""
 	},
 	{
-		"InitializeInternalInstrument",
-		InitializeInternalInstrument,
+		"CreateInternalInstrument",
+		CreateInternalInstrument,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DelInternalInstrument",
+		DelInternalInstrument,
 		METH_VARARGS,
 		""
 	},
 	{ NULL, NULL, 0, NULL }
 };
-
-PyScoreDraft::PyScoreDraft()
-{
-	m_logger = nullptr; 
-	m_PyScoreDraftMethods = s_PyScoreDraftMethods;
-}
 
 static struct PyModuleDef cModPyDem =
 {

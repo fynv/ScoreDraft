@@ -36,7 +36,7 @@ class MainWidget : public QWidget
 {
 	Q_OBJECT
 public:
-	MainWidget(const Visualizer* visualizer, TrackBuffer_deferred trackBuf);
+	MainWidget(const Visualizer* visualizer, TrackBuffer* trackBuf);
 	~MainWidget();
 
 private:
@@ -44,7 +44,7 @@ private:
 
 	Ui_MainWidget m_ui;
 
-	TrackBuffer_deferred m_TrackBuf;
+	TrackBuffer* m_TrackBuf;
 	std::vector<short> m_pcm;
 
 	BufferFeeder* m_Feeder;

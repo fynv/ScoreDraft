@@ -1,4 +1,4 @@
-#include "PyScoreDraft.h"
+#include "Python.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -8,6 +8,8 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #endif
+
+#include "Instrument.h"
 
 #include <string.h>
 
@@ -21,12 +23,11 @@ class InstrumentSingleSamplerInitializer
 {
 public:
 	std::string m_wav_path;
-	Instrument_deferred Init()
+	Instrument* Init()
 	{
 		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_wav_path.data());
-
-		Instrument_deferred inst = Instrument_deferred::Instance<InstrumentSingleSampler>();
-		inst.DownCast<InstrumentSingleSampler>()->SetSample(&m_sample);
+		InstrumentSingleSampler* inst = new InstrumentSingleSampler();
+		inst->SetSample(&m_sample);
 		return inst;
 	}
 
@@ -52,7 +53,7 @@ public:
 	}
 
 
-	Instrument_deferred Init()
+	Instrument* Init()
 	{
 		if (m_SampleWavList.size() < 1)
 		{
@@ -105,8 +106,8 @@ public:
 #endif
 			std::qsort(m_SampleWavList.data(), m_SampleWavList.size(), sizeof(InstrumentSample_deferred), compareSampleWav);
 		}
-		Instrument_deferred inst = Instrument_deferred::Instance<InstrumentMultiSampler>();
-		inst.DownCast<InstrumentMultiSampler>()->SetSampleList(&m_SampleWavList);
+		InstrumentMultiSampler* inst = new InstrumentMultiSampler();
+		inst->SetSampleList(&m_SampleWavList);
 		return inst;
 
 	}
@@ -141,40 +142,63 @@ InstrumentMultiSamplerInitializer* GetInitializer_Multi(std::string path)
 	return &s_initializers_multi[path];
 }
 
-static PyScoreDraft* s_PyScoreDraft;
-
-PyObject * InitializeInstrumentSingleSampler(PyObject *args)
+static PyObject* InitializeInstrumentSingleSampler(PyObject *self, PyObject *args)
 {
-	std::string path = _PyUnicode_AsString(args);
+	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args, 0));
 	InstrumentSingleSamplerInitializer* initializer = GetInitializer_Single(path);
-	Instrument_deferred inst = initializer->Init();
-	unsigned id = s_PyScoreDraft->AddInstrument(inst);
-	return PyLong_FromUnsignedLong(id);
+	Instrument* inst = initializer->Init();
+	return PyLong_FromVoidPtr(inst);
 }
 
-PyObject * InitializeInstrumentMultiSampler(PyObject *args)
+static PyObject* InitializeInstrumentMultiSampler(PyObject *self, PyObject *args)
 {
-	std::string path = _PyUnicode_AsString(args);
+	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args, 0));
 	InstrumentMultiSamplerInitializer* initializer = GetInitializer_Multi(path);
-	Instrument_deferred inst = initializer->Init();
-	unsigned id = s_PyScoreDraft->AddInstrument(inst);
-	return PyLong_FromUnsignedLong(id);
+	Instrument* inst = initializer->Init();
+	return PyLong_FromVoidPtr(inst);
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static PyObject* DestroyInstrumentSampler(PyObject *self, PyObject *args)
 {
-	s_PyScoreDraft = pyScoreDraft;
-	pyScoreDraft->RegisterInterfaceExtension("InitializeInstrumentSingleSampler", InitializeInstrumentSingleSampler,
-		"wavPath", "wavPath",
-		"\t'''\n"
-		"\tInitialize a instrument sampler using a single .wav file.\n"
-		"\twavPath -- path to the .wav file.\n"
-		"\t'''\n");
-	pyScoreDraft->RegisterInterfaceExtension("InitializeInstrumentMultiSampler", InitializeInstrumentMultiSampler,
-		"folderPath", "folderPath",
-		"\t'''\n"
-		"\tInitialize a instrument sampler using multiple .wav files.\n"
-		"\folderPath -- path containining the .wav files\n"
-		"\t'''\n");
-
+	Instrument* inst = (Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete inst;
+	return PyLong_FromLong(0);
 }
+
+
+static PyMethodDef s_Methods[] = {
+	{
+		"InitializeInstrumentSingleSampler",
+		InitializeInstrumentSingleSampler,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InitializeInstrumentMultiSampler",
+		InitializeInstrumentMultiSampler,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DestroyInstrumentSampler",
+		DestroyInstrumentSampler,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef cModPyDem =
+{
+	PyModuleDef_HEAD_INIT,
+	"InstrumentSampler_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
+
+PyMODINIT_FUNC PyInit_PyInstrumentSampler(void) {
+	return PyModule_Create(&cModPyDem);
+}
+
+

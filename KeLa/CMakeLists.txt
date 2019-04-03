@@ -17,7 +17,6 @@ ${PYTHON_INCLUDE_DIRS}
 ../ScoreDraftCore
 ../WavUtil
 ../DSPUtil
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -38,15 +37,16 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (KeLa SHARED ${SOURCES} ${HEADERS})
+add_library (PyKeLa SHARED ${SOURCES} ${HEADERS})
 if (WIN32) 
-set_target_properties(KeLa PROPERTIES SUFFIX ".dll")
+set_target_properties(PyKeLa PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(KeLa PROPERTIES SUFFIX ".so")
+set_target_properties(PyKeLa PROPERTIES SUFFIX ".so")
+set_target_properties(PyKeLa PROPERTIES PREFIX "")
 endif()
-target_link_libraries(KeLa ${LINK_LIBS})
+target_link_libraries(PyKeLa ${LINK_LIBS})
 
-install(TARGETS KeLa DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyKeLa DESTINATION ./ScoreDraft)
 
 
 

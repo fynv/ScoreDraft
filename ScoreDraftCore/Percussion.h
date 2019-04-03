@@ -5,13 +5,11 @@
 #include <string>
 
 #include<string>
-#include "Deferred.h"
 
 class NoteBuffer;
 class TrackBuffer;
 class BeatSequence;
 class Percussion;
-typedef Deferred<Percussion> Percussion_deferred;
 
 typedef std::vector<std::pair<int, float>> TempoMap;
 

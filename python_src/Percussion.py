@@ -1,23 +1,10 @@
 from . import PyScoreDraft
 
-def ObjectToId(obj):
-	'''
-	Utility only used intenally. User don't use it.
-	'''
-	if type(obj) is list:
-		return [ObjectToId(sub_obj) for sub_obj in obj]
-	else:
-		return obj.id
-
-
 class Percussion:
 	'''
 	Structure to define an percussion object 
 	An percussion object can be used to play beat-sequences to a track-buffer object
 	'''
-	def __del__ (self):
-		PyScoreDraft.DelPercussion(self.id)	
-
 	def tune(self, cmd):
 		'''
 		Sending a tuning command to an percussion.
@@ -28,7 +15,7 @@ class Percussion:
 		       Another command common to all percussions is "pan",  the value range is [-1.0, 1.0] example: 
 		       perc.tune("pan -0.5")
 		'''
-		PyScoreDraft.PercussionTune(self.id, cmd)
+		PyScoreDraft.PercussionTune(self.m_cptr, cmd)
 
 	@staticmethod
 	def play(percList, buf, seq, tempo=80):
@@ -48,11 +35,11 @@ class Percussion:
 
 		tempo -- an integer defining the tempo of play in beats/minute.		
 		'''
-		PyScoreDraft.PercussionPlay(buf.id, ObjectToId(percList), seq, tempo)
+		PyScoreDraft.PercussionPlay(buf.m_cptr, [item.m_cptr for item in percList], seq, tempo)
 
 	def setBeatVolume(self,volume):
-		PyScoreDraft.PercussionSetBeatVolume(self.id, volume)
+		PyScoreDraft.PercussionSetBeatVolume(self.m_cptr, volume)
 
 	def setBeatPan(self,pan):
-		PyScoreDraft.PercussionSetBeatPan(self.id, pan)
+		PyScoreDraft.PercussionSetBeatPan(self.m_cptr, pan)
 		

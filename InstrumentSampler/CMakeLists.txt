@@ -23,7 +23,6 @@ ${PYTHON_INCLUDE_DIRS}
 ../ScoreDraftCore
 ../WavUtil
 ../DSPUtil
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -44,15 +43,16 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (InstrumentSampler SHARED ${SOURCES} ${HEADERS})
+add_library (PyInstrumentSampler SHARED ${SOURCES} ${HEADERS})
 if (WIN32) 
-set_target_properties(InstrumentSampler PROPERTIES SUFFIX ".dll")
+set_target_properties(PyInstrumentSampler PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(InstrumentSampler PROPERTIES SUFFIX ".so")
+set_target_properties(PyInstrumentSampler PROPERTIES SUFFIX ".so")
+set_target_properties(PyInstrumentSampler PROPERTIES PREFIX "")
 endif()
-target_link_libraries(InstrumentSampler ${LINK_LIBS})
+target_link_libraries(PyInstrumentSampler ${LINK_LIBS})
 
-install(TARGETS InstrumentSampler DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyInstrumentSampler DESTINATION ./ScoreDraft)
 
 
 

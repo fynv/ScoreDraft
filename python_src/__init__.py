@@ -15,8 +15,6 @@ if os.name == 'nt':
 elif os.name == "posix":
 	os.environ["PATH"]+=":"+ScoreDraftPath
 
-PyScoreDraft.ScanExtensions(ScoreDraftPath)
-
 from .PyScoreDraft import TellDuration
 '''
 TellDuration(seq) takes in a single input "seq"
@@ -33,27 +31,17 @@ from .TrackBuffer import WriteTrackBufferToWav
 from .TrackBuffer import ReadTrackBufferFromWav
 
 try:
-	from .Extensions import WriteNoteSequencesToMidi
+	from .MIDIWriter import WriteNoteSequencesToMidi
 except ImportError:
 	pass
 
 try:
-	from .Extensions import PlayTrackBuffer
+	from .WinPCMPlayer import PlayTrackBuffer, PlayGetRemainingTime
 except ImportError:
 	pass
 
 try:
-	from .Extensions import PlayGetRemainingTime
-except ImportError:
-	pass
-
-try:
-	from .Extensions import QPlayTrackBuffer
-except ImportError:
-	pass
-
-try:
-	from .Extensions import QPlayGetRemainingTime
+	from .QtPCMPlayer import QPlayTrackBuffer, QPlayGetRemainingTime
 except ImportError:
 	pass
 
@@ -157,7 +145,6 @@ def """+item+UTAU_VB_SUFFIX+"""(useCuda=True):
 				Catalog['Singers'] += [item+UTAU_VB_SUFFIX+' - UtauDraft']
 except ImportError:
 	pass
-
 
 try:
 	from .SF2Instrument import ListPresets as ListPresetsSF2

@@ -1,4 +1,3 @@
-#include "PyScoreDraft.h"
 #include <Python.h>
 
 #ifdef _WIN32
@@ -9,6 +8,8 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #endif
+
+#include "TrackBuffer.h"
 
 #include <string.h>
 #include <cmath>
@@ -574,13 +575,6 @@ static bool HaveCUDA()
 	return s_have_cuda;
 }
 
-class UtauDraftDeferred : public Singer_deferred
-{
-public:
-	UtauDraftDeferred(bool useCUDA = false) : Singer_deferred(new UtauDraft(useCUDA)){}
-	UtauDraftDeferred(const UtauDraftDeferred & in) : Singer_deferred(in){}
-};
-
 class UtauDraftInitializer
 {
 public:
@@ -658,7 +652,7 @@ public:
 #endif
 	}
 
-	Singer_deferred Init(bool useCuda)
+	UtauDraft* Init(bool useCuda)
 	{
 		if (useCuda && !HaveCUDA())	useCuda = false;
 		if (m_OtoMap.size() == 0)
@@ -686,11 +680,11 @@ public:
 				fclose(fp_charset);
 			}
 		}
-		UtauDraftDeferred singer(useCuda);
-		singer.DownCast<UtauDraft>()->SetOtoMap(&m_OtoMap);
-		singer.DownCast<UtauDraft>()->SetCharset(m_charset.data());
+		UtauDraft* singer = new UtauDraft(useCuda);
+		singer->SetOtoMap(&m_OtoMap);
+		singer->SetCharset(m_charset.data());
 		if (m_PrefixMap.size() > 0)
-			singer.DownCast<UtauDraft>()->SetPrefixMap(&m_PrefixMap);
+			singer->SetPrefixMap(&m_PrefixMap);
 		return singer;
 	}
 
@@ -718,78 +712,92 @@ UtauDraftInitializer* GetInitializer(std::string path)
 	return &s_initializers[path];
 }
 
-
-static PyScoreDraft* s_PyScoreDraft;
-
-PyObject * InitializeUtauDraft(PyObject *args)
+static PyObject* InitializeUtauDraft(PyObject *self, PyObject *args)
 {
 	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args,0));
 	bool useCuda = PyObject_IsTrue(PyTuple_GetItem(args, 1))!=0;
 	UtauDraftInitializer* initializer = GetInitializer(path);
-	Singer_deferred singer = initializer->Init(useCuda);
-	unsigned id = s_PyScoreDraft->AddSinger(singer);
-	return PyLong_FromUnsignedLong(id);
+	UtauDraft* singer = initializer->Init(useCuda);
+	return PyLong_FromVoidPtr(singer);
 }
 
-PyObject* UtauDraftSetLyricConverter(PyObject *args)
+
+static PyObject* DestroyUtauDraft(PyObject *self, PyObject *args)
 {
-	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	UtauDraft* singer = (UtauDraft*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete singer;
+	return PyLong_FromLong(0);
+}
+
+static PyObject* UtauDraftSetLyricConverter(PyObject *self, PyObject *args)
+{
+	UtauDraft* singer = (UtauDraft*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	PyObject* LyricConverter = PyTuple_GetItem(args, 1);
-
-	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
-	singer.DownCast<UtauDraft>()->SetLyricConverter(LyricConverter);
-
+	singer->SetLyricConverter(LyricConverter);
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject* UtauDraftSetUsePrefixMap(PyObject *args)
+static PyObject* UtauDraftSetUsePrefixMap(PyObject *self, PyObject *args)
 {
-	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	UtauDraft* singer = (UtauDraft*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	bool use_prefix_map = PyObject_IsTrue(PyTuple_GetItem(args, 1))!=0;
-
-	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
-	singer.DownCast<UtauDraft>()->SetUsePrefixMap(use_prefix_map);
-
+	singer->SetUsePrefixMap(use_prefix_map);
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject* UtauDraftSetCZMode(PyObject *args)
+static PyObject* UtauDraftSetCZMode(PyObject *self, PyObject *args)
 {
-	unsigned SingerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	UtauDraft* singer = (UtauDraft*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	bool czmode = PyObject_IsTrue(PyTuple_GetItem(args, 1)) != 0;
-
-	Singer_deferred singer = s_PyScoreDraft->GetSinger(SingerId);
-	singer.DownCast<UtauDraft>()->SetCZMode(czmode);
-
+	singer->SetCZMode(czmode);
 	return PyLong_FromUnsignedLong(0);
 }
 
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static PyMethodDef s_Methods[] = {
+	{
+		"InitializeUtauDraft",
+		InitializeUtauDraft,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DestroyUtauDraft",
+		DestroyUtauDraft,
+		METH_VARARGS,
+		""
+	},
+	{
+		"UtauDraftSetLyricConverter",
+		UtauDraftSetLyricConverter,
+		METH_VARARGS,
+		""
+	},
+	{
+		"UtauDraftSetUsePrefixMap",
+		UtauDraftSetUsePrefixMap,
+		METH_VARARGS,
+		""
+	},
+	{
+		"UtauDraftSetCZMode",
+		UtauDraftSetCZMode,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+
+static struct PyModuleDef cModPyDem =
 {
-	s_PyScoreDraft = pyScoreDraft;
+	PyModuleDef_HEAD_INIT,
+	"UtauDraft_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
 
-	pyScoreDraft->RegisterInterfaceExtension("InitializeUtauDraft", InitializeUtauDraft,
-		"path, useCUDA", "path, useCUDA",
-		"\t'''\n"
-		"\tInitialize a UtauDraft based singer.\n"
-		"\tpath -- path to the UTAU voicebank.\n"
-		"\t'''\n");
-
-	
-	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetLyricConverter", UtauDraftSetLyricConverter, "singer, LyricConverterFunc", "singer.id, LyricConverterFunc",
-		"\t'''\n"
-		"\tSet a lyric-converter function for a UtauDraft singer used to generate VCV/CVVC lyrics\n"
-		"\tThe 'LyricConverterFunc' has the following form:\n"
-		"\tdef LyricConverterFunc(LyricForEachSyllable):\n"
-		"\t\t...\n"
-		"\t\treturn [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]\n"
-		"\tThe argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string\n"
-		"\tIn the return value, each lyric is a converted lyric as a string and each weight a float indicating the ratio taken within the syllable,\n"
-		"\tplus a bool value indicating whether it is the vowel part of the syllable.\n"
-		"\t'''\n");
-
-	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetUsePrefixMap", UtauDraftSetUsePrefixMap, "singer, use", "singer.id, use");
-	pyScoreDraft->RegisterInterfaceExtension("UtauDraftSetCZMode", UtauDraftSetCZMode, "singer, czmode", "singer.id, czmode");
-
+PyMODINIT_FUNC PyInit_PyUtauDraft(void) {
+	return PyModule_Create(&cModPyDem);
 }

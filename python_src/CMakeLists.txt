@@ -2,7 +2,6 @@ cmake_minimum_required (VERSION 3.0)
 
 set(PYTHON
 __init__.py
-Extensions.py
 TrackBuffer.py
 Instrument.py
 Percussion.py
@@ -11,6 +10,9 @@ Document.py
 InternalInstruments.py
 Notes.py
 RapChinese.py
+MIDIWriter.py
+WinPCMPlayer.py
+QtPCMPlayer.py
 PercussionSampler.py
 InstrumentSampler.py
 KeLa.py

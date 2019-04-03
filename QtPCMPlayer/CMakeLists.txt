@@ -71,7 +71,6 @@ set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
-../PyScoreDraft
 )
 
 
@@ -83,13 +82,25 @@ ScoreDraftCore
 )
 
 
-include_directories(${INCLUDE_DIR})
-add_library (QtPCMPlayerExt SHARED ${SOURCES} ${HEADERS})
 if (WIN32) 
-set_target_properties(QtPCMPlayerExt PROPERTIES SUFFIX ".dll")
+set (DEFINES  ${DEFINES}
+-D"_CRT_SECURE_NO_DEPRECATE"  
+-D"_SCL_SECURE_NO_DEPRECATE" 
+)
 else()
-set_target_properties(QtPCMPlayerExt PROPERTIES SUFFIX ".so")
+add_definitions(-std=c++0x)
+add_compile_options(-fPIC)
 endif()
-target_link_libraries(QtPCMPlayerExt ${LINK_LIBS})
 
-install(TARGETS QtPCMPlayerExt DESTINATION ./ScoreDraft/Extensions)
+
+include_directories(${INCLUDE_DIR})
+add_library (PyQtPCMPlayerExt SHARED ${SOURCES} ${HEADERS})
+if (WIN32) 
+set_target_properties(PyQtPCMPlayerExt PROPERTIES SUFFIX ".pyd")
+else()
+set_target_properties(PyQtPCMPlayerExt PROPERTIES SUFFIX ".so")
+set_target_properties(PyQtPCMPlayerExt PROPERTIES PREFIX "")
+endif()
+target_link_libraries(PyQtPCMPlayerExt ${LINK_LIBS})
+
+install(TARGETS PyQtPCMPlayerExt DESTINATION ./ScoreDraft)

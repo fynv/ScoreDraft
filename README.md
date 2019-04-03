@@ -98,11 +98,10 @@ be kept at small scale here. Users can extend that part themselves.
 Sub-directories:
 
 	/python_test/ScoreDraft: the ScoreDraft package 
-	/python_test/ScoreDraft/Extensions: binary extensions
 	/python_test/ScoreDraft/InstrumentSamples: audio samples for InstrumentSampler extension
 	/python_test/ScoreDraft/PercussionSamples: audio samples for PercussionSampler extension
 	/python_test/ScoreDraft/KeLaSamples: audio samples for KeLa voice engine 
-	/python_test/ScoreDraft/UTAUVoice: deploy your UTAU voice-banks here, the UtauDraft voice engine will use
+	/python_test/ScoreDraft/UTAUVoice: deploy your UTAU voice-banks here, the UtauDraft voice engine will use them
 	/python_test/zh_TTS: a simple Chinese TTS demo using pypinyin + ScoreDraft   
 
 Examples:

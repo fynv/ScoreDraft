@@ -10,7 +10,6 @@ set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -30,15 +29,16 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (MIDIWriter SHARED ${SOURCES})
+add_library (PyMIDIWriter SHARED ${SOURCES})
 if (WIN32) 
-set_target_properties(MIDIWriter PROPERTIES SUFFIX ".dll")
+set_target_properties(PyMIDIWriter PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(MIDIWriter PROPERTIES SUFFIX ".so")
+set_target_properties(PyMIDIWriter PROPERTIES SUFFIX ".so")
+set_target_properties(PyMIDIWriter PROPERTIES PREFIX "")
 endif()
-target_link_libraries(MIDIWriter ${LINK_LIBS})
+target_link_libraries(PyMIDIWriter ${LINK_LIBS})
 
-install(TARGETS MIDIWriter DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyMIDIWriter DESTINATION ./ScoreDraft)
 
 
 

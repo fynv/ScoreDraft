@@ -1,37 +1,47 @@
 #include <Python.h>
-#include "PyScoreDraft.h"
 #include "WinPCMPlayer.h"
 
-static PyScoreDraft* s_pPyScoreDraft;
 static WinPCMPlayer s_Player;
 
-PyObject * PlayTrackBuffer(PyObject *args)
+static PyObject* PlayTrackBuffer(PyObject *self, PyObject *args)
 {
-	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(args);
-	TrackBuffer_deferred buffer = s_pPyScoreDraft->GetTrackBuffer(BufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	s_Player.PlayTrack(*buffer);
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject * PlayGetRemainingTime(PyObject *args)
+static PyObject* PlayGetRemainingTime(PyObject *self, PyObject *args)
 {
 	return PyFloat_FromDouble( (double)s_Player.GetRemainingTime());
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+
+static PyMethodDef s_Methods[] = {
+	{
+		"PlayTrackBuffer",
+		PlayTrackBuffer,
+		METH_VARARGS,
+		""
+	},
+	{
+		"PlayGetRemainingTime",
+		PlayGetRemainingTime,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef cModPyDem =
 {
-	s_pPyScoreDraft = pyScoreDraft;
-	
-	pyScoreDraft->RegisterInterfaceExtension("PlayTrackBuffer", PlayTrackBuffer, "buf", "buf.id",
-		"\t'''\n"
-		"\tUsing Win32 API to playback a track-buffer.\n"
-		"\tbuf -- an instance of TrackBuffer.\n"
-		"\tNote that this function is a async call. Please keep the main thread busy or do a sleep to let the playback continue.\n"
-		"\t'''\n");
+	PyModuleDef_HEAD_INIT,
+	"WinPCMPlayer_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
 
-	pyScoreDraft->RegisterInterfaceExtension("PlayGetRemainingTime", PlayGetRemainingTime, "", "",
-		"\t'''\n"
-		"\tMonitoring how much time in seconds is remaining in current play-back.\n"
-		"\t'''\n");
-
+PyMODINIT_FUNC PyInit_PyWinPCMPlayer(void) {
+	return PyModule_Create(&cModPyDem);
 }
+

@@ -16,7 +16,6 @@ set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -24,17 +23,29 @@ ${PYTHON_LIBRARIES}
 ScoreDraftCore
 )
 
+if (WIN32) 
 set (DEFINES  ${DEFINES}
 -D"_CRT_SECURE_NO_DEPRECATE"  
 -D"_SCL_SECURE_NO_DEPRECATE" 
 )
+else()
+add_definitions(-std=c++0x)
+add_compile_options(-fPIC)
+endif()
+
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (WinPCMPlayer SHARED ${SOURCES} ${HEADERS})
-target_link_libraries(WinPCMPlayer ${LINK_LIBS})
+add_library (PyWinPCMPlayer SHARED ${SOURCES} ${HEADERS})
+if (WIN32) 
+set_target_properties(PyWinPCMPlayer PROPERTIES SUFFIX ".pyd")
+else()
+set_target_properties(PyWinPCMPlayer PROPERTIES SUFFIX ".so")
+set_target_properties(PyWinPCMPlayer PROPERTIES PREFIX "")
+endif()
+target_link_libraries(PyWinPCMPlayer ${LINK_LIBS})
 
-install(TARGETS WinPCMPlayer DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyWinPCMPlayer DESTINATION ./ScoreDraft)
 
 
 

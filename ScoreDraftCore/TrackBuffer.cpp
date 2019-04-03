@@ -36,10 +36,6 @@ void NoteBuffer::Allocate()
 	m_data = new float[m_sampleNum*m_channelNum];
 }
 
-TrackBuffer_deferred::TrackBuffer_deferred(){}
-TrackBuffer_deferred::TrackBuffer_deferred(const TrackBuffer_deferred & in) : Deferred<TrackBuffer>(in){}
-TrackBuffer_deferred::TrackBuffer_deferred(unsigned rate, unsigned chn): Deferred<TrackBuffer>(new TrackBuffer(rate, chn)){}
-
 static const unsigned s_localBufferSize = 65536;
 unsigned TrackBuffer::GetLocalBufferSize()
 {
@@ -204,7 +200,7 @@ void TrackBuffer::WriteBlend(const NoteBuffer& noteBuf)
 }
 
 
-bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer_deferred* tracks)
+bool TrackBuffer::CombineTracks(unsigned num, TrackBuffer** tracks)
 {
 	NoteBuffer targetBuffer;
 	targetBuffer.m_sampleNum = s_localBufferSize;

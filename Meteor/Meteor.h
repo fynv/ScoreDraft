@@ -37,6 +37,7 @@ struct VisSinging
 
 #include "SubListLookUp.h"
 
+class TrackBuffer;
 class Visualizer
 {
 public:
@@ -44,7 +45,7 @@ public:
 	void ProcessNoteSeq(unsigned instrumentId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap, bool isGMDrum);
 	void ProcessBeatSeq(unsigned percIdList[], float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, TempoMap *tempoMap);
 	void ProcessSingingSeq(unsigned singerId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap);
-	void Play(unsigned bufferId);
+	void Play(TrackBuffer* buffer);
 
 	const std::vector<VisNote>& GetNotes() const { return m_notes;  }
 	const std::vector<VisBeat>& GetBeats() const { return m_beats;  }

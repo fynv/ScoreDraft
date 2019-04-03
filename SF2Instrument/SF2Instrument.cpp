@@ -1,4 +1,7 @@
-#include "PyScoreDraft.h"
+#include "Python.h"
+
+#include "Instrument.h"
+#include "TrackBuffer.h"
 
 #include "SF2.h"
 #include "Presets.h"
@@ -59,12 +62,12 @@ public:
 		m_initialized = false;
 	}
 
-	Instrument_deferred Init(unsigned preset_index)
+	SF2Instrument* Init(unsigned preset_index)
 	{
 		if (!m_initialized) _initialize();
 
-		Instrument_deferred inst = Instrument_deferred::Instance<SF2Instrument>();
-		inst.DownCast<SF2Instrument>()->setSF2(m_fontSamples, &(*m_presets)[preset_index]);
+		SF2Instrument* inst = new SF2Instrument();
+		inst->setSF2(m_fontSamples, &(*m_presets)[preset_index]);
 
 		return inst;
 	}
@@ -106,44 +109,65 @@ SF2InstrumentInitializer* GetInitializer(std::string path)
 	return &s_initializers[path];
 }
 
-static PyScoreDraft* s_PyScoreDraft;
-
-PyObject * SF2InstrumentListPresets(PyObject *args)
+static PyObject* SF2InstrumentListPresets(PyObject *self, PyObject *args)
 {
-	std::string path = _PyUnicode_AsString(args);
+	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args, 0));
 	SF2InstrumentInitializer* initializer = GetInitializer(path);
 	initializer->ListPresets();
 	return PyLong_FromUnsignedLong(0);
 }
 
-PyObject * InitializeSF2Instrument(PyObject *args)
+static PyObject* InitializeSF2Instrument(PyObject *self, PyObject *args)
 {
 	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args, 0));
 	unsigned preset_index = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
 	SF2InstrumentInitializer* initializer = GetInitializer(path);
-	Instrument_deferred inst = initializer->Init(preset_index);
-	unsigned id = s_PyScoreDraft->AddInstrument(inst);
-	return PyLong_FromUnsignedLong(id);
+	SF2Instrument* inst = initializer->Init(preset_index);
+	return PyLong_FromVoidPtr(inst);
 }
 
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static PyObject* DestroySF2Instrument(PyObject *self, PyObject *args)
 {
-	s_PyScoreDraft = pyScoreDraft;
-	pyScoreDraft->RegisterInterfaceExtension("InitializeSF2Instrument", InitializeSF2Instrument,
-		"sf2Path, preset_index", "sf2Path, preset_index",
-		"\t'''\n"
-		"\tInitialize a SF2 based instrument\n"
-		"\tsf2Path -- path to the sf2 file.\n"
-		"\tpreset_index -- preset index.\n"
-		"\t'''\n");
-	pyScoreDraft->RegisterInterfaceExtension("SF2InstrumentListPresets", SF2InstrumentListPresets,
-		"sf2Path", "sf2Path",
-		"\t'''\n"
-		"\tList presets of a sf2 file\n"
-		"\tsf2Path -- path to the sf2 file.\n"
-		"\t'''\n");
+	SF2Instrument* inst = (SF2Instrument*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete inst;
+	return PyLong_FromLong(0);
 }
 
+
+static PyMethodDef s_Methods[] = {
+	{
+		"SF2InstrumentListPresets",
+		SF2InstrumentListPresets,
+		METH_VARARGS,
+		""
+	},
+	{
+		"InitializeSF2Instrument",
+		InitializeSF2Instrument,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DestroySF2Instrument",
+		DestroySF2Instrument,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef cModPyDem =
+{
+	PyModuleDef_HEAD_INIT,
+	"SF2Instrument_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
+
+PyMODINIT_FUNC PyInit_PySF2Instrument(void) {
+	return PyModule_Create(&cModPyDem);
+}
 
 

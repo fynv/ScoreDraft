@@ -1,8 +1,10 @@
-﻿#include "PyScoreDraft.h"
-
+﻿#include <Python.h>
 #include <string.h>
 #include <math.h>
 #include <ReadWav.h>
+
+#include "Percussion.h"
+#include "TrackBuffer.h"
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -177,12 +179,11 @@ class PercussionSamplerInitializer
 {
 public:
 	std::string m_wavPath;
-	Percussion_deferred Init()
+	PercussionSampler* Init()
 	{
 		if (!m_sample.m_wav_samples) m_sample.LoadWav(m_wavPath.data());
-
-		Percussion_deferred perc = Percussion_deferred::Instance<PercussionSampler>();
-		perc.DownCast<PercussionSampler>()->SetSample(&m_sample);
+		PercussionSampler* perc = new PercussionSampler();
+		perc->SetSample(&m_sample);
 		return perc;
 	}
 private:
@@ -203,25 +204,47 @@ PercussionSamplerInitializer* GetInitializer(std::string path)
 	return &s_initializers[path];
 }
 
-
-static PyScoreDraft* s_PyScoreDraft;
-
-PyObject * InitializePercurssionSampler(PyObject *args)
+static PyObject* InitializePercurssionSampler(PyObject *self, PyObject *args)
 {
-	std::string path = _PyUnicode_AsString(args);
+	std::string path = _PyUnicode_AsString(PyTuple_GetItem(args,0));
 	PercussionSamplerInitializer* initializer = GetInitializer(path);
-	Percussion_deferred perc = initializer->Init();
-	unsigned id = s_PyScoreDraft->AddPercussion(perc);
-	return PyLong_FromUnsignedLong(id);
+	PercussionSampler* perc = initializer->Init();
+	return PyLong_FromVoidPtr(perc);
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
+static PyObject* DestroyPercurssionSampler(PyObject *self, PyObject *args)
 {
-	s_PyScoreDraft = pyScoreDraft;
-	pyScoreDraft->RegisterInterfaceExtension("InitializePercurssionSampler", InitializePercurssionSampler,
-		"wavPath", "wavPath",
-		"\t'''\n"
-		"\tInitialize a percussion sampler using a single .wav file.\n"
-		"\twavPath -- path to the .wav file.\n"
-		"\t'''\n");
+	PercussionSampler* perc = (PercussionSampler*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete perc;
+	return PyLong_FromLong(0);
 }
+
+static PyMethodDef s_Methods[] = {
+	{
+		"InitializePercurssionSampler",
+		InitializePercurssionSampler,
+		METH_VARARGS,
+		""
+	},
+	{
+		"DestroyPercurssionSampler",
+		DestroyPercurssionSampler,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef cModPyDem =
+{
+	PyModuleDef_HEAD_INIT,
+	"PercussionSampler_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
+
+PyMODINIT_FUNC PyInit_PyPercussionSampler(void) {
+	return PyModule_Create(&cModPyDem);
+}
+

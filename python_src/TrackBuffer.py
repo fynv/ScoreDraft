@@ -1,14 +1,5 @@
 from . import PyScoreDraft
 
-def ObjectToId(obj):
-	'''
-	Utility only used intenally. User don't use it.
-	'''
-	if type(obj) is list:
-		return [ObjectToId(sub_obj) for sub_obj in obj]
-	else:
-		return obj.id
-
 defaultNumOfChannels=2
 def setDefaultNumberOfChannels(defChn):
 	if defChn<1:
@@ -33,52 +24,52 @@ class TrackBuffer:
 			chn=1
 		elif chn>2:
 			chn=2
-		self.id= PyScoreDraft.InitTrackBuffer(chn)
+		self.m_cptr= PyScoreDraft.CreateTrackBuffer(chn)
 
 	def __del__(self):
-		PyScoreDraft.DelTrackBuffer(self.id)
+		PyScoreDraft.DelTrackBuffer(self.m_cptr)
 
 	def setVolume(self,volume):
 		'''
 		Set the volume of the track. This value is used as a weight when mixing tracks.
 		volume -- a float value, in range [0.0,1.0]
 		'''
-		PyScoreDraft.TrackBufferSetVolume(self.id, volume)
+		PyScoreDraft.TrackBufferSetVolume(self.m_cptr, volume)
 
 	def getVolume(self):
 		'''
 		Get the volume of the track. This value is used as a weight when mixing tracks.
 		Returned value is a float
 		'''
-		return PyScoreDraft.TrackBufferGetVolume(self.id)
+		return PyScoreDraft.TrackBufferGetVolume(self.m_cptr)
 
 	def setPan(self, pan):
 		'''
 		Set the panning of the track. This value is used when mixing tracks.
 		pan -- a float value, in range [-1.0,1.0]
 		'''
-		PyScoreDraft.TrackBufferSetPan(self.id, pan)
+		PyScoreDraft.TrackBufferSetPan(self.m_cptr, pan)
 
 	def getPan(self):
 		'''
 		Get the panning of the track. This value is used when mixing tracks.
 		Returned value is a float
 		'''
-		return PyScoreDraft.TrackBufferGetPan(self.id)
+		return PyScoreDraft.TrackBufferGetPan(self.m_cptr)
 
 	def getNumberOfSamples(self):
 		'''
 		Get the number of PCM samples of the buffer.
 		Returned value is an integer
 		'''
-		return PyScoreDraft.TrackBufferGetNumberOfSamples(self.id)
+		return PyScoreDraft.TrackBufferGetNumberOfSamples(self.m_cptr)
 
 	def getNumberOfChannles(self):
 		'''
 		Get the number of Channels of the buffer.
 		Returned value is an integer
 		'''
-		return PyScoreDraft.TrackBufferGetNumberOfChannels(self.id)
+		return PyScoreDraft.TrackBufferGetNumberOfChannels(self.m_cptr)
 
 	def getCursor(self):
 		'''
@@ -86,7 +77,7 @@ class TrackBuffer:
 		The unit is in number of samples.
 		Returned value is a float
 		'''
-		return PyScoreDraft.TrackBufferGetCursor(self.id)
+		return PyScoreDraft.TrackBufferGetCursor(self.m_cptr)
 
 	def setCursor(self, cursor):
 		'''
@@ -94,7 +85,7 @@ class TrackBuffer:
 		The unit is in number of samples.
 		cursor -- a float value, cursor >= 0.0
 		'''
-		PyScoreDraft.TrackBufferSetCursor(self.id, cursor)
+		PyScoreDraft.TrackBufferSetCursor(self.m_cptr, cursor)
 
 	def moveCursor(self, cursor_delta):
 		'''
@@ -102,7 +93,7 @@ class TrackBuffer:
 		The unit is in number of samples.
 		cursor_delta -- a float value
 		'''
-		PyScoreDraft.TrackBufferMoveCursor(self.id, cursor_delta)
+		PyScoreDraft.TrackBufferMoveCursor(self.m_cptr, cursor_delta)
 
 
 def MixTrackBufferList (targetbuf, bufferList):
@@ -111,7 +102,7 @@ def MixTrackBufferList (targetbuf, bufferList):
 	targetbuf -- an instance of TrackBuffer to contain the result
 	bufferList -- a list a track-buffers
 	'''
-	PyScoreDraft.MixTrackBufferList(targetbuf.id, ObjectToId(bufferList))
+	PyScoreDraft.MixTrackBufferList(targetbuf.m_cptr, [item.m_cptr for item in bufferList])
 
 def WriteTrackBufferToWav(buf, filename):
 	'''
@@ -119,7 +110,7 @@ def WriteTrackBufferToWav(buf, filename):
 	buf -- an instance of TrackBuffer
 	filename -- a string
 	'''
-	PyScoreDraft.WriteTrackBufferToWav(buf.id, filename)
+	PyScoreDraft.WriteTrackBufferToWav(buf.m_cptr, filename)
 
 def ReadTrackBufferFromWav(buf, filename):
 	'''
@@ -127,5 +118,5 @@ def ReadTrackBufferFromWav(buf, filename):
 	buf -- an instance of TrackBuffer
 	filename -- a string
 	'''
-	PyScoreDraft.ReadTrackBufferFromWav(buf.id, filename)
+	PyScoreDraft.ReadTrackBufferFromWav(buf.m_cptr, filename)
 

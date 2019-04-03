@@ -34,7 +34,6 @@ ${PYTHON_INCLUDE_DIRS}
 ../ScoreDraftCore
 ../WavUtil
 ../DSPUtil
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -64,6 +63,7 @@ HNM.cu
 set(HEADERS ${HEADERS}
 SentenceGenerator_CUDA.h
 helper_math.h
+DVVector.hpp
 VoiceUtil.cuh
 fft.cuh
 )
@@ -74,18 +74,20 @@ endif ()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
+
 if (USE_CUDA) 
-cuda_add_library (UtauDraft SHARED ${SOURCES} ${HEADERS})
+cuda_add_library (PyUtauDraft SHARED ${SOURCES} ${HEADERS})
 else()
-add_library (UtauDraft SHARED ${SOURCES} ${HEADERS})
+add_library (PyUtauDraft SHARED ${SOURCES} ${HEADERS})
 endif()
 if (WIN32) 
-set_target_properties(UtauDraft PROPERTIES SUFFIX ".dll")
+set_target_properties(PyUtauDraft PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(UtauDraft PROPERTIES SUFFIX ".so")
+set_target_properties(PyUtauDraft PROPERTIES SUFFIX ".so")
+set_target_properties(PyUtauDraft PROPERTIES PREFIX "")
 endif()
-target_link_libraries(UtauDraft ${LINK_LIBS})
+target_link_libraries(PyUtauDraft ${LINK_LIBS})
 
-install(TARGETS UtauDraft DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyUtauDraft DESTINATION ./ScoreDraft)
 
 

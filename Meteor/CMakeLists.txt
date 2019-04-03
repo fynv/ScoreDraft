@@ -31,7 +31,6 @@ set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
-../PyScoreDraft
 )
 
 set (LINK_LIBS 
@@ -56,14 +55,15 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (Meteor SHARED ${SOURCES} ${HEADERS})
+add_library (PyMeteor SHARED ${SOURCES} ${HEADERS})
 if (WIN32) 
-set_target_properties(Meteor PROPERTIES SUFFIX ".dll")
+set_target_properties(PyMeteor PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(Meteor PROPERTIES SUFFIX ".so")
+set_target_properties(PyMeteor PROPERTIES SUFFIX ".so")
+set_target_properties(PyMeteor PROPERTIES PREFIX "")
 endif()
-target_link_libraries(Meteor ${LINK_LIBS})
+target_link_libraries(PyMeteor ${LINK_LIBS})
 
-install(TARGETS Meteor DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PyMeteor DESTINATION ./ScoreDraft)
 
 

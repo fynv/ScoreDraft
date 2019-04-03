@@ -1,11 +1,9 @@
-#include "PyScoreDraft.h"
-#include "Deferred.h"
+#include "Python.h"
+#include "TrackBuffer.h"
 #include <string.h>
 #include "Meteor.h"
 #include "MainWidget.h"
 #include <qapplication.h>
-
-static PyScoreDraft* s_PyScoreDraft;
 
 void Visualizer::ProcessNoteSeq(unsigned instrumentId, float startPosition, float sampleRate, PyObject *seq_py, unsigned tempo, float RefFreq, TempoMap *tempoMap, bool isGMDrum)
 {
@@ -599,12 +597,10 @@ void Visualizer::_updateSublists()
 	m_needUpdateSublists = false;
 }
 
-void Visualizer::Play(unsigned bufferId) 
+void Visualizer::Play(TrackBuffer* buffer)
 {
 	if (m_needUpdateSublists)
 		_updateSublists();
-
-	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
 
 	int argc = 0;
 	char* argv = nullptr;
@@ -698,45 +694,31 @@ void Visualizer::LoadFromFile(const char* filename)
 }
 
 
-typedef Deferred<Visualizer> Visualizer_deferred;
-typedef std::vector<Visualizer_deferred> VisualizerMap;
-static VisualizerMap s_visualizer_map;
-
-
-static PyObject* InitVisualizer(PyObject *args)
+static PyObject* MeteorInitVisualizer(PyObject *self, PyObject *args)
 {
-	Visualizer_deferred visualizer;
-	unsigned id = (unsigned)s_visualizer_map.size();
-	s_visualizer_map.push_back(visualizer);
-	return PyLong_FromUnsignedLong((unsigned long)(id));
+	Visualizer* visualizer = new Visualizer;
+	return PyLong_FromVoidPtr(visualizer);
 }
 
-
-static PyObject* DelVisualizer(PyObject *args)
+static PyObject* MeteorDelVisualizer(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(args);
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
-	visualizer.Abondon();
-
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	delete visualizer;
 	return PyLong_FromLong(0);
 }
 
-static PyObject* ProcessNoteSeq(PyObject *args)
+static PyObject* MeteorProcessNoteSeq(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	unsigned instrumentId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
-
-	Instrument_deferred inst = s_PyScoreDraft->GetInstrument(instrumentId);
-	bool isGMDrum = inst->IsGMDrum();
-
-	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
-	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
+	bool isGMDrum = PyObject_IsTrue(PyTuple_GetItem(args, 2)) != 0;
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 3));
 	float sampleRate = buffer->Rate();
 	float startPosition = buffer->GetCursor() / sampleRate;
 
-	PyObject *seq_py = PyTuple_GetItem(args, 3);
-	PyObject *tempo_obj = PyTuple_GetItem(args, 4);
-	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 5));
+	PyObject *seq_py = PyTuple_GetItem(args, 4);
+	PyObject *tempo_obj = PyTuple_GetItem(args, 5);
+	float RefFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 6));
 
 	bool tempo_map = PyObject_TypeCheck(tempo_obj, &PyList_Type);
 
@@ -772,19 +754,15 @@ static PyObject* ProcessNoteSeq(PyObject *args)
 		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
 	}
 
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
 	visualizer->ProcessNoteSeq(instrumentId, startPosition, sampleRate, seq_py, tempo, RefFreq, tempo_map ? &tempoMap : nullptr, isGMDrum);
-
 	return PyLong_FromUnsignedLong(0);
 }
 
-static PyObject* ProcessBeatSeq(PyObject *args)
+static PyObject* MeteorProcessBeatSeq(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	PyObject *percId_list = PyTuple_GetItem(args, 1);
-
-	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
-	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 2));
 	float sampleRate = buffer->Rate();
 	float startPosition = buffer->GetCursor() / sampleRate;
 
@@ -824,8 +802,6 @@ static PyObject* ProcessBeatSeq(PyObject *args)
 	{
 		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
 	}
-
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
 
 	size_t perc_count = PyList_Size(percId_list);
 	unsigned *percIdList = new unsigned[perc_count];
@@ -840,14 +816,11 @@ static PyObject* ProcessBeatSeq(PyObject *args)
 
 }
 
-
-static PyObject* ProcessSingingSeq(PyObject *args)
+static PyObject* MeteorProcessSingingSeq(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
 	unsigned singerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
-
-	unsigned bufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 2));
-	TrackBuffer_deferred buffer = s_PyScoreDraft->GetTrackBuffer(bufferId);
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 2));
 	float sampleRate = buffer->Rate();
 	float startPosition = buffer->GetCursor() / sampleRate;
 
@@ -890,58 +863,105 @@ static PyObject* ProcessSingingSeq(PyObject *args)
 		tempo = (unsigned)PyLong_AsUnsignedLong(tempo_obj);
 	}
 
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
 	visualizer->ProcessSingingSeq(singerId, startPosition, sampleRate, seq_py, tempo, RefFreq, tempo_map ? &tempoMap : nullptr);
 
 	return PyLong_FromUnsignedLong(0);
 }
 
-static PyObject* Play(PyObject *args)
+static PyObject* MeteorPlay(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 0));
-	unsigned BufferId = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
-
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
-	visualizer->Play(BufferId);
-
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	TrackBuffer* buffer = (TrackBuffer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 1));
+	visualizer->Play(buffer);
 	return PyLong_FromUnsignedLong(0);
 }
 
-static PyObject* SaveToFile(PyObject *args)
+static PyObject* MeteorSaveToFile(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId;
-	const char* fn;
-	if (!PyArg_ParseTuple(args, "Is", &visualizerId, &fn))
-		return NULL;
-
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* fn = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	visualizer->SaveToFile(fn);
 	return PyLong_FromUnsignedLong(0);
 }
 
-static PyObject* LoadFromFile(PyObject *args)
+static PyObject* MeteorLoadFromFile(PyObject *self, PyObject *args)
 {
-	unsigned visualizerId;
-	const char* fn;
-	if (!PyArg_ParseTuple(args, "Is", &visualizerId, &fn))
-		return NULL;
-
-	Visualizer_deferred visualizer = s_visualizer_map[visualizerId];
+	Visualizer* visualizer = (Visualizer*)PyLong_AsVoidPtr(PyTuple_GetItem(args, 0));
+	const char* fn = PyUnicode_AsUTF8(PyTuple_GetItem(args, 1));
 	visualizer->LoadFromFile(fn);
 	return PyLong_FromUnsignedLong(0);
 }
 
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
-{
-	s_PyScoreDraft = pyScoreDraft;
 
-	pyScoreDraft->RegisterInterfaceExtension("MeteorInitVisualizer", InitVisualizer);
-	pyScoreDraft->RegisterInterfaceExtension("MeteorDelVisualizer", DelVisualizer, "visualizerId", "visualizerId");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessNoteSeq", ProcessNoteSeq, "visualizerId, instrument, buf, seq, tempo, refFreq", "visualizerId, instrument.id, buf.id, seq, tempo, refFreq");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessBeatSeq", ProcessBeatSeq, "visualizerId, percList, buf, seq, tempo", "visualizerId, ObjectToId(percList), buf.id, seq, tempo");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorProcessSingingSeq", ProcessSingingSeq, "visualizerId, singer, buf, seq, tempo, refFreq", "visualizerId, singer.id, buf.id, seq, tempo, refFreq");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorPlay", Play, "visualizerId, buffer", "visualizerId, buffer.id");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorSaveToFile", SaveToFile, "visualizerId, filename", "visualizerId, filename");
-	pyScoreDraft->RegisterInterfaceExtension("MeteorLoadFromFile", LoadFromFile, "visualizerId, filename", "visualizerId, filename");
+static PyMethodDef s_Methods[] = {
+	{
+		"MeteorInitVisualizer",
+		MeteorInitVisualizer,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorDelVisualizer",
+		MeteorDelVisualizer,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorProcessNoteSeq",
+		MeteorProcessNoteSeq,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorProcessBeatSeq",
+		MeteorProcessBeatSeq,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorProcessSingingSeq",
+		MeteorProcessSingingSeq,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorPlay",
+		MeteorPlay,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorSaveToFile",
+		MeteorSaveToFile,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorSaveToFile",
+		MeteorSaveToFile,
+		METH_VARARGS,
+		""
+	},
+	{
+		"MeteorLoadFromFile",
+		MeteorLoadFromFile,
+		METH_VARARGS,
+		""
+	},
+	{ NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef cModPyDem =
+{
+	PyModuleDef_HEAD_INIT,
+	"Meteor_module", /* name of module */
+	"",          /* module documentation, may be NULL */
+	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+	s_Methods
+};
+
+PyMODINIT_FUNC PyInit_PyMeteor(void) {
+	return PyModule_Create(&cModPyDem);
 }
+
 

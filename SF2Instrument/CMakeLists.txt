@@ -21,7 +21,6 @@ set (INCLUDE_DIR
 ${PYTHON_INCLUDE_DIRS}
 .
 ../ScoreDraftCore
-../PyScoreDraft
 )
 
 
@@ -42,12 +41,13 @@ endif()
 
 include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (SF2Instrument SHARED ${SOURCES} ${HEADERS})
+add_library (PySF2Instrument SHARED ${SOURCES} ${HEADERS})
 if (WIN32) 
-set_target_properties(SF2Instrument PROPERTIES SUFFIX ".dll")
+set_target_properties(PySF2Instrument PROPERTIES SUFFIX ".pyd")
 else()
-set_target_properties(SF2Instrument PROPERTIES SUFFIX ".so")
+set_target_properties(PySF2Instrument PROPERTIES SUFFIX ".so")
+set_target_properties(PySF2Instrument PROPERTIES PREFIX "")
 endif()
-target_link_libraries(SF2Instrument ${LINK_LIBS})
+target_link_libraries(PySF2Instrument ${LINK_LIBS})
 
-install(TARGETS SF2Instrument DESTINATION ./ScoreDraft/Extensions)
+install(TARGETS PySF2Instrument DESTINATION ./ScoreDraft)

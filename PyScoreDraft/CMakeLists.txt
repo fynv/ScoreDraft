@@ -8,7 +8,6 @@ WavIO.cpp
 )
 
 set(HEADERS 
-PyScoreDraft.h
 WavIO.h
 )
 

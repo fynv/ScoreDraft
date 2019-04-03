@@ -5,8 +5,6 @@ class Singer:
 	Structure to define an singer object 
 	An singer object can be used to sing singing-sequences to a track-buffer object
 	'''
-	def __del__ (self):
-		PyScoreDraft.DelSinger(self.id)		
 
 	def tune(self, cmd):
 		'''
@@ -21,7 +19,7 @@ class Singer:
 		       singer.tune("default_lyric la")
 		       This will make the singer to sing "la" when an empty lyric "" is recieved
 		'''
-		PyScoreDraft.SingerTune(self.id, cmd)
+		PyScoreDraft.SingerTune(self.m_cptr, cmd)
 
 	def sing(self, buf, seq, tempo=80, refFreq=261.626):
 		'''
@@ -51,14 +49,14 @@ class Singer:
 		tempo -- an integer defining the tempo of singing in beats/minute.
 		refFreq  --  a floating point defining the reference-frequency in Hz.
 		'''
-		PyScoreDraft.Sing(buf.id, self.id, seq, tempo, refFreq)
+		PyScoreDraft.Sing(buf.m_cptr, self.m_cptr, seq, tempo, refFreq)
 
 	def setDefaultLyric(self, lyric):
-		PyScoreDraft.SingerSetDefaultLyric(self.id, lyric)
+		PyScoreDraft.SingerSetDefaultLyric(self.m_cptr, lyric)
 
 	def setNoteVolume(self,volume):
-		PyScoreDraft.SingerSetNoteVolume(self.id, volume)
+		PyScoreDraft.SingerSetNoteVolume(self.m_cptr, volume)
 
 	def setNotePan(self,pan):
-		PyScoreDraft.SingerSetNotePan(self.id, pan)
+		PyScoreDraft.SingerSetNotePan(self.m_cptr, pan)
 		

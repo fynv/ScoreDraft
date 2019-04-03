@@ -3,261 +3,30 @@
 #include "TrackBuffer.h"
 #include <assert.h>
 
-template <class T>
-class CUDAVector
+#include "DVVector.hpp"
+
+
+class DVSrcBuf : public DVVector<float>
 {
 public:
-	CUDAVector()
+	const DVSrcBuf&  operator = (const SourceInfo& cpuVec)
 	{
-		count = 0;
-		d_data = nullptr;
-	}
-
-	~CUDAVector()
-	{
-		Free();
-	}
-
-	unsigned Count() const
-	{
-		return count;
-	}
-
-	T* Pointer()
-	{
-		return d_data;
-	}
-
-	const T* ConstPointer() const
-	{
-		return d_data;
-	}
-
-	operator T*()
-	{
-		return d_data;
-	}
-
-	operator const T*()
-	{
-		return d_data;
-	}
-
-	void Free()
-	{
-		if (d_data != nullptr)
-		{
-			cudaFree(d_data);
-			d_data = nullptr;
-		}
-		count = 0;
-	}
-
-	void Allocate(unsigned count)
-	{
-		Free();
-		this->count = count;
-		if (count>0)
-			cudaMalloc(&d_data, sizeof(T)*count);
-	}
-
-	const CUDAVector& operator = (const std::vector<T>& cpuVec)
-	{
-		Free();
-		Allocate((unsigned)cpuVec.size());
-		if (count > 0)
-		{
-			cudaMemcpy(d_data, cpuVec.data(), sizeof(T)*count, cudaMemcpyHostToDevice);
-		}
-
-		return *this;
-	}
-
-	void ToCPU(std::vector<T>& cpuVec) const
-	{
-		cpuVec.resize(count);
-		cudaMemcpy(cpuVec.data(), d_data, sizeof(T)*count, cudaMemcpyDeviceToHost);
-	}
-
-	void Update(const std::vector<T>& cpuVec)
-	{
-		assert(count == (unsigned)cpuVec.size());
-		if (count > 0)
-		{
-			cudaMemcpy(d_data, cpuVec.data(), sizeof(T)*count, cudaMemcpyHostToDevice);
-		}
-	}
-
-	void MakeLeaky()
-	{
-		count = 0;
-		d_data = nullptr;
-	}
-
-private:
-	unsigned count;
-	T* d_data;
-
-};
-
-template<class T>
-class Leaky_T : public T
-{
-public:
-	using T::MakeLeaky;
-	using T::operator =;
-	Leaky_T(){}
-	~Leaky_T()
-	{
-		MakeLeaky();
-	}
-};
-
-template <class T_GPU, class T_CPU>
-class CUDAImagedVector
-{
-public:
-	CUDAImagedVector()
-	{
-
-	}
-	~CUDAImagedVector()
-	{
-		Free();
-	}
-
-	unsigned Count() const
-	{
-		return m_vec.Count();
-	}
-
-	T_GPU* Pointer()
-	{
-		return m_vec.Pointer();
-	}
-
-	const T_GPU* ConstPointer() const
-	{
-		return m_vec.ConstPointer();
-	}
-
-	operator T_GPU*()
-	{
-		return m_vec.Pointer();
-	}
-
-	operator const T_GPU*() const
-	{
-		return m_vec.ConstPointer();
-	}
-
-	void Free()
-	{
-		if (m_vec.Count() > 0)
-		{
-			std::vector<T_GPU> temp;
-			m_vec.ToCPU(temp);
-		}
-		m_vec.Free();
-	}
-
-	const CUDAImagedVector& operator = (const std::vector<T_CPU>& cpuVecs)
-	{
-		Free();
-		m_vec.Allocate((unsigned)cpuVecs.size());
-		if (m_vec.Count() > 0)
-		{
-			std::vector<Leaky_T<T_GPU>> temp;
-			temp.resize(cpuVecs.size());
-			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
-				temp[i] = cpuVecs[i];
-			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
-		}
-		return *this;
-	}
-
-	void ToCPU(std::vector<T_CPU>& cpuVecs) const
-	{
-		cpuVecs.resize(m_vec.Count());
-		if (m_vec.Count() > 0)
-		{
-			std::vector<Leaky_T<T_GPU>> temp;
-			temp.resize(m_vec.Count());
-			cudaMemcpy(temp.data(), m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
-			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
-				temp[i].ToCPU(cpuVecs[i]);
-		}
-	}
-
-	void Update(const std::vector<T_CPU>& cpuVecs)
-	{
-		assert(m_vec.Count() == (unsigned)cpuVecs.size());
-		if (m_vec.Count() > 0)
-		{
-			std::vector<Leaky_T<T_GPU>> temp;
-			temp.resize(m_vec.Count());
-			cudaMemcpy(temp.data(), m_vec.ConstPointer(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyDeviceToHost);
-			for (unsigned i = 0; i < (unsigned)cpuVecs.size(); i++)
-				temp[i].Update(cpuVecs[i]);
-			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(T_GPU)*m_vec.Count(), cudaMemcpyHostToDevice);
-		}
-	}
-
-	void MakeLeaky()
-	{
-		m_vec.MakeLeaky();
-	}
-
-protected:
-	CUDAVector<T_GPU> m_vec;
-};
-
-template <class T>
-class CUDALevel2Vector : public CUDAImagedVector<CUDAVector<T>, std::vector<T> >
-{
-public:
-	using CUDAImagedVector<CUDAVector<T>, std::vector<T> >::Free;
-	using CUDAImagedVector<CUDAVector<T>, std::vector<T> >::m_vec;
-	void Allocate(const std::vector<unsigned>& counts)
-	{
-		Free();
-		m_vec.Allocate((unsigned)counts.size());
-		if (m_vec.Count() > 0)
-		{
-			std::vector<Leaky_T<CUDAVector<T>>> temp;
-			temp.resize(counts.size());
-			for (unsigned i = 0; i < (unsigned)counts.size(); i++)
-			{
-				temp[i].Allocate(counts[i]);
-			}
-			cudaMemcpy(m_vec.Pointer(), temp.data(), sizeof(CUDAVector<T>)*m_vec.Count(), cudaMemcpyHostToDevice);
-		}
-	}
-	using CUDAImagedVector<CUDAVector<T>, std::vector<T>>::operator =;
-};
-
-
-class CUDASrcBuf : public CUDAVector<float>
-{
-public:
-	const CUDASrcBuf&  operator = (const SourceInfo& cpuVec)
-	{
-		CUDAVector<float>::operator=(cpuVec.source.m_data);
+		DVVector<float>::operator=(cpuVec.source.m_data);
 		return *this;
 	}
 
 	void ToCPU(SourceInfo& cpuVec) const
 	{
-		CUDAVector<float>::ToCPU(cpuVec.source.m_data);
+		DVVector<float>::ToCPU(cpuVec.source.m_data);
 	}
 
 	void Update(const SourceInfo& cpuVec)
 	{
-		CUDAVector<float>::Update(cpuVec.source.m_data);
+		DVVector<float>::Update(cpuVec.source.m_data);
 	}
 };
 
-typedef CUDAImagedVector<CUDASrcBuf, SourceInfo> CUDASrcBufList;
+typedef DVImagedVector<DVSrcBuf, SourceInfo> DVSrcBufList;
 
 struct SrcSampleInfo
 {
@@ -276,17 +45,33 @@ struct SrcPieceInfo
 	unsigned fixedEndId_next;
 };
 
-struct CUDASrcPieceInfo
+struct SrcPieceInfoView
 {
-	CUDAVector<SrcSampleInfo> SampleLocations;
-	CUDAVector<SrcSampleInfo> SampleLocations_next;
+	VectorView<SrcSampleInfo> SampleLocations;
+	VectorView<SrcSampleInfo> SampleLocations_next;
+	unsigned fixedBeginId;
+	unsigned fixedEndId;
+	unsigned fixedBeginId_next;
+	unsigned fixedEndId_next;
+};
+
+struct DVSrcPieceInfo
+{
+	typedef SrcPieceInfoView ViewType;
+
+	DVVector<SrcSampleInfo> SampleLocations;
+	DVVector<SrcSampleInfo> SampleLocations_next;
 	unsigned fixedBeginId;
 	unsigned fixedEndId;
 	unsigned fixedBeginId_next;
 	unsigned fixedEndId_next;
 
+	ViewType view()
+	{
+		return{ SampleLocations.view(), SampleLocations_next.view(), fixedBeginId, fixedEndId, fixedBeginId_next, fixedEndId_next };
+	}
 
-	const CUDASrcPieceInfo& operator = (const SrcPieceInfo& cpuVec)
+	const DVSrcPieceInfo& operator = (const SrcPieceInfo& cpuVec)
 	{
 		SampleLocations = cpuVec.SampleLocations;
 		SampleLocations_next = cpuVec.SampleLocations_next;
@@ -318,15 +103,9 @@ struct CUDASrcPieceInfo
 		fixedEndId_next = cpuVec.fixedEndId_next;
 	}
 
-	void MakeLeaky()
-	{
-		SampleLocations.MakeLeaky();
-		SampleLocations_next.MakeLeaky();
-	}
-
 };
 
-typedef CUDAImagedVector<CUDASrcPieceInfo, SrcPieceInfo> CUDASrcPieceInfoList;
+typedef DVImagedVector<DVSrcPieceInfo, SrcPieceInfo> DVSrcPieceInfoList;
 
 struct Job
 {
@@ -362,19 +141,21 @@ struct CUDATempBuffer
 	float *d_data;
 };
 
-void h_GetMaxVoiced(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList,
-	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
+void h_GetMaxVoiced(VectorView<VectorView<float>> cuSrcBufs, VectorView<SrcPieceInfoView> pieceInfoList,
+	VectorView<VectorView<unsigned>> cuMaxVoicedLists, VectorView<VectorView<unsigned>> cuMaxVoicedLists_next,
+	VectorView<Job> jobMap, unsigned BufSize);
 
-void h_AnalyzeInput(CUDASrcBufList cuSrcBufs, CUDASrcPieceInfoList pieceInfoList, unsigned halfWinLen,
-	unsigned specLen, CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
-	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
-	CUDALevel2Vector<unsigned> cuMaxVoicedLists, CUDALevel2Vector<unsigned> cuMaxVoicedLists_next, CUDAVector<Job> jobMap, unsigned BufSize);
+void h_AnalyzeInput(VectorView<VectorView<float>> cuSrcBufs, VectorView<SrcPieceInfoView> pieceInfoList, unsigned halfWinLen,
+	unsigned specLen, VectorView<VectorView<float>> cuHarmWindows, VectorView<VectorView<float>> cuNoiseSpecs,
+	VectorView<VectorView<float>> cuHarmWindows_next, VectorView<VectorView<float>> cuNoiseSpecs_next,
+	VectorView<VectorView<unsigned>> cuMaxVoicedLists, VectorView<VectorView<unsigned>> cuMaxVoicedLists_next, 
+	VectorView<Job> jobMap, unsigned BufSize);
 
-void h_Synthesis(CUDASrcPieceInfoList cuSrcPieceInfos, unsigned halfWinLen, unsigned specLen,
-	CUDALevel2Vector<float> cuHarmWindows, CUDALevel2Vector<float> cuNoiseSpecs,
-	CUDALevel2Vector<float> cuHarmWindows_next, CUDALevel2Vector<float> cuNoiseSpecs_next,
-	CUDAVector<DstPieceInfo> cuDstPieceInfos, CUDAVector<CUDATempBuffer> cuTmpBufs1, CUDAVector<CUDATempBuffer> cuTmpBufs2,
-	CUDAVector<float> cuRandPhase, CUDAVector<SynthJobInfo> cuSynthJobs, unsigned BufSize);
+void h_Synthesis(VectorView<SrcPieceInfoView> cuSrcPieceInfos, unsigned halfWinLen, unsigned specLen,
+	VectorView<VectorView<float>> cuHarmWindows, VectorView<VectorView<float>> cuNoiseSpecs,
+	VectorView<VectorView<float>> cuHarmWindows_next, VectorView<VectorView<float>> cuNoiseSpecs_next,
+	VectorView<DstPieceInfo> cuDstPieceInfos, VectorView<CUDATempBuffer> cuTmpBufs1, VectorView<CUDATempBuffer> cuTmpBufs2,
+	VectorView<float> cuRandPhase, VectorView<SynthJobInfo> cuSynthJobs, unsigned BufSize);
 
 void h_Merge2Bufs(unsigned uSumLen, float *d_destBuf1, float *d_destBuf2);
 
@@ -386,7 +167,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	for (unsigned i = 0; i < numPieces; i++)
 		if (!srcFetcher.FetchSourceInfo(lyrics[i].data(), srcInfos[i], !isVowel_list[i] && _CZMode, i<numPieces - 1 ? lyrics[i+1].data() : nullptr)) return;
 
-	CUDASrcBufList cuSourceBufs;
+	DVSrcBufList cuSourceBufs;
 	cuSourceBufs=srcInfos;
 
 	SourceInfo _dummyNext;
@@ -565,14 +346,14 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		}
 	}
 	
-	CUDASrcPieceInfoList cuSrcPieceInfos;
+	DVSrcPieceInfoList cuSrcPieceInfos;
 	cuSrcPieceInfos = SrcPieceInfos;
 
-	CUDALevel2Vector<unsigned> cuMaxVoicedLists;
+	DVLevel2Vector<unsigned> cuMaxVoicedLists;
 	std::vector<unsigned> countMaxVoiceds;
 	countMaxVoiceds.resize(numPieces);
 
-	CUDALevel2Vector<unsigned> cuMaxVoicedLists_next;
+	DVLevel2Vector<unsigned> cuMaxVoicedLists_next;
 	std::vector<unsigned> countMaxVoiceds_next;
 	countMaxVoiceds_next.resize(numPieces-1);
 
@@ -617,7 +398,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 			}
 	}
 
-	CUDAVector<Job> cuJobMap;
+	DVVector<Job> cuJobMap;
 	cuJobMap=jobMap;
 
 	unsigned cuHalfWinLen = (unsigned)ceilf(max_srcHalfWinWidth);
@@ -629,7 +410,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	unsigned BufSize = (unsigned)ceilf(max_freqDetectHalfWinWidth) * 2 + fftLen * 2;
 	//printf("BufSize: %u\n", BufSize);
 
-	h_GetMaxVoiced(cuSourceBufs, cuSrcPieceInfos, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
+	h_GetMaxVoiced(cuSourceBufs.view(), cuSrcPieceInfos.view(), cuMaxVoicedLists.view(), cuMaxVoicedLists_next.view(), cuJobMap.view(), BufSize);
 
 	std::vector<std::vector<unsigned>> h_maxVoicedLists;
 	cuMaxVoicedLists.ToCPU(h_maxVoicedLists);
@@ -700,14 +481,14 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		}
 	}
 
-	CUDALevel2Vector<float> cuHarmWindows;
+	DVLevel2Vector<float> cuHarmWindows;
 	cuHarmWindows.Allocate(cuTotalHalfWinLen);
-	CUDALevel2Vector<float> cuNoiseSpecs;
+	DVLevel2Vector<float> cuNoiseSpecs;
 	cuNoiseSpecs.Allocate(cuTotalSpecLen);
 
-	CUDALevel2Vector<float> cuHarmWindows_next;
+	DVLevel2Vector<float> cuHarmWindows_next;
 	cuHarmWindows_next.Allocate(cuTotalHalfWinLen_next);
-	CUDALevel2Vector<float> cuNoiseSpecs_next;
+	DVLevel2Vector<float> cuNoiseSpecs_next;
 	cuNoiseSpecs_next.Allocate(cuTotalSpecLen_next);
 
 	fftLen = 1;
@@ -740,8 +521,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	}
 	cuJobMap = jobMap;
 
-	h_AnalyzeInput(cuSourceBufs, cuSrcPieceInfos, cuHalfWinLen, cuSpecLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next,
-		cuNoiseSpecs_next, cuMaxVoicedLists, cuMaxVoicedLists_next, cuJobMap, BufSize);
+	h_AnalyzeInput(cuSourceBufs.view(), cuSrcPieceInfos.view(), cuHalfWinLen, cuSpecLen, cuHarmWindows.view(), 
+		cuNoiseSpecs.view(), cuHarmWindows_next.view(),	cuNoiseSpecs_next.view(), cuMaxVoicedLists.view(), 
+		cuMaxVoicedLists_next.view(), cuJobMap.view(), BufSize);
 
 	/*std::vector<std::vector<float>> HarmWindows;
 	cuHarmWindows.ToCPU(HarmWindows);
@@ -941,14 +723,14 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		phase = (fTmpWinCenter - tempLen) / tempHalfWinLen;
 	}
 
-	CUDAVector<DstPieceInfo> cuDstPieceInfos;
+	DVVector<DstPieceInfo> cuDstPieceInfos;
 	cuDstPieceInfos = DstPieceInfos;
 
-	CUDAVector<SynthJobInfo> cuSynthJobs;
+	DVVector<SynthJobInfo> cuSynthJobs;
 	cuSynthJobs = SynthJobs;
 
-	CUDAVector<float> cuSumTmpBuf1;
-	CUDAVector<float> cuSumTmpBuf2;
+	DVVector<float> cuSumTmpBuf1;
+	DVVector<float> cuSumTmpBuf2;
 	cuSumTmpBuf1.Allocate(sumTmpBufLen);
 	cuSumTmpBuf2.Allocate(sumTmpBufLen);
 
@@ -973,9 +755,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 		pTmpBuf2 += count;
 	}
 
-	CUDAVector<CUDATempBuffer> cuTmpBufs1;
+	DVVector<CUDATempBuffer> cuTmpBufs1;
 	cuTmpBufs1 = tmpBufs1;
-	CUDAVector<CUDATempBuffer> cuTmpBufs2;
+	DVVector<CUDATempBuffer> cuTmpBufs2;
 	cuTmpBufs2 = tmpBufs2;
 
 	std::vector<float> randPhase;
@@ -984,7 +766,7 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	for (unsigned i = 0; i < maxRandPhaseLen; i++)
 		randPhase[i] = rand01();
 
-	CUDAVector<float> cuRandPhase;
+	DVVector<float> cuRandPhase;
 	cuRandPhase = randPhase;
 
 	fftLen = 1;
@@ -994,8 +776,9 @@ void SentenceGenerator_CUDA::GenerateSentence(const UtauSourceFetcher& srcFetche
 	BufSize = fftLen * 4;
 	//printf("BufSize: %u\n", BufSize);
 
-	h_Synthesis(cuSrcPieceInfos, cuHalfWinLen, cuSpecLen, cuHarmWindows, cuNoiseSpecs, cuHarmWindows_next, cuNoiseSpecs_next,
-		cuDstPieceInfos, cuTmpBufs1, cuTmpBufs2, cuRandPhase, cuSynthJobs, BufSize);
+	h_Synthesis(cuSrcPieceInfos.view(), cuHalfWinLen, cuSpecLen, cuHarmWindows.view(), cuNoiseSpecs.view(), 
+		cuHarmWindows_next.view(), cuNoiseSpecs_next.view(), cuDstPieceInfos.view(), cuTmpBufs1.view(), 
+		cuTmpBufs2.view(), cuRandPhase.view(), cuSynthJobs.view(), BufSize);
 
 	h_Merge2Bufs(sumTmpBufLen, cuSumTmpBuf1, cuSumTmpBuf2);
 
