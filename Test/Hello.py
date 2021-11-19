@@ -7,5 +7,10 @@ doc=ScoreDraft.Document()
 
 seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
 
-doc.playNoteSeq(seq, ScoreDraft.NaivePiano())
-doc.mixDown('Hello.wav')
+doc.playNoteSeq(seq, ScoreDraft.KarplusStrongInstrument())
+#doc.mixDown('Hello.wav')
+
+targetBuf=ScoreDraft.TrackBuffer(-1)
+doc.mix(targetBuf)
+
+ScoreDraft.PlayTrackBuffer(targetBuf)

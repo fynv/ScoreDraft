@@ -3,8 +3,8 @@ from .ScoreDraftCore import MixTrackBufferList
 from .ScoreDraftCore import WriteTrackBufferToWav
 
 from .Instrument import Instrument
-#from .Percussion import Percussion
-#from .Singer import Singer
+from .Percussion import Percussion
+from .Singer import Singer
 
 class Document:
 	'''
