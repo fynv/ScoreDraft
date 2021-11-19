@@ -1,0 +1,286 @@
+import os
+from cffi import FFI
+
+ffi = FFI()
+ffi.cdef("""
+// general
+void* PtrArrayCreate(unsigned long long size, const void** ptrs);
+void PtrArrayDestroy(void* ptr_arr);
+
+// F32Buf
+void* F32BufCreate(unsigned long long size, float value);
+void F32BufDestroy(void* ptr);
+float* F32BufData(void* ptr);
+int F32BufSize(void* ptr);	
+void F32BufToS16(void* ptr, short* dst, float amplitude);
+void F32BufFromS16(void* ptr, const short* data, unsigned long long size);
+float F32BufMaxValue(void* ptr);
+void F32BufMix(void* ptr, void* ptr_lst);
+
+void* WavBufferCreate(float sampleRate, unsigned channelNum, void* ptr_data, unsigned alignPos, float volume, float pan);
+void WavBufferDestroy(void *ptr);
+float WavBufferGetSampleRate(void* ptr);
+unsigned WavBufferGetChannelNum(void *ptr);
+unsigned long long WavBufferGetSampleNum(void *ptr);
+unsigned WavBufferGetAlignPos(void* ptr);
+void WavBufferSetAlignPos(void* ptr, unsigned alignPos);
+float WavBufferGetVolume(void* ptr);
+void WavBufferSetVolume(void* ptr, float volume);
+float WavBufferGetPan(void* ptr);
+void WavBufferSetPan(void* ptr, float pan);
+
+void* TrackBufferCreate(unsigned chn);
+void TrackBufferDestroy(void* ptr);
+void TrackBufferSetVolume(void* ptr, float volume);
+float TrackBufferGetVolume(void* ptr);
+void TrackBufferSetPan(void* ptr, float pan);
+float TrackBufferGetPan(void* ptr);
+unsigned TrackBufferGetNumberOfSamples(void* ptr);
+unsigned TrackBufferGetAlignPos(void* ptr);
+float TrackBufferGetCursor(void* ptr);
+void TrackBufferSetCursor(void* ptr, float cursor);
+void TrackBufferMoveCursor(void* ptr, float cursor_delta);
+void MixTrackBufferList(void* ptr, void* ptr_list);
+void WriteTrackBufferToWav(void* ptr, const char* fn);
+void ReadTrackBufferFromWav(void* ptr, const char* fn);
+void TrackBufferWriteBlend(void* ptr, void* ptr_wav_buf);
+""")
+
+
+if os.name == 'nt':
+    fn_shared_lib = 'ScoreDraftCore.dll'
+    fs_encoding = "mbcs"
+elif os.name == "posix":
+    fn_shared_lib = 'libScoreDraftCore.so'
+    fs_encoding = "utf-8"
+
+path_shared_lib = os.path.dirname(__file__)+"/"+fn_shared_lib
+Native = ffi.dlopen(path_shared_lib)
+
+class ObjArray:
+    def __init__(self, arr):
+        self.m_arr = arr
+        c_ptrs = [obj.m_cptr for obj in arr]
+        self.m_cptr = Native.PtrArrayCreate(len(c_ptrs), c_ptrs)
+            
+    def __del__(self):
+        Native.PtrArrayDestroy(self.m_cptr)
+
+
+class F32Buf:
+    def __init__(self, size, value = 0.0):
+        self.m_cptr = Native.F32BufCreate(size, value)
+        
+    def __del__(self):
+        Native.F32BufDestroy(self.m_cptr)
+        
+    def data(self):
+        return Native.F32BufData(self.m_cptr)
+        
+    def size(self):
+        return Native.F32BufSize(self.m_cptr)
+        
+    def to_s16(self, amplitude):
+        _size = self.size()
+        s16 = bytearray(_size*2)
+        ptr_s16 = ffi.from_buffer('short[]', s16)
+        Native.F32BufToS16(self.m_cptr, ptr_s16, amplitude)
+        return bytes(s16)
+        
+    @classmethod
+    def from_s16(cls, s16):
+        f32 = cls(0)
+        ptr_s16 = ffi.from_buffer('const short[]', s16)
+        Native.F32BufFromS16(f32.m_cptr, ptr_s16, len(s16)//2)
+        return f32
+        
+    def max_value(self):
+        return Native.F32BufMaxValue(self.m_cptr)
+            
+    @classmethod
+    def mix(cls, lst_bufs):
+        f32 = cls()
+        obj_lst = ObjArray(lst_bufs);
+        Native.F32BufMix(f32.m_cptr, obj_lst.m_cptr)        
+        return f32
+        
+class WavBuffer:
+    def __init__(self, sampleRate, channelNum, data, alignPos = 0, volume = 1.0, pan = 0.0):
+        self.m_data = data
+        self.m_cptr = Native.WavBufferCreate(sampleRate, channelNum, data.m_cptr, alignPos, volume, pan)
+        
+    def __del__(self):
+        Native.WavBufferDestroy(self.m_cptr)        
+        
+    def get_sample_rate(self):
+        return Native.WavBufferGetSampleRate(self.m_cptr)
+        
+    def get_channel_num(self):
+        return Native.WavBufferGetChannelNum(self.m_cptr)
+        
+    def get_sample_num(self):
+        return Native.WavBufferGetSampleNum(self.m_cptr)
+        
+    def get_align_pos(self):
+        return Native.WavBufferGetAlignPos(self.m_cptr)
+        
+    def set_align_pos(self, alignPos):
+        Native.WavBufferSetAlignPos(self.m_cptr, alignPos)
+        
+    def get_volume(self):
+        return Native.WavBufferGetVolume(self.m_cptr)
+        
+    def set_volume(self, volume):
+        Native.WavBufferSetVolume(self.m_cptr, volume)
+        
+    def get_pan(self):
+        return Native.WavBufferGetPan(self.m_cptr)
+        
+    def set_pan(self, pan):
+        Native.WavBufferSetPan(self.m_cptr, pan)
+        
+defaultNumOfChannels=2
+def setDefaultNumberOfChannels(defChn):
+    if defChn<1:
+        defChn=1
+    elif defChn>2:
+        defChn=2
+    global defaultNumOfChannels
+    defaultNumOfChannels=defChn
+
+class TrackBuffer:
+    '''
+    Basic data structure storing waveform.
+    The content can either be generated by "play" and "sing" calls or by mixing track-buffer into a new one
+    '''
+    def __init__ (self, chn=-1):
+        '''
+        chn is the number of channels, which can be 1 or 2
+        '''
+        if chn==-1:
+            chn=defaultNumOfChannels
+        if chn<1:
+            chn=1
+        elif chn>2:
+            chn=2
+        self.m_cptr = Native.TrackBufferCreate(chn)    
+
+    def __del__(self):
+        Native.TrackBufferDestroy(self.m_cptr)
+
+    def getSampleRate(self):
+        return 44100 # currently we always use a sample rate 44100.0
+
+    def setVolume(self,volume):
+        '''
+        Set the volume of the track. This value is used as a weight when mixing tracks.
+        volume -- a float value, in range [0.0,1.0]
+        '''
+        Native.TrackBufferSetVolume(self.m_cptr, volume)
+
+    def getVolume(self):
+        '''
+        Get the volume of the track. This value is used as a weight when mixing tracks.
+        Returned value is a float
+        '''
+        return Native.TrackBufferGetVolume(self.m_cptr)
+
+    def setPan(self, pan):
+        '''
+        Set the panning of the track. This value is used when mixing tracks.
+        pan -- a float value, in range [-1.0,1.0]
+        '''
+        Native.TrackBufferSetPan(self.m_cptr, pan)    
+
+
+    def getPan(self):
+        '''
+        Get the panning of the track. This value is used when mixing tracks.
+        Returned value is a float
+        '''
+        return Native.TrackBufferGetPan(self.m_cptr)
+
+    def getNumberOfSamples(self):
+        '''
+        Get the number of PCM samples of the buffer.
+        Returned value is an integer
+        '''
+        return Native.TrackBufferGetNumberOfSamples(self.m_cptr)
+
+    def getNumberOfChannles(self):
+        '''
+        Get the number of Channels of the buffer.
+        Returned value is an integer
+        '''
+        return Native.TrackBufferGetNumberOfChannels(self.m_cptr)
+
+    def getAlignPosition(self):
+        '''
+        Get the align position of the buffer
+        The postion will be used as the logical original point when mixed with other track buffers
+        The unit is in number of samples
+        Returned value is an integer 
+        '''
+        return Native.TrackBufferGetAlignPos(self.m_cptr)
+
+    def getCursor(self):
+        '''
+        Get the cursor position of the buffer.
+        The unit is in milliseconds.
+        Returned value is a float
+        '''
+        return Native.TrackBufferGetCursor(self.m_cptr)
+
+    def setCursor(self, cursor):
+        '''
+        Set the curosr position of the buffer.
+        The unit is in milliseconds.
+        cursor -- a float value, cursor >= 0.0
+        '''
+        Native.TrackBufferSetCursor(self.m_cptr, cursor)
+
+
+    def moveCursor(self, cursor_delta):
+        '''
+        Set the curosr position of the buffer to current position + cursor_delta.
+        The unit is in milliseconds.
+        cursor_delta -- a float value
+        '''
+        Native.TrackBufferMoveCursor(self.m_cptr, cursor_delta)
+
+    def writeBlend(self, wavBuf):
+        '''
+        Write and blend a WavBuffer into current trackbuffer. 
+        Cursor will not be moved. Need another call to move the cursor.
+        '''
+        Native.TrackBufferWriteBlend(self.m_cptr, wavBuf.m_cptr)
+
+
+def MixTrackBufferList (targetbuf, bufferList):
+    '''
+    Function used to mix a list of track-buffers into another one
+    targetbuf -- an instance of TrackBuffer to contain the result
+    bufferList -- a list a track-buffers
+    '''
+    arr = ObjArray(bufferList)
+    Native.MixTrackBufferList(targetbuf.m_cptr, arr.m_cptr)
+
+def WriteTrackBufferToWav(buf, filename):
+    '''
+    Function used to write a track-buffer to a .wav file.
+    buf -- an instance of TrackBuffer
+    filename -- a string
+    '''
+    Native.WriteTrackBufferToWav(buf.m_cptr, filename.encode(fs_encoding))
+
+def ReadTrackBufferFromWav(buf, filename):
+    '''
+    Function used to read a track-buffer from a .wav file.
+    buf -- an instance of TrackBuffer
+    filename -- a string
+    '''
+    Native.ReadTrackBufferFromWav(buf.m_cptr, filename.encode(fs_encoding))
+    
+
+
+

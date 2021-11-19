@@ -1,38 +1,21 @@
 cmake_minimum_required (VERSION 3.0)
 
+project(ScoreDraftCore)
+
 set(SOURCES
+api.cpp
 TrackBuffer.cpp
-Instrument.cpp
-Percussion.cpp
-Singer.cpp
-instruments/BottleBlow.cpp
-instruments/NaivePiano.cpp
-instruments/PureSin.cpp
-instruments/Sawtooth.cpp
-instruments/Square.cpp
-instruments/Triangle.cpp
+ReadWav.cpp
+WriteWav.cpp
 )
 
 set(HEADERS 
-RefCounted.h
-Deferred.h
+api.h
+utils.h
+WavBuffer.h
 TrackBuffer.h
-Note.h
-Instrument.h
-Beat.h
-Percussion.h
-Syllable.h
-Singer.h
-instruments/BottleBlow.h
-instruments/NaivePiano.h
-instruments/PureSin.h
-instruments/Sawtooth.h
-instruments/Square.h
-instruments/Triangle.h
-)
-
-set (INCLUDE_DIR
-.
+ReadWav.h
+WriteWav.h
 )
 
 if (WIN32) 
@@ -45,11 +28,16 @@ add_definitions(-std=c++0x)
 add_compile_options(-fPIC)
 endif()
 
-include_directories(${INCLUDE_DIR})
 add_definitions(${DEFINES})
-add_library (ScoreDraftCore ${SOURCES} ${HEADERS})
+add_library (ScoreDraftCore SHARED ${SOURCES} ${HEADERS})
 
+if (WIN32) 
+target_compile_definitions(ScoreDraftCore PRIVATE SCOREDRAFTCORE_DLL_EXPORT)
+endif()
 
-
-
+if (WIN32) 
+install(TARGETS ScoreDraftCore RUNTIME DESTINATION ScoreDraft)
+else()
+install(TARGETS ScoreDraftCore DESTINATION ScoreDraft)
+endif()
 

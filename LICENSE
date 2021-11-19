@@ -1,4 +1,4 @@
-Copyright (C) 2018 Fei Yang
+Copyright (C) 2018 - 2021 Fei Yang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -18,24 +18,23 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Dependecies
+Acknowledgements
 
-Source code under /SF2Instrument is based on 
+Source code under /SoundFont2 is based on 
 TinySoundFont, Copyright (C) 2017 Bernhard Schelling (https://github.com/schellingb/TinySoundFont)
 
-Exclusions
+Noto Sans Font: /thirdparty/fonts/NotoSansSC-Bold.otf
+Licensed under the Open Font License (https://fonts.google.com/noto/specimen/Noto+Sans+SC)
 
-The above licenses only apply to the source code within the repository.
-Binaries under /python_test are not included in the license. Including (not limited to):
+FreeType: /thirdparty/freetype
+Licensed: https://gitlab.freedesktop.org/freetype/freetype/-/blob/master/docs/FTL.TXT
 
-* Dlls from Qt5 are in LGPL license
-* Audio samples from
+GLFW: /thirdparty/glfw
+Licensed: https://www.glfw.org/license.html
 
-https://freewavesamples.com
-http://utau.vocalover.com/
+PortAudio: /thirdparty/portaudio
+Licensed: http://www.portaudio.com/license.html
 
-have their own licenses.
-
-Users are on their own responsibility to properly use binaries under /python_test. 
-
+Audio Samples
+From https://freewavesamples.com
 

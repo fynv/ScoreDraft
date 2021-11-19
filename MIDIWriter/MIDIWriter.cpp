@@ -1,7 +1,119 @@
-#include <Python.h>
-#include <stdio.h>
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define SCOREDRAFT_API __declspec(dllexport)
+#else
+#define SCOREDRAFT_API 
+#endif
+
+extern "C"
+{
+	SCOREDRAFT_API void* NoteCreate(float freq_rel, int duration);
+	SCOREDRAFT_API void NoteDestroy(void* ptr);
+	SCOREDRAFT_API void* WriteToMidi(void* ptr_seq_list, unsigned tempo, float refFreq, const char* fileName);
+}
+
+#include <cstdio>
 #include <cmath>
-#include "Note.h"
+#include <vector>
+
+inline void ByteSwap(unsigned short& word)
+{
+	unsigned short a = word & 0xFF;
+	a <<= 8;
+	word >>= 8;
+	word |= a;
+}
+
+inline void ByteSwap(unsigned& word)
+{
+	unsigned a = word & 0xFF;
+	a <<= 24;
+	word >>= 8;
+	unsigned b = word & 0xFF;
+	b <<= 16;
+	word >>= 8;
+	unsigned c = word & 0xFF;
+	c <<= 8;
+	word |= a | b | c;
+}
+
+inline void ToVariableLength(unsigned fixed, unsigned& variable, unsigned& bytes)
+{
+	variable = 0;
+	bytes = 1;
+	unsigned mask = 0;
+	while (fixed)
+	{
+		variable += (fixed & 0x7F) | mask;
+		fixed >>= 7;
+		if (fixed)
+		{
+			variable <<= 8;
+			bytes++;
+			mask = 0x80;
+		}
+	}
+}
+
+
+inline void WriteBigEdianWord(FILE *fp, unsigned short aword)
+{
+	ByteSwap(aword);
+	fwrite(&aword, 2, 1, fp);
+}
+
+inline void WriteBigEdianDWord(FILE *fp, unsigned int adword)
+{
+	ByteSwap(adword);
+	fwrite(&adword, 4, 1, fp);
+}
+
+inline void WriteVariableLengthDWord(FILE *fp, unsigned fixeddword)
+{
+	unsigned variable;
+	unsigned bytes;
+	ToVariableLength(fixeddword, variable, bytes);
+	fwrite(&variable, 1, bytes, fp);
+}
+
+
+struct Note
+{
+	float m_freq_rel = -1.0f;
+	int m_duration = 48;
+};
+
+void* NoteCreate(float freq_rel, int duration)
+{
+	return new Note({ freq_rel, duration });
+}
+
+void NoteDestroy(void* ptr)
+{
+	delete (Note*)ptr;
+}
+
+struct NoteEvent
+{
+	bool isOn;
+	unsigned time;
+	unsigned char note;
+};
+
+typedef std::vector<NoteEvent> NoteEventList;
+
+inline void AddNoteEvent(NoteEventList& list, const NoteEvent& nevent)
+{
+	if (list.empty() || (list.end() - 1)->time <= nevent.time)
+	{
+		list.push_back(nevent);
+		return;
+	}
+
+	NoteEventList::iterator it = list.end() - 1;
+	while (it != list.begin() && (it - 1)->time > nevent.time) it--;
+	list.insert(it, nevent);
+}
+
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
@@ -13,115 +125,15 @@
 
 #define TIME_DIVISION 48
 
-#include <vector>
-#include "Deferred.h"
-
-class NoteSequence;
-typedef Deferred<NoteSequence> NoteSequence_deferred;
-typedef std::vector<NoteSequence_deferred> SequenceList;
-
-static void ByteSwap(unsigned short& word)
+void* WriteToMidi(void* ptr_seq_list, unsigned tempo, float refFreq, const char* fileName)
 {
-	unsigned short a=word&0xFF;
-	a<<=8;
-	word>>=8;
-	word|=a;
-}
-
-static void ByteSwap(unsigned& word)
-{
-	unsigned a=word&0xFF;
-	a<<=24;
-	word>>=8;
-	unsigned b=word&0xFF;
-	b<<=16;
-	word>>=8;
-	unsigned c=word&0xFF;
-	c<<=8;
-	word|=a|b|c;
-}
-
-static void ToVariableLength(unsigned fixed, unsigned& variable,unsigned& bytes)
-{
-	variable=0;
-	bytes=1;
-	unsigned mask=0;
-	while (fixed)
-	{
-		variable+=(fixed&0x7F)|mask;
-		fixed>>=7;
-		if (fixed) 
-		{
-			variable<<=8;
-			bytes++;
-			mask=0x80;
-		}
-	}
-
-}
-
-static void WriteBigEdianWord(FILE *fp, unsigned short aword)
-{
-	ByteSwap(aword);
-	fwrite(&aword, 2, 1, fp);
-}
-
-static void WriteBigEdianDWord(FILE *fp, unsigned int adword)
-{
-	ByteSwap(adword);
-	fwrite(&adword, 4, 1, fp);
-}
-
-static void WriteVariableLengthDWord(FILE *fp, unsigned fixeddword)
-{
-	unsigned variable;
-	unsigned bytes;
-	ToVariableLength(fixeddword,variable,bytes);
-	fwrite(&variable, 1, bytes, fp);
-}
-
-
-struct NoteEvent
-{
-	bool isOn;
-	unsigned time;
-	unsigned char note;
-};
-
-#include <vector>
-
-typedef std::vector<NoteEvent> NoteEventList;
-
-static void AddNoteEvent(NoteEventList& list, const NoteEvent& nevent)
-{
-	if (list.empty() || (list.end() - 1)->time <= nevent.time)
-	{
-		list.push_back(nevent);
-		return;
-	}
-
-	NoteEventList::iterator it = list.end() - 1;
-	while (it != list.begin() && (it - 1)->time>nevent.time) it--;
-	list.insert(it, nevent);
-
-}
-
-#ifndef max
-#define max(a,b)            (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef min
-#define min(a,b)            (((a) < (b)) ? (a) : (b))
-#endif
-
-static void s_WriteToMidi(const SequenceList& seqList, unsigned tempo, float refFreq, const char* fileName)
-{
-	size_t numOfTracks = seqList.size();
+	std::vector<std::vector<Note*>*>* seqList = (std::vector<std::vector<Note*>*>*)ptr_seq_list;
+	size_t numOfTracks = seqList->size();
 
 	FILE *fp = fopen(fileName, "wb");
 	fwrite("MThd", 1, 4, fp);
 
-	WriteBigEdianDWord(fp,6);
+	WriteBigEdianDWord(fp, 6);
 	WriteBigEdianWord(fp, 1);
 	WriteBigEdianWord(fp, (unsigned short)numOfTracks);
 	WriteBigEdianWord(fp, TIME_DIVISION);
@@ -130,14 +142,13 @@ static void s_WriteToMidi(const SequenceList& seqList, unsigned tempo, float ref
 
 	//pitch shift
 	float pitchShift = logf(refFreq / 261.626f)*12.0f / logf(2.0f) + 0.5f;
-
 	unsigned maxTrackLength = 0;
 	for (unsigned i = 0; i < numOfTracks; i++)
 	{
-		const NoteSequence& seq = *seqList[i];
+		const std::vector<Note*>& seq = *(*seqList)[i];
 
 		fwrite("MTrk", 1, 4, fp);
-		WriteBigEdianDWord(fp,0); // trackLength;
+		WriteBigEdianDWord(fp, 0); // trackLength;
 
 		unsigned beginPoint = ftell(fp);
 
@@ -165,19 +176,19 @@ static void s_WriteToMidi(const SequenceList& seqList, unsigned tempo, float ref
 
 		unsigned timeTicks = 0;
 		unsigned j;
-		for (j = 0; j <seq.size(); j++)
+		for (j = 0; j < seq.size(); j++)
 		{
 			NoteEvent nevent;
-			if (seq[j].m_freq_rel<0.0f)
-				timeTicks += seq[j].m_duration*timeFactor;
-			else if (seq[j].m_freq_rel>0.0f)
+			if (seq[j]->m_freq_rel < 0.0f)
+				timeTicks += seq[j]->m_duration*timeFactor;
+			else if (seq[j]->m_freq_rel > 0.0f)
 			{
 				nevent.isOn = true;
 				nevent.time = timeTicks;
-				nevent.note = (unsigned char)(logf(seq[j].m_freq_rel)*12.0f / logf(2.0f)+ 60.0f + pitchShift);
+				nevent.note = (unsigned char)(logf(seq[j]->m_freq_rel)*12.0f / logf(2.0f) + 60.0f + pitchShift);
 				AddNoteEvent(elist, nevent);
 
-				timeTicks += seq[j].m_duration*timeFactor;
+				timeTicks += seq[j]->m_duration*timeFactor;
 				nevent.isOn = false;
 				nevent.time = timeTicks;
 				AddNoteEvent(elist, nevent);
@@ -186,11 +197,11 @@ static void s_WriteToMidi(const SequenceList& seqList, unsigned tempo, float ref
 		maxTrackLength = max(maxTrackLength, timeTicks);
 
 		timeTicks = 0;
-		for (j = 0; j<elist.size(); j++)
+		for (j = 0; j < elist.size(); j++)
 		{
 			unsigned start = elist[j].time - timeTicks;
 			timeTicks = elist[j].time;
-			WriteVariableLengthDWord(fp,start);
+			WriteVariableLengthDWord(fp, start);
 
 			if (elist[j].isOn)
 				aByte = 0x90;
@@ -219,82 +230,10 @@ static void s_WriteToMidi(const SequenceList& seqList, unsigned tempo, float ref
 
 		unsigned length = ftell(fp) - beginPoint;
 		fseek(fp, beginPoint - 4, SEEK_SET);
-		WriteBigEdianDWord(fp,length);
+		WriteBigEdianDWord(fp, length);
 		fseek(fp, length, SEEK_CUR);
 	}
 
 	fclose(fp);
 }
-
-static PyObject* WriteToMidi(PyObject *self, PyObject *args)
-{
-	PyObject *pySeqList = PyTuple_GetItem(args, 0);
-	unsigned tempo = (unsigned)PyLong_AsUnsignedLong(PyTuple_GetItem(args, 1));
-	float refFreq = (float)PyFloat_AsDouble(PyTuple_GetItem(args, 2));
-	const char* fileName = _PyUnicode_AsString(PyTuple_GetItem(args, 3));
-
-	size_t seqCount = PyList_Size(pySeqList);
-
-	SequenceList seqList;
-	for (size_t i = 0; i < seqCount; i++)
-	{
-		NoteSequence_deferred seq;
-		PyObject *pySeq = PyList_GetItem(pySeqList, i);
-		size_t note_count = PyList_Size(pySeq);
-		for (size_t j = 0; j < note_count; j++)
-		{
-			PyObject *item = PyList_GetItem(pySeq, j);
-			if (PyObject_TypeCheck(item, &PyTuple_Type))
-			{
-				Note note;
-				note.m_freq_rel = (float)PyFloat_AsDouble(PyTuple_GetItem(item, 0));
-				note.m_duration = (int)PyLong_AsLong(PyTuple_GetItem(item, 1));
-				seq->push_back(note);
-			}
-		}
-		seqList.push_back(seq);
-	}
-	s_WriteToMidi(seqList, tempo, refFreq, fileName);
-
-	return PyLong_FromUnsignedLong(0);
-}
-
-static PyMethodDef s_Methods[] = {
-	{
-		"WriteToMidi",
-		WriteToMidi,
-		METH_VARARGS,
-		""
-	},
-	{ NULL, NULL, 0, NULL }
-};
-
-static struct PyModuleDef cModPyDem =
-{
-	PyModuleDef_HEAD_INIT,
-	"MIDIWriter_module", /* name of module */
-	"",          /* module documentation, may be NULL */
-	-1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-	s_Methods
-};
-
-PyMODINIT_FUNC PyInit_PyMIDIWriter(void) {
-	return PyModule_Create(&cModPyDem);
-}
-
-
-/*
-PY_SCOREDRAFT_EXTENSION_INTERFACE void Initialize(PyScoreDraft* pyScoreDraft, const char* root)
-{
-	pyScoreDraft->RegisterInterfaceExtension("WriteNoteSequencesToMidi", WriteToMidi,
-		"seqList, tempo, refFreq, fileName", "seqList, tempo, refFreq, fileName", 
-		"\t'''\n"
-		"\tWrite a list of note sequences to a MIDI file.\n"
-		"\tseqList -- a list of note sequences.\n"
-		"\ttempo -- an integer indicating tempo in beats/minute.\n"
-		"\trefFreq -- a float indicating reference frequency in Hz.\n"
-		"\tfileName -- a string.\n"
-		"\t'''\n");
-
-}*/
 

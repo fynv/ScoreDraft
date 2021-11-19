@@ -1,22 +1,25 @@
-cmake_minimum_required(VERSION 3.0)
-project (ScoreDraft)
+cmake_minimum_required (VERSION 3.0)
+project(ScoreDraft)
+
+IF(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  SET(CMAKE_INSTALL_PREFIX  ../Test CACHE PATH "Install path" FORCE)
+ENDIF(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
 add_subdirectory(ScoreDraftCore)
-add_subdirectory(WavUtil)
-add_subdirectory(PyScoreDraft)
+add_subdirectory(SimpleInstruments)
+add_subdirectory(KarplusStrong)
+add_subdirectory(BasicSamplers)
+add_subdirectory(SoundFont2)
+add_subdirectory(VoiceSampler)
+
 add_subdirectory(MIDIWriter)
-if (WIN32) 
-add_subdirectory(WinPCMPlayer)
-endif()
-add_subdirectory(DSPUtil)
-add_subdirectory(QtPCMPlayer)
-add_subdirectory(PercussionSampler)
-add_subdirectory(InstrumentSampler)
-add_subdirectory(KeLa)
-add_subdirectory(UtauDraft)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_subdirectory(thirdparty/portaudio)
+add_subdirectory(thirdparty/glfw)
+# add_subdirectory(thirdparty/glew)
+
+add_subdirectory(PCMPlayer)
 add_subdirectory(Meteor)
-add_subdirectory(SF2Instrument)
-add_subdirectory(KarplusStrongInstrument)
 
-add_subdirectory(python_src)
-
-
+add_subdirectory(python)
