@@ -40,6 +40,7 @@ The following example shows how easily a piece of musical sound can be generated
 
 ```
 
+For more detailed introduction and demos see: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
 
 ## Installation
 ScoreDraft is now available from PyPi. Windows x64/Linux x64 supported.

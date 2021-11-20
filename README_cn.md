@@ -37,6 +37,8 @@ Meteor 提供了更高级的可视化功能，可以可视化用来生成音乐�
 
 ```
 
+更详细的使用说明和演示见: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
+
 ## 安装
 ScoreDraft 现在可以由 PyPi 安装，支持64位的 Windows 和 Linux 系统。
 
