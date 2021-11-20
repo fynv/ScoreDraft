@@ -131,7 +131,7 @@ which only partially solves the issues.
 After the Nov 2021 refactoring, ScoreDraft have all the benefits of both SingingGadgets and the old ScoreDraft.
 Therefore, the SingingGadgets project is now closed.
 
-* Nov 19, 2021. ScoreDraft 1.0.0
+* Nov 19, 2021. ScoreDraft 1.0.0 & 1.0.1
 * Jun 16, 2018. SingingGadgets 0.0.3
 
 

@@ -97,6 +97,7 @@ def DetectFrqVoice(wavF32, interval=256):
     return frq_data
     
 from .UtauDraft import GetVoiceBank as GetVoiceBankUTAU
+from .UtauDraft import Engine as EngineUtauDraft
 from .UtauDraft import UtauDraft
 from .CVVCChineseConverter import CVVCChineseConverter
 from .XiaYYConverter import XiaYYConverter
@@ -106,10 +107,17 @@ from .TTEnglishConverter import TTEnglishConverter
 from .VCCVEnglishConverter import VCCVEnglishConverter
 
 from .Document import Document
-from .Meteor import Meteor, MeteorPlay
-from .Meteor import Document as MeteorDocument
+try:
+    from .Meteor import Meteor, MeteorPlay
+    from .Meteor import Document as MeteorDocument
+except:
+    print('Meteor import failed')
+
 from .MIDIWriter import WriteNoteSequencesToMidi
-from .PCMPlayer import PCMPlayer, AsyncUIPCMPlayer
+try:
+    from .PCMPlayer import PCMPlayer, AsyncUIPCMPlayer
+except:
+    print('PCMPlayer import failed')    
 
 def PlayTrackBuffer(track):
     player = AsyncUIPCMPlayer()
