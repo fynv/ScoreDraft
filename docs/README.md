@@ -9,5 +9,8 @@
 
 ## Meteor Demos
 
-[TikTok](meteor/tiktok)
-[MyLove](meteor/MyLove)
+### English
+
+* [TikTok](meteor/tiktok)
+* [MyLove](meteor/MyLove)
+* [SoreFeetSong](meteor/SoreFeetSong)
