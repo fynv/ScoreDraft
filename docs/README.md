@@ -14,3 +14,8 @@
 * [TikTok](meteor/tiktok)
 * [MyLove](meteor/MyLove)
 * [SoreFeetSong](meteor/SoreFeetSong)
+
+### Japanese
+
+* [おうちに帰りたい](meteor/ouchi)
+
