@@ -1,4 +1,4 @@
-<script type="text/javascript" src="/js/meteor.js"></script>
+<script type="text/javascript" src="meteor.js"></script>
 
 <script type="text/javascript">
     window.onload = function() {
