@@ -1,0 +1,3 @@
+# ScoreDraft
+
+An empty index.
