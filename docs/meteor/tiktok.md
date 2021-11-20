@@ -5,7 +5,7 @@
         var restiktok = {
             canvasID : "canvastiktok",
             audioID : "audiotiktok",
-            dataPath : "/staticPages/tiktok.meteor"
+            dataPath : "tiktok.meteor"
         };
         meteortiktok = new Meteor(restiktok);
     };
@@ -24,7 +24,7 @@
 </div>
 <div>
     <audio id='audiotiktok' controls="controls">
-        <source type="audio/mpeg" src="/staticPages/tiktok.mp3"/>
+        <source type="audio/mpeg" src="tiktok.mp3"/>
     </audio>
 </div>
 
