@@ -32,8 +32,18 @@ ScoreDraft/PCMPlayer.py
 ScoreDraft/Meteor.py
 
 ScoreDraft/Catalog.py
+
+ScoreDraft/MusicXMLDocument.py
+)
+
+set(PYTHON_MX
+ScoreDraft/musicxml/__init__.py
+ScoreDraft/musicxml/musicxml.py
+ScoreDraft/musicxml/xlink.py
+ScoreDraft/musicxml/xml.py
 )
 
 install(FILES ${PYTHON} DESTINATION ScoreDraft)
+install(FILES ${PYTHON_MX} DESTINATION ScoreDraft/musicxml)
 install(FILES setup.py README.md DESTINATION .)
 

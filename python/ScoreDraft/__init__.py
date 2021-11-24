@@ -123,6 +123,11 @@ def PlayTrackBuffer(track):
     player = AsyncUIPCMPlayer()
     player.play_track(track)
 
+try:
+    from .MusicXMLDocument import MusicXMLDocument, from_music_xml, from_lilypond
+except:
+    print('MusicXMLDocument import failed')
+
 RESOURCE_ROOT='.'
 
 PERC_SAMPLE_ROOT=RESOURCE_ROOT+'/PercussionSamples'

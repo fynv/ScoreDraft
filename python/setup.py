@@ -9,7 +9,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
 	name = 'ScoreDraft',
-	version = '1.0.1',
+	version = '1.0.2',
 	description = 'A music/singing synthesizer that provides a Python based score authoring interface. ',
 	long_description=long_description,
 	long_description_content_type='text/markdown',  
@@ -18,9 +18,9 @@ setup(
 	author='Fei Yang, Vulcan Eon, Beijing',
 	author_email='hyangfeih@gmail.com',
 	keywords='synthesizer audio music utau psola',
-	packages=['ScoreDraft'],
+	packages=['ScoreDraft', "ScoreDraft.musicxml"],
 	package_data = { 'ScoreDraft': ['*.dll', '*.so', '*.data']},
-	install_requires = ['cffi'],
+	install_requires = ['cffi', 'xsdata', 'python_ly'],
 )
 
 
