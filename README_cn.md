@@ -5,15 +5,15 @@ ScoreDraft 是一个音乐和歌唱合成系统，它提供了基于Python的乐
 目前，它集成了下列几种合成引擎：
 
 * 乐器合成
-	- SimpleInstruments: 基于简单数学函数，如正弦波
-	- KarplusStrong: 基于纯算法的吉他模拟器
-	- BasicSamplers: 由单个或多个波形文件采样生成音符
-	- SoundFont2
+  - SimpleInstruments: 基于简单数学函数，如正弦波
+  - KarplusStrong: 基于纯算法的吉他模拟器
+  - BasicSamplers: 由单个或多个波形文件采样生成音符
+  - SoundFont2
 * 打击乐合成
-	- BasicSamples
-	- SoundFont2 (GM 鼓轨)
+  - BasicSamples
+  - SoundFont2 (GM 鼓轨)
 * 语音合成
-	- VoiceSampler: 采用类PSOLA的算法采样语音样本，提供了名为UtauDraft的前端来兼容UTAU音源
+  - VoiceSampler: 采用类PSOLA的算法采样语音样本，提供了名为UtauDraft的前端来兼容UTAU音源
 
 系统框架是开放的，极易扩展。
 
@@ -24,48 +24,54 @@ Meteor 提供了更高级的可视化功能，可以可视化用来生成音乐�
 下面这个例子展示了通过ScoreDraft来合成一小段音乐可以多么简单。
 
 ```Python
+    import ScoreDraft
+    from ScoreDraft.Notes import *
 
-	import ScoreDraft
-	from ScoreDraft.Notes import *
-	
-	doc=ScoreDraft.Document()
-	
-	seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
-	
-	doc.playNoteSeq(seq, ScoreDraft.Piano())
-	doc.mixDown('twinkle.wav')
+    doc=ScoreDraft.Document()
 
+    seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
+
+    doc.playNoteSeq(seq, ScoreDraft.Piano())
+    doc.mixDown('twinkle.wav')
 ```
 
 更详细的使用说明和演示见: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
 
 ## 安装
-ScoreDraft 现在可以由 PyPi 安装，支持64位的 Windows 和 Linux 系统。
 
+ScoreDraft 现在可以由 PyPi 安装，支持64位的 Windows 和 Linux 系统。
 
 ```
 pip install scoredraft
 ```
+
+已知问题：Linux方面只在Ubuntu20.04测试通过，已知在Ubuntu18.04上有问题。
 
 ## 编译
 
 编译期依赖：
 
 * CMake 3.0+
+
 * Python3
+
 * CUDA(可选): 如果没有CUDA可以去掉 CMake 的 "USE_CUDA" 选项
+
 * FreeType: 
-	- 已包含Windows开发库
-	- Ubuntu: sudo apt install libfreetype-dev
-	
+  
+  - 已包含Windows开发库
+  - Ubuntu: sudo apt install libfreetype-dev
+
 * GLFW: 
-	- 已包含源代码
-	- Ubuntu: sudo apt install libglfw3-dev
+  
+  - 已包含源代码
+  - Ubuntu: sudo apt install libglfw3-dev
 
 * PortAudio:
-	- 已包含源代码
-	- Ubuntu: sudo apt-get install libasound-dev libjack-dev
-	
+  
+  - 已包含源代码
+  - Ubuntu: sudo apt-get install libasound-dev libjack-dev
+
 编译过程：
 
 ```
@@ -77,8 +83,11 @@ pip install scoredraft
 ```
 
 运行期依赖：
+
 * Python3 
 * cffi
+* 播放器依赖于X.org和ALSA驱动
+* MusicXML 和 LilyPond 支持依赖于 xsdata, python_ly
 
 ## 采样和语音音源
 
@@ -87,28 +96,35 @@ pip install scoredraft
 ScoreDraft 基于 Python 脚本的启动位置来搜索特定目录，以此建立乐器样本和语音音源的索引。
 
 * InstrumentSamples 目录：wav 乐器样本
-	- 可以包含子目录，每个子目录包含多个wav文件，共同来定义一个乐器的不同音高范围。
-	- 对每个wav文件，可以有一个对应的freq文件来定义采样的音高
-	
+  
+  - 可以包含子目录，每个子目录包含多个wav文件，共同来定义一个乐器的不同音高范围。
+  - 对每个wav文件，可以有一个对应的freq文件来定义采样的音高
+
 * PercussionSamples 目录：wav 打击乐样本
+
 * SF2 目录：SoundFont2 乐器库文件
+
 * UTAUVoice：UTAU 语音音源库，每个库一个子目录
 
 用户需要自行下载和布署这些音源。以下推荐几个作者自己在用的音源。
 
 * wav 乐器采样：
-	- https://freewavesamples.com
+  
+  - https://freewavesamples.com
 
 * SoundFont2 乐器库
-	- Arachno: http://www.arachnosoft.com/main/download.php?id=soundfont-sf2
-	- SynthFontViena: http://www.synthfont.com/
-	- 
+  
+  - Arachno: http://www.arachnosoft.com/main/download.php?id=soundfont-sf2
+  - SynthFontViena: http://www.synthfont.com/
+  - 
+
 * UTAU
-	- uta(Japanese): default voice-bank that comes with UTAU
-	- TetoEng(English): https://kasaneteto.jp/en/voicebank.html
-	- Ayaka(Chinese): https://bowlroll.net/file/53297
-	- Ayaka2 (Japanese): https://bowlroll.net/file/69898
-	- WanEr(Chinese): http://lindayana.lofter.com/waner
+  
+  - uta(Japanese): default voice-bank that comes with UTAU
+  - TetoEng(English): https://kasaneteto.jp/en/voicebank.html
+  - Ayaka(Chinese): https://bowlroll.net/file/53297
+  - Ayaka2 (Japanese): https://bowlroll.net/file/69898
+  - WanEr(Chinese): http://lindayana.lofter.com/waner
 
 ## 版权协议
 

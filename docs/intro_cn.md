@@ -14,7 +14,6 @@ pip install scoredraft
 
 我们就由一个最简单的例子入手来介绍ScoreDraft 的基本使用和设计思想。
 
-
 ```python
 import ScoreDraft
 from ScoreDraft.Notes import *
@@ -27,7 +26,7 @@ ScoreDraft.WriteTrackBufferToWav(buf,'twinkle.wav')
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="twinkle.mp3"/>
+    <source type="audio/mpeg" src="twinkle.mp3"/>
 </audio>
 
 <h3>Play命令</h3>
@@ -37,9 +36,11 @@ ScoreDraft.KarplusStrongInstrument().play(buf, seq)
 ```
 
 ScoreDraft最重要的接口设计，是一类我们后面称为Play命令的语句，它的基本形式是 
+
 ```python
 instrument.play(buf,seq)
 ```
+
 其中，instrument是乐器，buf是音轨缓存，seq是序列。整句话代表用乐器instrument演奏序列seq，结果写入buf。
 
 与此类似的，还可以用打击乐组来演奏，或用（虚拟）歌手来演唱，这些语句都具有与这里类似的形式，统称为Play命令。
@@ -56,9 +57,11 @@ from ScoreDraft.Notes import *
 使用ScoreDraft必须首先导入ScoreDraft包，该包定义了ScoreDraft的核心Python 接口。
 
 多数应用也会包含ScoreDraft.Notes 模块中的音符定义。这里要注意一个事实，那就是，音符定义并不是ScoreDraft核心接口的一部分。对于音符的音高，核心接口直接接受的是物理频率。具体来说，在每一个Play命令中，我们可以传入一个以Hz为单位的参考频率，此处记为f_ref，然后对每一个音符，我们指定一个无量纲的相对频率f_rel[i]，此时音符的物理频率可由以下公式计算得到：
+
 ```
 f_note[i] = f_ref *f_rel[i].
 ```
+
 ScoreDraft.Notes给出了一系列“音符”函数（do(), re(), mi()...）的定义，帮助我们把音乐语言转换为物理量。这些函数都十分简单，这使得用户可根据自己的需要在必要的时候对其进行修改和扩展，比如，当你需要一个不同于十二平均律的律制的时候。
 
 ### 乐谱的表示
@@ -76,6 +79,7 @@ seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
 ```python
 buf=ScoreDraft.TrackBuffer()
 ```
+
 ScoreDraft 用音轨缓存来储存波形数据，不论是音乐合成的中间结果还是最终的混音结果都储存在音轨缓存当中。
 
 在ScoreDraft包中定义有TrackBuffer类，它是对C++接口的直接封装，相对于后面要介绍的Document类，TrackBuffer类是较为底层的操作接口。
@@ -148,6 +152,7 @@ ScoreDraft.PrintCatalog()
   ]
 }
 ```
+
 第一个列表"Engines"列出的是各个可用的引擎以及它们的类型（乐器/打击乐/歌手）。
 
 后续的三个列表分别给出可以立即使用的乐器/打击乐/歌手初始化器和它们所基于的引擎。ScoreDraft在启动时，根据脚本运行的位置搜索特定的几个目录来建立乐器采样、音源库的索引，并自动创建上面这些初始化器。这些初始化器的声明是动态代码块，在代码中是找不到的，但是使用却很方便，例如，您可以通过下面的代码来初始化一个大提琴乐器：
@@ -157,6 +162,7 @@ Cello1 = ScoreDraft.Cello()
 ```
 
 ### 乐器采样器
+
 乐器采样器引擎使用1个或多个wav文件作为样本来构造乐器。wav文件必须是1个或2个通道的16bit PCM格式。乐器采样器的算法是通过对样本的简单拉伸来改变音高的。因此使用的音频样本应具有足够的长度。
 
 #### 单采样
@@ -202,6 +208,7 @@ SoundFont2 的支持来自于对TinySoundFont(https://github.com/schellingb/Tiny
 ```python
 drum = ScoreDraft.PercussionSampler('./Drum.wav')
 ```
+
 你也可以把wav文件布署到启动位置下的**PercussionSamples**目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在PrintCatalog列表当中。
 
 ### UtauDraft 引擎
@@ -233,7 +240,7 @@ doc.playNoteSeq(seq, ScoreDraft.Piano())
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="DoMiSo.mp3"/>
+    <source type="audio/mpeg" src="DoMiSo.mp3"/>
 </audio>
 
 浮点数rel_freq表示一个相对于当前Document参考频率的相对频率, Document的参考频率可以通过doc.setReferenceFreqeuncy()来设置，默认为261.626，单位是Hz.
@@ -253,8 +260,9 @@ octave=5代表中心八度，因此do(5,48)的相对频率为1.0，而do(4,48)�
 ```python
 seq=[do(5,48), BK(48), mi(5,48), BK(48), so(5,48)]
 ```
+
 <audio controls>
-	<source type="audio/mpeg" src="DoMiSo2.mp3"/>
+    <source type="audio/mpeg" src="DoMiSo2.mp3"/>
 </audio>
 
 ## 打击乐演奏
@@ -263,7 +271,7 @@ seq=[do(5,48), BK(48), mi(5,48), BK(48), so(5,48)]
 
 ```python
 BassDrum=ScoreDraft.BassDrum()
-Snare=ScoreDraft.Snare()	
+Snare=ScoreDraft.Snare()    
 perc_list= [BassDrum, Snare]
 ```
 
@@ -273,23 +281,26 @@ perc_list= [BassDrum, Snare]
 
 ```python
 def dong(duration=48):
-	return (0,duration)
+    return (0,duration)
 
 def ca(duration=48):
-	return (1,duration)
+    return (1,duration)
 ```
+
 使用上面两个函数，我们就可以用下面的方式来编写Beat序列了：
 
 ```python
 seq = [dong(), ca(24), dong(24), dong(), ca(), dong(), ca(24), dong(24), dong(), ca()]
 ```
+
 使用一个已有的Document对象 "doc"和打击乐组, 你可以像下面这样来演奏一个Beat序列:
 
 ```python
 doc.playBeatSeq(seq, perc_list)
 ```
+
 <audio controls>
-	<source type="audio/mpeg" src="test_perc.mp3"/>
+    <source type="audio/mpeg" src="test_perc.mp3"/>
 </audio>
 
 ## 唱歌
@@ -310,18 +321,17 @@ doc.sing(seq, ScoreDraft.GePing_UTAU())
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="GePing.mp3"/>
+    <source type="audio/mpeg" src="GePing.mp3"/>
 </audio>
 
 分段线性的音高表示可以用来模拟rap。在ScoreDraft.RapChinese模块中提供了一个工具函数CRap()，可以用来帮助生成中文四声的Rap。使用实例如：
-
 
 ```python
 seq= [ CRap("chu", 2, 36)+CRap("he", 2, 60)+CRap("ri", 4, 48)+CRap("dang", 1, 48)+CRap("wu", 3, 48), BL(24)]
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="rap2.mp3"/>
+    <source type="audio/mpeg" src="rap2.mp3"/>
 </audio>
 
 ### UtauDraft 引擎
@@ -353,9 +363,8 @@ Ayaka.setLyricConverter(ScoreDraft.CVVCChineseConverter)
 
 ```python
 def LyricConverterFunc(LyricForEachSyllable):
-	...
-	return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
-
+    ...
+    return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
 ```
 
 输入参数'LyricForEachSyllable' 是歌唱片段中输入的歌词列表 [lyric1, lyric2, ...], 每个歌词 对应一个音节。拆音函数将每个输入歌词转换为1个或多个歌词，来瓜分原歌词的时值。输出的时候，要给每个 分解后的歌词设置一个权重，以指示分解后的歌词在原歌词的时值中所占的比例。另外还需要提供一个bool值isVowel表示分离出来的这个部分是否包含原音节的元音部分。
@@ -381,6 +390,7 @@ dest_position_i 为浮点数，代表生成音频的时间点，单位是毫秒�
 对于 dest_position_i ，通常需要手动测量待对齐的音频（或视频）内容来得到。
 
 例子：
+
 ```python
 seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
 buf = ScoreDraft.TrackBuffer()
@@ -388,6 +398,7 @@ piano = ScoreDraft.Piano()
 tempo_map = [ (0, 1000.0), (ScoreDraft.TellDuration(seq), 5000.0) ]
 piano.play(buf, seq, tempo_map)
 ```
+
 以上代码在生成音频时，会把音频的起点和终点精确对齐到1s和5s处。
 
 ## 回放和可视化
@@ -399,36 +410,67 @@ ScoreDraft 目前提供两个播放器/可视化模块。
 ScoreDraft.PCMPlayer 可以用来播放一个之前生成的TrackBuffer对象buf，可以显示窗口也可以不显示窗口。
 
 无窗口模式：
+
 ```python
 player = ScoreDraft.PCMPlayer()
 player.play_track(buf)
 ```
+
 这里play_track()是异步调用，这意味着这个函数在启动音频播放之后会立刻返回Python代码执行。 此时你可以继续提交新的播放。所有提交的音轨会组成队列依次播放。
 
 有窗口模式：
+
 ```python
 player = ScoreDraft.PCMPlayer(ui = True)
 player.play_track(buf)
 player.main_loop()
 ```
+
 ui=True时必须要调用main_loop()来实现窗口交互响应，但是这样一来成了同步调用了。如果需要异步调用的话，则应使用ScoreDraft.AsyncUIPCMPlayer：
 
 ```python
 player = ScoreDraft.AsyncUIPCMPlayer()
 player.play_track(buf)
 ```
+
 或者更简单地：
+
 ```python
 ScoreDraft.PlayTrackBuffer(buf)
 ```
+
 <image src ="PCMPlayer1.png"/>
 <image src ="PCMPlayer2.png"/>
 
 PCMPlayer 支持两种可视化模式，按“W”显示波形，按“S”显示频谱。
 
-
 ### Meteor
+
 Meteor 可以用来可视化前面介绍过的各种序列，同时播放混合好的音轨。使用Meteor最简单的方法是用ScoreDraft.MeteorDocument代替ScoreDraft.Document来使用，该类包含ScoreDraft.Document中的所有接口，外加一个额外的方法 MeteorDocument.meteor(chn=-1). 如果你在旧的项目中使用ScoreDraft.Document，你只需要用ScoreDraft.MeteorDocument来替换它，然后在代码最后调用doc.meteor() 可视化器将会被激活。与 PlayTrackBuffer()不同，doc.meteor()是同步调用，代码会暂停执行，直到播放结束。
 
 <image src ="Meteor.png"/>
 
+## MusicXML 和 LilyPond 支持
+
+ScoreDraft 通过 **class MusicXMLDocument** 支持MusicXML和LilyPond格式的输入。可以由一个MusicXML文件或LilyPond文件创建该对象。MusicXML:
+
+```pythonag-0-1flafg1ldag-1-1flafg1ldag-0-1flafg1ldag-1-1flafg1ld
+doc = ScoreDraft.from_music_xml('xyz.xml')
+```
+
+LilyPond:
+
+```python
+doc = ScoreDraft.from_lilypond('xyz.ly')
+```
+
+方法 **playXML()** 用于将音符播放到音轨当中：
+
+```python
+instruments = [ScoreDraft.Piano()]
+doc.playXML(instruments)
+```
+
+每个乐器对应于一个音轨（一行音符），当乐器数比音轨数少时，最后一个乐器会被使用多次。
+
+**MusicXMLDocument** 对象可以像其他文档对象一样使用，默认支持meteor.

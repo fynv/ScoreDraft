@@ -14,7 +14,6 @@ This document will introduce the uses of each basic elements of ScoreDraft.
 
 Let's start from a minimal example to explain the basic usage and design ideas of ScoreDraft.
 
-
 ```python
 import ScoreDraft
 from ScoreDraft.Notes import *
@@ -27,7 +26,7 @@ ScoreDraft.WriteTrackBufferToWav(buf,'twinkle.wav')
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="twinkle.mp3"/>
+    <source type="audio/mpeg" src="twinkle.mp3"/>
 </audio>
 
 ### Play Calls
@@ -41,6 +40,7 @@ As the most important interface design of ScoreDraft, "Play Calls" is a class of
 ```python
 instrument.play(buf,seq)
 ```
+
 which simply means, play sequence "seq" with the instrument and write the resulted waveform to "buf".
 
 Similarly, you can also use a percussion group to play or use a "singer" to sing. We will use the the term **Play Call** to refer to any command of these sorts.
@@ -57,6 +57,7 @@ from ScoreDraft.Notes import *
 The first thing to do is to import "ScoreDraft"  package, which provides the core Python interfaces of ScoreDraft.
 
 Most application code will also import the note definitions from the "ScoreDraft.Notes" module. In face, the core interface of ScoreDraft does not include any specific definition of musical notes. It simply accepts a physical frequency f_ref in Hz as a reference frequency for each **Play Call**, and a  relative frequency f_rel[i], which is just a multiplier, for each note. The physical frequency of each f_note[i] can be then calculated by:
+
 ```
 f_note[i] = f_ref *f_rel[i].
 ```
@@ -108,6 +109,7 @@ This have a few benefits. First, it simplifies the creation of track-buffers, th
 The class Document also manages tempo and reference frequency parameters internally, so we don't pass them through the Play Calls anymore in this case.
 
 ## Initialization of Intruments/Percussions/Singers
+
 User can always run the PrintCatalog.py to get a list of all available instrument/percussion/singer initializers. 
 
 ```python
@@ -117,6 +119,7 @@ ScoreDraft.PrintCatalog()
 ```
 
 The output will look like:
+
 ```
 {
   "Engines": [
@@ -166,6 +169,7 @@ Cello1 = ScoreDraft.Cello()
 The instrument sampler engine uses one or multiple wav files as the input to create an instrument. The .wav files must have one or two channels in 16bit PCM format. The algorithm of the instrument sampler is by simply stretching the sample audio and adding a envelope. So be sure that the samples have sufficient lengths.
 
 #### Single-sampling
+
 You can use the class **ScoreDraft.InstrumentSampler_Single** to create an instrument directly. At creation time, you need to provide a path to the wav file. The path can be either absolute path or relative to the starting folder.
 
 ```python
@@ -243,11 +247,10 @@ doc.playNoteSeq(seq, ScoreDraft.Piano())
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="DoMiSo.mp3"/>
+    <source type="audio/mpeg" src="DoMiSo.mp3"/>
 </audio>
 
 The float "rel_freq" is a relative frequency relative to the reference frequency stored in the document object, which can be set with doc.setReferenceFreqeuncy(), and defaulted to 261.626(in Hz).
-
 
 The duration of a note is "1 beat" when the integer value "duration" equals 48. The document objects manages a tempo value in beats/minute, which can be set using doc.setTempo(), and defaulted to 80. It is also allowed to feed doc.setTempo() with a series of control points, which builds a **Dynamic Tempo Mapping**, which is to be discussed later.
 
@@ -264,28 +267,31 @@ When rel_freq < 0.0, ScoreDraft will treat the note as some special marker, depe
 ```python
 seq=[do(5,48), BK(48), mi(5,48), BK(48), so(5,48)]
 ```
+
 <audio controls>
-	<source type="audio/mpeg" src="DoMiSo2.mp3"/>
+    <source type="audio/mpeg" src="DoMiSo2.mp3"/>
 </audio>
 
 ## Percussion Play
+
 For percussion play, first you should consider what percussions to choose to build a percussion group. For example, I choose BassDrum and Snare:
 
 ```python
 BassDrum=ScoreDraft.BassDrum()
-Snare=ScoreDraft.Snare()	
+Snare=ScoreDraft.Snare()    
 perc_list= [BassDrum, Snare]
 ```
+
 The kind of sequence used for percussion play is called beat sequence. Beat sequences are consisted of tuples in (percussion_index, duration) form. Both "percussion_index" and "duration" are integers, where "percussion_index" refers to the index in the "perc_list" defined above, and "duration" is the same as instrument play.
 
 Often, we want to defines some utility functions to make the writing of beat sequences more intuitive:
 
 ```python
 def dong(duration=48):
-	return (0,duration)
+    return (0,duration)
 
 def ca(duration=48):
-	return (1,duration)
+    return (1,duration)
 ```
 
 Now you can use the above 2 functions to build a beat sequence like:
@@ -293,6 +299,7 @@ Now you can use the above 2 functions to build a beat sequence like:
 ```python
 seq = [dong(), ca(24), dong(24), dong(), ca(), dong(), ca(24), dong(24), dong(), ca()]
 ```
+
 With an existing document object "doc", you can "play" the sequence using "perc_list" like:
 
 ```python
@@ -300,7 +307,7 @@ doc.playBeatSeq(seq, perc_list)
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="test_perc.mp3"/>
+    <source type="audio/mpeg" src="test_perc.mp3"/>
 </audio>
 
 ## Singing
@@ -311,6 +318,7 @@ ScoreDraft provides a singing interface similar to instrument and percussion pla
 seq = [ ("mA", mi(5,24), "mA", re(5,24), mi(5,48)), BL(24)]
 seq +=[ ("du",mi(5,24),"ju", so(5,24), "rIm", la(5,24), "Em", mi(5,12),re(5,12), "b3", re(5,72)), BL(24)]
 ```
+
 Each singing segment contains one or more lyric as a string, each followed by one or more tuples to define the pitch corresponding to the leading lyric. In the simplest case, one of the tuples can be the same form as an instrument note: (freq_rel, duration). The tuple can also contain multiple freq_rel/duration pairs to define multiple control-points, like (freq_rel1, duration1, freq_rel2, duration2, ...). In that case, pitches will be linearly interpolated between control points, and the last control point defines a period of flat pitch. Pitches are not interpolated between tuples. Using **ScoreDraft.Notes** definitions, you can define a piece-wise pitch curve by concatenating multiple instrument notes, like do(5,24)+so(5,24)+do(5,0), which defines a pitch curve of 3 control points and a total duration of 48.
 
 All lyrics and notes in the same singing segment are intended to be sung continuously. However, when there are rests/backspaces, the singing-segment will be broken into multiple segments to sing. The singing command looks like following, with an existing "doc" and some singer:
@@ -320,7 +328,7 @@ doc.sing(seq, ScoreDraft.TetoEng_UTAU())
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="cvvc.mp3"/>
+    <source type="audio/mpeg" src="cvvc.mp3"/>
 </audio>
 
 The piece-wise formed pitch curve can be used to simulate rapping. There is an utility CRap() defined in ScoreDraftRapChinese.py to help to generate the tones of Mandarin Chinese (the 4 tones). An example using CRap():
@@ -330,7 +338,7 @@ seq= [ CRap("chu", 2, 36)+CRap("he", 2, 60)+CRap("ri", 4, 48)+CRap("dang", 1, 48
 ```
 
 <audio controls>
-	<source type="audio/mpeg" src="rap2.mp3"/>
+    <source type="audio/mpeg" src="rap2.mp3"/>
 </audio>
 
 ### UtauDraft Engine
@@ -362,10 +370,10 @@ The converter functions are defined in the following form, write your own if the
 
 ```python
 def LyricConverterFunc(LyricForEachSyllable):
-	...
-	return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
-
+    ...
+    return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
 ```
+
 The argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string, which is the input lyric of a syllable.
 
 The converter function should convert 1 input lyric into 1 or more lyrics to split the duration of the original syllable. A weight value should be provided to indicate the ratio or duration of the converted note. A bool value "isVowel" need to be provided to indicate whether it contains the vowel part of the syllable.
@@ -393,6 +401,7 @@ For beat_position_i, it is suggested to calculate it by calling ScoreDraft.TellD
 For dest_position_i, we often need to measure the target material (audio/video) that we are aligning to, manually.
 
 For example:
+
 ```python
 seq=[do(),do(),so(),so(),la(),la(),so(5,96)]
 buf = ScoreDraft.TrackBuffer()
@@ -412,6 +421,7 @@ ScoreDraft now contains 2 players/visualizers.
 **ScoreDraft.PCMPlayer** can be used to play a previously generate TrackBuffer object **buf**, with or without a display window.
 
 For windowless use:
+
 ```python
 player = ScoreDraft.PCMPlayer()
 player.play_track(buf)
@@ -420,6 +430,7 @@ player.play_track(buf)
 Here **play_track()** is an asynchronized call, which means that it will return immediately to execute the succeeding Python code after the playback is started. You can continue to submit more track-buffers to be played-back. The track-buffers will be queued and played-back consecutively.
 
 For visualzied use:
+
 ```python
 player = ScoreDraft.PCMPlayer(ui = True)
 player.play_track(buf)
@@ -434,9 +445,11 @@ player.play_track(buf)
 ```
 
 Or more simply:
+
 ```python
 ScoreDraft.PlayTrackBuffer(buf)
 ```
+
 <image src ="PCMPlayer1.png"/>
 <image src ="PCMPlayer2.png"/>
 
@@ -450,3 +463,28 @@ PCMPlayer supports 2 visualization modes:
 Meteor can be used to visualize all kinds of sequences while playing-back the mixed track. The easiest way to use Meteor is to use ScoreDraft.MeteorDocument instead of ScoreDraft.Document.The definition of ScoreDraft.MeteorDocument contains all interface as the one defined in ScoreDraft.Document, plus an extra method MeteorDocument.meteor(chn=-1). If you are using ScoreDraft.Document in your old project, you just need to use Meteor.Document to replace it, and call doc.meteor() at the end of the code, the visualizer will thus be activated. Unlike PlayTrackBuffer(), doc.meteor() is a synchronized call. The execution will be blocked until the end of play-back.
 
 <image src ="Meteor.png"/>
+
+## MusicXML & LilyPond Support
+
+ScoreDraft supports MusicXML & LilyPond through **class MusicXMLDocument**. It can be created from a MusicXML file:
+
+```python
+doc = ScoreDraft.from_music_xml('xyz.xml')
+```
+
+or from a LilyPond file:
+
+```python
+doc = ScoreDraft.from_lilypond('xyz.ly')
+```
+
+To play the notes into the track-buffers, use the **playXML()** method:
+
+```python
+instruments = [ScoreDraft.Piano()]
+doc.playXML(instruments)
+```
+
+Each instrument is alligned to a track (staff). If there are less instruments than tracks, the last instrument will be used mutliple times.
+
+A **MusicXMLDocument** can be used just like other documents, meteor is supported by default.
