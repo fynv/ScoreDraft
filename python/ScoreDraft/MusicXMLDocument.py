@@ -1,6 +1,9 @@
 from .musicxml import ScorePartwise
 from xsdata.formats.dataclass.parsers import XmlParser
-from .Meteor import Document
+try:
+    from .Meteor import Document
+except:
+    from .Document import Document
 import ly.musicxml
 
 def _find_tempo(score):
