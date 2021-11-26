@@ -20,7 +20,12 @@ setup(
 	keywords='synthesizer audio music utau psola',
 	packages=['ScoreDraft', "ScoreDraft.musicxml"],
 	package_data = { 'ScoreDraft': ['*.dll', '*.so', '*.data']},
-	install_requires = ['cffi', 'xsdata', 'python_ly'],
+	install_requires = ['cffi', 'xsdata', 'python_ly', 'pyyaml'],
+	entry_points={
+        'console_scripts': [
+            'scoredraft=ScoreDraft:run_yaml'
+        ]
+    }
 )
 
 

@@ -1,4 +1,3 @@
-import os
 import numbers
 
 def isNumber(x):
@@ -47,48 +46,12 @@ from .UTAUUtils import LoadPrefixMap as LoadPrefixMapUTAU
 from .UTAUUtils import LookUpPrefixMap as LookUpPrefixMapUTAU
 from .UTAUUtils import VoiceBank as VoiceBankUTAU
 
-from .Catalog import Catalog
-from .Catalog import PrintCatalog
-
-from .Instrument import Instrument
-from .Percussion import Percussion
-from .Singer import Singer
-
-from .SimpleInstruments import EnginePureSin
-from .SimpleInstruments import EngineSquare
-from .SimpleInstruments import EngineTriangle
-from .SimpleInstruments import EngineSawtooth
-from .SimpleInstruments import EngineNaivePiano
-from .SimpleInstruments import EngineBottleBlow
-from .SimpleInstruments import PureSin
-from .SimpleInstruments import Square
-from .SimpleInstruments import Triangle
-from .SimpleInstruments import Sawtooth
-from .SimpleInstruments import NaivePiano
-from .SimpleInstruments import BottleBlow
-
-from .KarplusStrong import EngineKarplusStrong
-from .KarplusStrong import KarplusStrongInstrument
-
-from .BasicSamplers import EnginePercussionSampler
-from .BasicSamplers import EngineInstrumentSampler_Single
-from .BasicSamplers import EngineInstrumentSampler_Multi
-from .BasicSamplers import PercussionSampler
-from .BasicSamplers import InstrumentSampler_Single
-from .BasicSamplers import InstrumentSampler_Multi
-
-from .SoundFont2 import ListPresets as ListPresetsSF2
-from .SoundFont2 import EngineSoundFont2
-from .SoundFont2 import SF2Instrument
-
-# VoiceSampler
 notVowel = 0
 preVowel = 1
 isVowel = 2
 
 from .VoiceSampler import GenerateSentence
 from .VoiceSampler import GenerateSentenceCUDA
-
 from . import VoiceSampler
 
 def DetectFrqVoice(wavF32, interval=256):
@@ -96,15 +59,8 @@ def DetectFrqVoice(wavF32, interval=256):
     frq_data.detect(wavF32, interval)
     return frq_data
     
-from .UtauDraft import GetVoiceBank as GetVoiceBankUTAU
-from .UtauDraft import Engine as EngineUtauDraft
-from .UtauDraft import UtauDraft
-from .CVVCChineseConverter import CVVCChineseConverter
-from .XiaYYConverter import XiaYYConverter
-from .JPVCVConverter import JPVCVConverter
-from .TsuroVCVConverter import TsuroVCVConverter
-from .TTEnglishConverter import TTEnglishConverter
-from .VCCVEnglishConverter import VCCVEnglishConverter
+from .Catalog import PrintCatalog
+from .Initializers import *
 
 from .Document import Document
 try:
@@ -128,65 +84,36 @@ try:
 except:
     print('MusicXMLDocument import failed')
 
-RESOURCE_ROOT='.'
+try:
+    from .YAMLDocument import YAMLScore, YAMLDocument
+    has_yaml = True
+except:
+    print('YAMLDocument import failed')
+    has_yaml = False
+    
+import argparse
+    
+def run_yaml():
+    if has_yaml:
+        parser = argparse.ArgumentParser(prog = "scoredraft")
+        parser.add_argument("yaml", help = "input yaml filename")
+        parser.add_argument("-ly", help = "output lilyond filename")
+        parser.add_argument("-wav", help = "output wav filename")
+        parser.add_argument("-meteor", help = "output meteor filename")
+        parser.add_argument("-run", help = "run meteor", action='store_true')
+        args=vars(parser.parse_args())
+        with open(args['yaml'], 'r') as f_in:
+            score = YAMLScore(f_in)
+            if not args['ly'] is None:
+                with open(args['ly'], 'w') as f_out:
+                    f_out.write(score.to_ly())
+            if not args['wav'] is None or not args['meteor'] is None or args['run']:
+                doc = YAMLDocument(score)
+                doc.play()
+                if not args['wav'] is None:
+                    doc.mixDown(args['wav'])
+                if not args['meteor'] is None:
+                    doc.saveToFile(args['meteor'])
+                if args['run']:
+                    doc.meteor()
 
-PERC_SAMPLE_ROOT=RESOURCE_ROOT+'/PercussionSamples'
-if os.path.isdir(PERC_SAMPLE_ROOT):
-    for item in os.listdir(PERC_SAMPLE_ROOT):
-        file_path = PERC_SAMPLE_ROOT+'/'+item
-        if os.path.isfile(file_path) and item.endswith(".wav"):
-            name = item[0:len(item)-4]
-            definition="""
-def """+name+"""():
-    return PercussionSampler('"""+file_path+"""')
-"""
-            exec(definition)
-            Catalog['Percussions'] += [name+' - PercussionSampler']
-
-INSTR_SAMPLE_ROOT=RESOURCE_ROOT+'/InstrumentSamples'
-if os.path.isdir(INSTR_SAMPLE_ROOT):
-    for item in os.listdir(INSTR_SAMPLE_ROOT):
-        inst_path = INSTR_SAMPLE_ROOT+'/'+item
-        if os.path.isfile(inst_path) and item.endswith(".wav"):
-            name = item[0:len(item)-4]
-            definition="""
-def """+name+"""():
-    return InstrumentSampler_Single('"""+inst_path+"""')
-"""
-            exec(definition)
-            Catalog['Instruments'] += [name+' - InstrumentSampler_Single']
-        elif os.path.isdir(inst_path):
-            definition="""
-def """+item+"""():
-    return InstrumentSampler_Multi('"""+inst_path+"""')
-"""
-            exec(definition)
-            Catalog['Instruments'] += [item+' - InstrumentSampler_Multi']
-            
-SF2_ROOT=RESOURCE_ROOT+'/SF2'
-if os.path.isdir(SF2_ROOT):
-    for item in os.listdir(SF2_ROOT):
-        sf2_path = SF2_ROOT+'/'+item
-        if os.path.isfile(sf2_path) and item.endswith(".sf2"):
-            name = item[0:len(item)-4]
-            definition="""
-def """+name+"""(preset_index):
-    return SF2Instrument('"""+sf2_path+"""', preset_index)
-
-def """+name+"""_List():
-    ListPresetsSF2('"""+sf2_path+"""')
-"""
-            exec(definition)
-            Catalog['Instruments'] += [name+' - SF2Instrument']
-
-UTAU_VB_ROOT=RESOURCE_ROOT+'/UTAUVoice'
-UTAU_VB_SUFFIX='_UTAU'
-if os.path.isdir(UTAU_VB_ROOT):
-    for item in os.listdir(UTAU_VB_ROOT):
-        if os.path.isdir(UTAU_VB_ROOT+'/'+item):
-            definition="""
-def """+item+UTAU_VB_SUFFIX+"""(useCuda=True):
-    return UtauDraft('"""+UTAU_VB_ROOT+"""/"""+item+"""',useCuda)
-"""
-            exec(definition)
-            Catalog['Singers'] += [item+UTAU_VB_SUFFIX+' - UtauDraft']
