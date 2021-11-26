@@ -1,0 +1,67 @@
+score:
+    tempo: 150
+    staffs:
+        -
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+                
+            pedal: |
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                
+#        -
+#            relative: c
+#            instrument: Arachno(24)
+#            sweep: 0.1
+#            content: |
+#                \clef "bass"
+#                c4 e <g c e>2
+#                c,4 e <g bes e>2
+#                c,4 e <g bes e>2
+#                f,4 a <e' a c>2
+#                f,4 a <e' a c>2
+#                g,4 b <d g b>2
+#                g,4 b <d g b>2
+#                c4 e <g b e>2
+
+        -
+            is_drum: true
+            instrument: Arachno(128)
+            content: |
+                bd4 hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
