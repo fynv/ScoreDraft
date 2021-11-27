@@ -683,7 +683,7 @@ score:
 ```
 
 <audio controls>
-    <source type="audio/mpeg" src="example3.mp3"/>
+    <source type="audio/mpeg" src="example4.mp3"/>
 </audio>
 
 对于鼓轨来说，instrument 必须是一个GM鼓乐器，如我们这里设置的 Arachno(128)。
