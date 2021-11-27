@@ -38,6 +38,25 @@ The following example shows how easily a piece of musical sound can be generated
     doc.mixDown('twinkle.wav')
 ```
 
+Starting from version 1.0.3, ScoreDraft now supports a YAML based input format, which looks like:
+
+```yaml
+# test.yaml
+score:
+    staffs:
+        -
+            relative: c''
+            instrument: Piano()
+            content: |
+                c4 c g g a a g2
+```
+
+where in the 'content' part, LilyPond syntax can be used to input notes. The following shell command can be used to generate a wav:
+
+```
+# scoredraft -wav twinkle.wav test.yaml
+```
+
 For more detailed introduction and demos see: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
 
 ## Installation
@@ -45,7 +64,7 @@ For more detailed introduction and demos see: [https://fynv.github.io/ScoreDraft
 ScoreDraft is now available from PyPi. Windows x64/Linux x64 supported.
 
 ```
-pip install scoredraft
+# pip install scoredraft
 ```
 
 Known issue: For Linux, it is only tested on Ubuntu 20.04. It is known to be not working on Ubuntu 18.04.
@@ -91,6 +110,7 @@ Run-time dependencies:
 * cffi
 * X-org, ALSA drivers are optionally needed for players
 * xsdata, python_ly are optionally needed for MusicXML and LilyPond support
+* pyyaml is optionally needed for YAML support
 
 ## Samples & Voice Banks
 
@@ -143,6 +163,7 @@ which only partially solves the issues.
 After the Nov 2021 refactoring, ScoreDraft have all the benefits of both SingingGadgets and the old ScoreDraft.
 Therefore, the SingingGadgets project is now closed.
 
+* Nov 27, 2021. ScoreDraft 1.0.3, adding a YAML based input routine support
 * Nov 24, 2021. ScoreDraft 1.0.2, adding MusicXML & LilyPond support
 * Nov 19, 2021. ScoreDraft 1.0.0 & 1.0.1
 * Jun 16, 2018. SingingGadgets 0.0.3

@@ -474,3 +474,357 @@ doc.playXML(instruments)
 每个乐器对应于一个音轨（一行音符），当乐器数比音轨数少时，最后一个乐器会被使用多次。
 
 **MusicXMLDocument** 对象可以像其他文档对象一样使用，默认支持meteor.
+
+## 基于 YAML 格式的输入
+
+我们可以看出，使用 LilyPond 进行输入，相比于用 Python 录入序列要更为简洁、容易。但是，LilyPond 的语法非常复杂，解析起来并不容易。前面的例子中，ScoreDraft 在内部使用了 python_ly 库，把 ly 转换成 MusicXML，再读取 MusicXML 进行合成。这个转换过程并不是很可靠，遇到复杂的 ly 文件会出问题。此外，还有一些对于合成过程有用的信息，是无法包含在 LilyPond 和 MusicXML 文件当中的，导致我们还需要在Python代码中对引擎进行一些额外的设置。
+
+显然，我们可以在“人类可读性”和“机器可读性”中间寻求某种折中。这里提出一种方案，使用 YAML 作为外层结构描述，并内嵌 LilyPond 代码片段来输入音符。这样折中之后，我们就可以把音乐合成所需的全部信息放入到一个YAML文件中。
+
+```yaml
+# exmaple 1
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example1.mp3"/>
+</audio>
+
+score 是最顶层对象，包含全部内容。第二层包括全局设置和 staffs 列表。
+
+每个 staff 定义一行音符，以及如何合成这行音符。instrument 属性告诉 Python 如何初始化用来合成这行音符的乐器。它的值本身是有效的Python代码，ScoreDraft在内部会使用exec() 来执行这个代码。这里 Arachano 是一个 SoundFont2 音色库，我们事先把它部署在 SF2 目录下面。括号内的编号代表音色序号，如40号是小提琴，0号是钢琴。
+
+content 是一个多行字符串，主要包含LilyPond音符。
+
+从版本 1.0.3 开始，加入了一个命令行指令 scoredraft，用来处理 YAML 输入。用法如下：
+
+```
+usage: scoredraft [-h] [-ly LY] [-wav WAV] [-meteor METEOR] [-run] yaml
+
+positional arguments:
+  yaml            input yaml filename
+
+optional arguments:
+  -h, --help      show this help message and exit
+  -ly LY          output lilyond filename
+  -wav WAV        output wav filename
+  -meteor METEOR  output meteor filename
+  -run            run meteor
+```
+
+使用 -ly 参数，可以把YAML文件转成一个正常的 LilyPond 文件，可以进一步完善后发布。除了音符以外的更多信息则将会传递给合成引擎用于合成过程，而这些信息大多不会记录在LilyPond文件中。
+
+![](workflow.png)
+
+上图显示了 scoredraft 内部的工作流程。从原理上，只要是对合成过程有用的信息我们都可以把它包含到 YAML 文件里。例如，可以用如下方法加入踏板控制信息：
+
+```yaml
+# exmaple 2
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+
+            pedal: |
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example2.mp3"/>
+</audio>
+
+LilyPond 其实是有专门的踏板指令的，但是没有工具可以可靠地把这个信息转换成 MusicXML。因此，在YAML中我们用一个打击乐序列来表示踏板的运动，这里bd本来是用来表示底鼓的，使用其他打击乐也没有问题，毕竟踏板只需要一个开关信息。
+
+在吉他轨中，我们经常希望在和弦音中加入一个微小的延迟，用来模拟扫弦效果。在YAML中我们只要加入一个sweep属性就可以在合成过程中自动模拟这个效果。
+
+```yaml
+# exmaple 3
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(24)
+            sweep: 0.1
+            content: |
+                \clef "bass"
+                c4 e <g c e>2
+                c,4 e <g bes e>2
+                c,4 e <g bes e>2
+                f,4 a <e' a c>2
+                f,4 a <e' a c>2
+                g,4 b <d g b>2
+                g,4 b <d g b>2
+                c4 e <g b e>2
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example3.mp3"/>
+</audio>
+
+sweep: 0.1 告诉 ScoreDraft 在和弦音中加入10% 的延迟。
+
+要加入打击乐的话，只需要设置 is_drum: true，然后就可以在 content 里使用打击乐音符了。
+
+```yaml
+# exmaple 4
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(24)
+            sweep: 0.1
+            content: |
+                \clef "bass"
+                c4 e <g c e>2
+                c,4 e <g bes e>2
+                c,4 e <g bes e>2
+                f,4 a <e' a c>2
+                f,4 a <e' a c>2
+                g,4 b <d g b>2
+                g,4 b <d g b>2
+                c4 e <g b e>2
+
+        -
+            is_drum: true
+            instrument: Arachno(128)
+            content: |
+                bd4 hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example3.mp3"/>
+</audio>
+
+对于鼓轨来说，instrument 必须是一个GM鼓乐器，如我们这里设置的 Arachno(128)。
+
+歌唱合成也可以在YAML中进行编写。
+
+```yaml
+# example 5
+score:
+    tempo: 150
+    staffs:
+        -
+            relative: c'
+            is_vocal: true
+            singer: TetoEng_UTAU()
+            converter: TTEnglishConverter            
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d4 (c) c2
+                r4 c d e
+                f2 g4 (a)
+                r4 a g f
+                e2. r4
+            utau: |
+                ju Ar maI
+                s@n SaIn.
+                maI oU nli
+                s@n SaIn.
+                ju meIk mi
+                h{p i.
+                wEn skaIz Ar
+                greI.
+
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+
+            pedal: |
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+
+        -
+            is_drum: true
+            instrument: Arachno(128)
+            content: |
+                bd4 hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+```
+
+首先，设置 is_vocal: true。第二，设置一个 singer 属性代替 instrument 属性。在多数情况下，还要设置一个converter属性来设置歌词转换器。如果使用的是CZ式VCCV的话，还需要设置 CZMode: true。第三，添加一个 utau 属性来加入音标。音节之间用空格分隔，每句话结尾加一个点。除了这个句尾点之外，content 代码中的休止符 r 也标志着一句话的结束。每个音节默认对应一个音符，如果需要对应多个音符则需要加入连音线。
+
+### 属性参考
+
+目前，ScoreDraft 在 YAML 格式中识别的属性并不多，上面基本上都提到了。这里给出一个完整的列表。
+
+#### score
+
+顶层对象
+
+#### tempo
+
+全局属性，定义速率，单位BPM
+
+#### staffs
+
+音轨表
+
+#### content
+
+音轨属性，包含嵌入的LilyPond代码。原则上可以包含任何 LilyPond 代码。在使用 -ly 命令行参数时，这些代码会被直接输出到 ly 文件中。但是，对于合成器来说，只有一小部分 LilyPond 语法是有意义的。除了基本的音符之外，<> 和弦标记和 ()连音标记会被识别。连音标记对于歌唱合成有用。
+
+#### is_drum
+
+音轨属性，表示当前音轨是否是鼓轨。
+
+#### is_vocal
+
+音轨属性，表示当前音轨是否是歌声。
+
+当 is_drum 和 is_vocal 都没有被设置时，当前轨默认为乐器轨。
+
+#### relative
+
+音轨属性，用于乐器和歌唱轨，表示 content 里的音符是相对模式。
+
+#### instrument
+
+音轨属性，用于乐器和鼓轨，表示乐器信息。
+
+属性值应为用来调用乐器初始化器所需的 Python 代码。
+
+对于鼓轨，该乐器应为GM鼓乐器。
+
+#### pedal
+
+音轨属性，用于乐器轨中控制延音踏板。属性值用打击乐的语法来编写，可以使用任何一种打击乐音符。支持休止符。
+
+#### sweep
+
+音轨属性，用于乐器轨中，为和弦音添加一个延迟来模拟吉他扫弦效果。
+
+#### singer
+
+音轨属性，用于歌唱轨中，表示歌手信息。
+
+属性值应为用来调用歌手初始化器所需的Python代码。
+
+#### converter
+
+音轨属性，用于歌唱轨中，提供歌词转换器信息。
+
+属性值应为该歌词转换器的 Python 变量名。
+
+**CZMode**
+
+音轨属性，用于歌唱轨中，表示当前歌手是否是CZ VCCV模式的。
+
+**utau**
+
+音轨属性，用于歌唱轨中，包含每个音节的 UTAU 音标。音节用空格分隔，句尾加一个点。

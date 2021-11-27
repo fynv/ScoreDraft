@@ -35,6 +35,25 @@ Meteor 提供了更高级的可视化功能，可以可视化用来生成音乐�
     doc.mixDown('twinkle.wav')
 ```
 
+从版本 1.0.3 开始，ScoreDraft 支持一种基于 YAML 的输入格式，例如：
+
+```yaml
+# test.yaml
+score:
+    staffs:
+        -
+            relative: c''
+            instrument: Piano()
+            content: |
+                c4 c g g a a g2
+```
+
+其中 content 部分使用 LilyPond 的语法。可以使用以下命令把 YAML 文件合成为wav:
+
+```
+# scoredraft -wav twinkle.wav test.yaml
+```
+
 更详细的使用说明和演示见: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
 
 ## 安装
@@ -42,7 +61,7 @@ Meteor 提供了更高级的可视化功能，可以可视化用来生成音乐�
 ScoreDraft 现在可以由 PyPi 安装，支持64位的 Windows 和 Linux 系统。
 
 ```
-pip install scoredraft
+# pip install scoredraft
 ```
 
 已知问题：Linux方面只在Ubuntu20.04测试通过，已知在Ubuntu18.04上有问题。
@@ -88,6 +107,7 @@ pip install scoredraft
 * cffi
 * 播放器依赖于X.org和ALSA驱动
 * MusicXML 和 LilyPond 支持依赖于 xsdata, python_ly
+* YAML 支持依赖于 pyyaml
 
 ## 采样和语音音源
 
@@ -139,6 +159,7 @@ ScoreDraft 实际上是我的第一个Python项目，由于一些设计问题，
 
 在2021年11月的重构之后，ScoreDraft已经具有SingingGadgets和早期ScoreDraft的全部优点，因此SingingGadgets项目现已被关闭。
 
+* 2021年11月27日. ScoreDraft 1.0.3 增加了一个基于YAML的乐谱输入方案
 * 2021年11月24日, ScoreDraft 1.0.2 加入对MusicXML和LilyPond的支持
 * 2021年11月19日. ScoreDraft 1.0.0 & 1.0.1
 * 2018年06月16日. SingingGadgets 0.0.3

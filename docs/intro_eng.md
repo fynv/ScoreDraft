@@ -488,3 +488,359 @@ doc.playXML(instruments)
 Each instrument is alligned to a track (staff). If there are less instruments than tracks, the last instrument will be used mutliple times.
 
 A **MusicXMLDocument** can be used just like other documents, meteor is supported by default.
+
+## YAML Based Input
+
+We can see that the **LilyPond** syntax is more compact and easier to write comparing to writing the sequences directly into Python. However, parsing **LilyPond** is non-trivial. The previous method uses  **python_ly** to first convert **ly** to **MusicXML** then reads from the **MusicXML** format. That process doesn't always work well. Moreover, there are cases where information useful to the synthesizer engine cannot be included into **LilyPond** and **MusicXML**, so we still need extra configurations in our Python code. 
+
+Obviously, a trade-off can be made between human-readability and machine-readability. The solution is to use **YAML** for the outline structure, and **LilyPond** syntax for notes only, so that we are able to include everything we need for the synthesizer into a single **YAML** file.
+
+```yaml
+# exmaple 1
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example1.mp3"/>
+</audio>
+
+**score** is the top-level object including everything. The second level includes global settings, besides the **staffs**.  
+
+Each **staff** defines a line of notes and decriptions of how to synthesize it. The **instrument** field tells Python how to initialize the instrument to play the notes. It is literally Python code which is evaluated using **exec()** internally. Here **Arachno** is a soundfont which is deployed inside the SF2 directory. The index tells which preset to use (40 = violin, 0 = piano).
+
+Inside the **content** filed, **LilyPond** notes are embeded as a multiline string.
+
+Since version 1.0.3, a command-line tool **scoredraft** is provided to process the YAML input. 
+
+```
+usage: scoredraft [-h] [-ly LY] [-wav WAV] [-meteor METEOR] [-run] yaml
+
+positional arguments:
+  yaml            input yaml filename
+
+optional arguments:
+  -h, --help      show this help message and exit
+  -ly LY          output lilyond filename
+  -wav WAV        output wav filename
+  -meteor METEOR  output meteor filename
+  -run            run meteor
+```
+
+With ****scoredraft-ly****, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't neccesarily go into the **LilyPond** file.
+
+![](workflow.png) 
+
+The picture above shows the internal workflow how a YAML file gets processed. The workflow allows arbitary information (useful to the synthesizer) to be included into the YAML file. For example, we can add pedal movements like:
+
+```yaml
+# exmaple 2
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+
+            pedal: |
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example2.mp3"/>
+</audio>
+
+There is a dedicated syntax in **LilyPond** for pedals. However, there's no tool that can reliably convert that syntax into **MusicXML**. Therefore, instead, we simply define it as a percussion sequence, where **bd** means base-drum. You can use other percussion notes too, there's no difference since a pedal is just a simple trigger.
+
+For guitar tracks, we often want to add a little delay to the chord notes to simulate sweeping, this can be configured by adding a "sweep" field:
+
+```yaml
+# exmaple 3
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(24)
+            sweep: 0.1
+            content: |
+                \clef "bass"
+                c4 e <g c e>2
+                c,4 e <g bes e>2
+                c,4 e <g bes e>2
+                f,4 a <e' a c>2
+                f,4 a <e' a c>2
+                g,4 b <d g b>2
+                g,4 b <d g b>2
+                c4 e <g b e>2
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example3.mp3"/>
+</audio>
+
+**sweep: 0.1** tells ScoreDraft to add a 10% delay to chord notes.
+
+To include a percussion track, simply add **is_drum: true** then you can use the persussion notes:
+
+```yaml
+# exmaple 4
+score:
+    tempo: 150
+    staffs:
+        - 
+            relative: c''
+            instrument: Arachno(40)
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d2 c2
+                r4 c d e
+                f2 a2
+                r4 a g f
+                e2. r4
+        -
+            relative: c
+            instrument: Arachno(24)
+            sweep: 0.1
+            content: |
+                \clef "bass"
+                c4 e <g c e>2
+                c,4 e <g bes e>2
+                c,4 e <g bes e>2
+                f,4 a <e' a c>2
+                f,4 a <e' a c>2
+                g,4 b <d g b>2
+                g,4 b <d g b>2
+                c4 e <g b e>2
+
+        -
+            is_drum: true
+            instrument: Arachno(128)
+            content: |
+                bd4 hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example4.mp3"/>
+</audio>
+
+For percussion tracks, the **instrument** field must be a GM Drum instrument like the one used here.
+
+For singing synthesizing, some different configuration fileds are needed:
+
+```yaml
+# example 5
+score:
+    tempo: 150
+    staffs:
+        -
+            relative: c'
+            is_vocal: true
+            singer: TetoEng_UTAU()
+            converter: TTEnglishConverter            
+            content: |
+                r4 g c d 
+                e2 e2
+                r4 e dis e
+                d4 (c) c2
+                r4 c d e
+                f2 g4 (a)
+                r4 a g f
+                e2. r4
+            utau: |
+                ju Ar maI
+                s@n SaIn.
+                maI oU nli
+                s@n SaIn.
+                ju meIk mi
+                h{p i.
+                wEn skaIz Ar
+                greI.
+
+        -
+            relative: c
+            instrument: Arachno(0)
+            content: |
+                \clef "bass"
+                c g' <c e> g
+                c, g' <bes e> g
+                c, g' <bes e> g
+                f c' <e a> c
+                f, c' <e a> c
+                g d' <f b> d
+                g, d' <f b> d
+                c, g' <b e>2
+
+            pedal: |
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+                bd1
+
+        -
+            is_drum: true
+            instrument: Arachno(128)
+            content: |
+                bd4 hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+                bd hh sn hh
+```
+
+<audio controls>
+    <source type="audio/mpeg" src="example5.mp3"/>
+</audio>
+
+First, set **is_vocal** to **true**. Second, instead of defining a **instrument**, here we need a **singer**. Most of the cases, a **converter** needs to be given to handle syllable connections. If the voicebank is defined in CZMode, simply add **CZMode: true**. Third, add a **utau** field to incldue the phonetic symbols. Syllables are separated by spaces, with a dot at the end of each sentence. A rest 'r' in the **content** code also marks the end of a sentence. Each syllable is mapped to 1 note by default. Slurs can be used so that multiple notes can be mapped to a syllable.
+
+### Reference
+
+Currently, there is only a small set of YAML keys recognized by ScoreDraft, and basically everything has been mentioned above. Here is a exhaustive list of all keys.
+
+#### score
+
+The top-level object
+
+#### tempo
+
+Global property defining tempo in BPM.
+
+#### staffs
+
+Entry to the array of staffs.
+
+#### content
+
+Staff property containing embedded **LilyPond** code. Basically any **LilyPond** code can be put here. For **-ly** ouput, these code will be put straightly to the **ly** file. However, for the synthesizer, only a small part of **LilyPond** syntax is acknowledged. Besides the notes, **<>** is recognized as a chord, and **()** is recognized as slur. Slurs are useful for singing synthesize.
+
+#### is_drum
+
+Staff property indicating whether the current staff is a percussion track.
+
+#### is_vocal
+
+Staff property indicating whether the current staff is a singing track
+
+When neither **is_drum** nor **is_vocal** is set, the current staff is a instrumental track.
+
+#### relative
+
+Staff propery for a instrumental/singing track, indicating the **content** is in relative mode.
+
+#### instrument
+
+Staff property for an instrumental/percussion track, giving instrument information.
+
+The value should be literal Python code calling the instrument initializer.
+
+For percussion tracks, the instrument should be a GM Drum instrument.
+
+#### pedal
+
+Staff property for an instrumental track, telling the movement of the sustaining pedal. The value should be written using arbitary percussion notes. Rests are supported.
+
+#### sweep
+
+Staff property for an instrumental track, adding a delay to chord notes to simulate a guitar sweeping effect.
+
+#### singer
+
+Staff property for a singing track, giving singer information. 
+
+The value should be literal Python code calling the singer intitializer.
+
+#### converter
+
+Staff property for a singing track, giving the Python variable name of the lyric converter required by the singer.
+
+**CZMode**
+
+Staff property for a  singing track, indicating whether the singer is in CZMode.
+
+**utau**
+
+Staff property for a singing track containing **UTAU** phonetic symbols for each syllable. Syllables are separated by spaces, with a dot at the end of each sentence.
