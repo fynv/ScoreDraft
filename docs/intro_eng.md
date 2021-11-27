@@ -837,10 +837,10 @@ The value should be literal Python code calling the singer intitializer.
 
 Staff property for a singing track, giving the Python variable name of the lyric converter required by the singer.
 
-**CZMode**
+#### CZMode
 
 Staff property for a  singing track, indicating whether the singer is in CZMode.
 
-**utau**
+#### utau
 
 Staff property for a singing track containing **UTAU** phonetic symbols for each syllable. Syllables are separated by spaces, with a dot at the end of each sentence.
