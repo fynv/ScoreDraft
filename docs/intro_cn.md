@@ -757,6 +757,10 @@ score:
                 bd hh sn hh
 ```
 
+<audio controls>
+    <source type="audio/mpeg" src="example5.mp3"/>
+</audio>
+
 首先，设置 is_vocal: true。第二，设置一个 singer 属性代替 instrument 属性。在多数情况下，还要设置一个converter属性来设置歌词转换器。如果使用的是CZ式VCCV的话，还需要设置 CZMode: true。第三，添加一个 utau 属性来加入音标。音节之间用空格分隔，每句话结尾加一个点。除了这个句尾点之外，content 代码中的休止符 r 也标志着一句话的结束。每个音节默认对应一个音符，如果需要对应多个音符则需要加入连音线。
 
 ### 属性参考
