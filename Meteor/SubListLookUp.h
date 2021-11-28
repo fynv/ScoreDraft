@@ -5,6 +5,7 @@
 #include <float.h>
 #include <stdio.h>
 #include <cmath>
+#include "blob.hpp"
 
 typedef std::vector<unsigned> SubList;
 
@@ -52,6 +53,19 @@ public:
 			fread(&sub_count, sizeof(unsigned), 1, fp);
 			m_subLists[i].resize(sub_count);
 			fread(&m_subLists[i][0], sizeof(unsigned), sub_count, fp);
+		}
+	}
+
+	void ToBlob(std::vector<uint8_t>& blob)
+	{
+		blob_write(blob, &m_minStart, sizeof(float) * 3);
+		unsigned count = (unsigned)m_subLists.size();
+		blob_write(blob, &count, sizeof(unsigned));
+		for (unsigned i = 0; i < count; i++)
+		{
+			unsigned sub_count = (unsigned)m_subLists[i].size();
+			blob_write(blob, &sub_count, sizeof(unsigned));
+			blob_write(blob, &m_subLists[i][0], sizeof(unsigned)*sub_count);
 		}
 	}
 

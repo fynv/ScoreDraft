@@ -14,6 +14,8 @@ SubListLookUp.h
 Meteor.h
 MeteorPlayer.h
 DrawText.h
+base64.hpp
+blob.hpp
 )
 
 

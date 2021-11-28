@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 class Event
 {
@@ -127,6 +128,8 @@ public:
 	void SingEvent(EventSing& e);
 	void SaveToFile(const char* filename);
 	void LoadFromFile(const char* filename);
+	void ToBlob(std::vector<uint8_t>& blob);
+	void ToBase64(std::string& base64);
 
 	const std::vector<VisNote>& GetNotes() const { return m_notes; }
 	const std::vector<VisBeat>& GetBeats() const { return m_beats; }

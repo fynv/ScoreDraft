@@ -19,6 +19,9 @@ void MeteorDestroy(void* ptr);
 void MeteorSaveToFile(void* ptr, const char* filename);
 void MeteorLoadFromFile(void* ptr, const char* filename);
 void MeteorPlay(void* ptr_meteor, void* ptr_track);
+void* Base64Create(void* ptr_meteor);
+void Base64Destroy(void* ptr);
+const char* Base64Get(void* ptr);
 """)
 
 if os.name == 'nt':
@@ -82,6 +85,12 @@ class Meteor:
         
     def load_from_file(self, filename):
         Native.MeteorLoadFromFile(self.m_cptr, filename.encode(fs_encoding))
+        
+    def to_base64(self):
+        p_b64 = Native.Base64Create(self.m_cptr)
+        b64 = ffi.string(Native.Base64Get(p_b64)).decode('utf-8')
+        Native.Base64Destroy(p_b64)
+        return b64
         
 def MeteorPlay(meteor, track):
     Native.MeteorPlay(meteor.m_cptr, track.m_cptr)

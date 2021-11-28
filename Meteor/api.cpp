@@ -21,6 +21,9 @@ extern "C"
 	SCOREDRAFT_API void MeteorSaveToFile(void* ptr, const char* filename);
 	SCOREDRAFT_API void MeteorLoadFromFile(void* ptr, const char* filename);
 	SCOREDRAFT_API void MeteorPlay(void* ptr_meteor, void* ptr_track);
+	SCOREDRAFT_API void* Base64Create(void* ptr_meteor);
+	SCOREDRAFT_API void Base64Destroy(void* ptr);
+	SCOREDRAFT_API const char* Base64Get(void* ptr);
 }
 
 #include "Meteor.h"
@@ -118,4 +121,22 @@ void MeteorPlay(void* ptr_meteor, void* ptr_track)
 	TrackBuffer* track = (TrackBuffer*)ptr_track;
 
 	meteor->Play(track);
+}
+
+void* Base64Create(void* ptr_meteor)
+{
+	Meteor* meteor = (Meteor*)ptr_meteor;
+	std::string* base64 = new std::string;
+	meteor->ToBase64(*base64);
+	return base64;
+}
+
+void Base64Destroy(void* ptr)
+{
+	delete (std::string*)ptr;
+}
+
+const char* Base64Get(void* ptr)
+{
+	return ((std::string*)ptr)->c_str();
 }

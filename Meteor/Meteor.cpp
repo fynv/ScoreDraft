@@ -1,4 +1,6 @@
 #include "Meteor.h"
+#include "blob.hpp"
+#include "base64.hpp"
 
 void Meteor::_updateSublists()
 {
@@ -140,7 +142,6 @@ void Meteor::SaveToFile(const char* filename)
 	fclose(fp);
 }
 
-
 void Meteor::LoadFromFile(const char* filename)
 {
 	FILE *fp = fopen(filename, "rb");
@@ -187,6 +188,43 @@ void Meteor::LoadFromFile(const char* filename)
 }
 
 
+void Meteor::ToBlob(std::vector<uint8_t>& blob)
+{
+	if (m_needUpdateSublists) _updateSublists();
+
+	blob.clear();
+	unsigned countNotes = (unsigned)m_notes.size();
+	blob_write(blob, &countNotes, sizeof(unsigned));
+	blob_write(blob, &m_notes[0], sizeof(VisNote) * countNotes);
+	m_notes_sublists.ToBlob(blob);
+	unsigned countBeats = (unsigned)m_beats.size();
+	blob_write(blob, &countBeats, sizeof(unsigned));
+	blob_write(blob, &m_beats[0], sizeof(VisBeat)*countBeats);
+	m_beats_sublists.ToBlob(blob);
+	unsigned countSinging = (unsigned)m_singings.size();
+	blob_write(blob, &countSinging, sizeof(unsigned));
+	for (unsigned i = 0; i < countSinging; i++)
+	{
+		const VisSinging& singing = m_singings[i];
+		blob_write(blob, &singing.singerId, sizeof(unsigned));
+		unsigned char len = (unsigned char)singing.lyric.length();
+		blob_write(blob, &len, 1);
+		if (len > 0)
+			blob_write(blob, singing.lyric.data(), len);
+		unsigned count = (unsigned)singing.pitch.size();
+		blob_write(blob, &count, sizeof(unsigned));
+		blob_write(blob, singing.pitch.data(), sizeof(float) * count);
+		blob_write(blob, &singing.start, sizeof(float)*2);
+	}
+	m_singing_sublists.ToBlob(blob);
+}
+
+void Meteor::ToBase64(std::string& base64)
+{
+	std::vector<uint8_t> blob;
+	ToBlob(blob);
+	base64_encode(blob, base64);
+}
 
 Meteor::Meteor(size_t num_events, const Event** events)
 {
