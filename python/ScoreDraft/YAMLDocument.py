@@ -231,7 +231,7 @@ class YAMLDocument(MusicXMLDocument):
                         exec('singer.setLyricConverter('+staff['converter']+')', globals(),locals())
                     
                     if 'CZMode' in staff and staff['CZMode']:
-                        exec('singer.setCZMode()', globals(),locals())
+                        singer.setCZMode()                        
                     
                 sweep = 0.0
                 if 'sweep' in staff:
