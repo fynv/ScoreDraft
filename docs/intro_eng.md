@@ -789,6 +789,14 @@ The top-level object
 
 Global property defining tempo in BPM.
 
+#### title
+
+Title of the score. (for LilyPond)
+
+#### composer
+
+Author of the score. (for LilyPond)
+
 #### staffs
 
 Entry to the array of staffs.

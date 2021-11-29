@@ -775,6 +775,14 @@ score:
 
 全局属性，定义速率，单位BPM
 
+#### title
+
+曲谱标题
+
+#### composer
+
+曲谱作者
+
 #### staffs
 
 音轨表
