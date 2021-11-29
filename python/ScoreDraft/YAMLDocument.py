@@ -14,9 +14,27 @@ class YAMLScore:
         if 'tempo' in self.score:
             tempo = int(self.score['tempo'])
             
+        title = ""
+        if 'title' in self.score:
+            title = self.score['title']
+            
+        composer = ""
+        if 'composer' in self.score:
+            composer = self.score['composer']
+            
         ly_text='\\version "2.18.2"\n'
+        
+        if title!="" or composer!="":
+            ly_text+='\\header\n'
+            ly_text+='{\n'
+            if title!="":
+                ly_text += '\ttitle = "' + title + '"\n'
+            if composer!="":
+                ly_text += '\tcomposer = "' + composer + '"\n'
+            ly_text+='}\n'
+            
         ly_text+='\\score\n'
-        ly_text+='{\n'        
+        ly_text+='{\n'
            
         ly_text+='\t<<\n'
     
@@ -201,6 +219,7 @@ class YAMLDocument(MusicXMLDocument):
         ly_text='\\version "2.18.2"\n'
         ly_text+='\\score\n'
         ly_text+='{\n'
+        
         ly_text+='\t<<\n'
         
         inst = KarplusStrongInstrument()

@@ -1,8 +1,10 @@
 score:
     tempo: 150
+    title: You Are My Sunshine
+    composer: Jimmie Davis
     staffs:
         -
-            relative: c''
+            relative: c'
             is_vocal: true
             singer: TetoEng_UTAU()
             converter: TTEnglishConverter            
