@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstddef>
+#include <memory.h>
 
 inline void blob_write(std::vector<uint8_t>& blob, const void* data, size_t size)
 {
