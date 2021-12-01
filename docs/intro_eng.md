@@ -41,7 +41,7 @@ As the most important interface design of ScoreDraft, "Play Calls" is a class of
 instrument.play(buf,seq)
 ```
 
-which simply means, play sequence "seq" with the instrument and write the resulted waveform to "buf".
+which simply means, play sequence **seq** with the instrument and write the resulted waveform to "buf".
 
 Similarly, you can also use a percussion group to play or use a "singer" to sing. We will use the the term **Play Call** to refer to any command of these sorts.
 
@@ -56,7 +56,7 @@ from ScoreDraft.Notes import *
 
 The first thing to do is to import "ScoreDraft"  package, which provides the core Python interfaces of ScoreDraft.
 
-Most application code will also import the note definitions from the "ScoreDraft.Notes" module. In face, the core interface of ScoreDraft does not include any specific definition of musical notes. It simply accepts a physical frequency f_ref in Hz as a reference frequency for each **Play Call**, and a  relative frequency f_rel[i], which is just a multiplier, for each note. The physical frequency of each f_note[i] can be then calculated by:
+Most application code will also import the note definitions from the "ScoreDraft.Notes" module. In fact, the core interface of ScoreDraft does not include any specific definition of musical notes. It simply accepts a physical frequency **f_ref** in Hz as a reference frequency for each **Play Call**, and a  relative frequency **f_rel[i]**, which is just a multiplier, for each note. The physical frequency of each **f_note[i]** can be then calculated by:
 
 ```
 f_note[i] = f_ref *f_rel[i].
@@ -102,9 +102,9 @@ doc.mixDown('twinkle.wav')
 
 Most musical pieces need multiple track-buffers. The class ScoreDraft.Document is provided as an unified track-buffer manager, and it is more recommended than using **ScoreDraft.TrackBuffer** directly.
 
-As shown in the above example, using class Document is accompanied by some changes in the writing style of the Play Calls. When issuing a Play Call through the class Document, the target track-buffer is always implicated, so a parameter is not necessary anymore. At the same time, the instrument used for playing becomes a parameter. The format now looks like doc.play(seq,instrument) instead of instrument.play(buf,seq).
+As shown in the above example, using class Document is accompanied by some changes in the writing style of the Play Calls. When issuing a **Play Call** through the class Document, the target track-buffer is always implicated, so a parameter is not necessary anymore. At the same time, the instrument used for playing becomes a parameter. The format now looks like doc.play(seq,instrument) instead of instrument.play(buf,seq).
 
-This have a few benefits. First, it simplifies the creation of track-buffers, the document object can do that for you implicitly during Play Calls. Second, it largely simplifies the mixdown call. You don't need to enumerate all the track-buffer to be mixed when they are managed insides the document object. Third, visualization component can exploit polymorphism by replacing the Document class with an extended version. For example, the Meteor visualizer can be enabled with minimal effort by replacing "ScoreDraft.Document" with "ScoreDraft.MeteorDocument".
+This have a few benefits. First, it simplifies the creation of track-buffers, the document object can do that for you implicitly during Play Calls. Second, it largely simplifies the mixdown call. You don't need to enumerate all the track-buffer to be mixed when they are managed insides the document object. Third, visualization component can exploit polymorphism by replacing the Document class with an extended version. For example, the Meteor visualizer can be enabled with minimal effort by replacing **ScoreDraft.Document** with **ScoreDraft.MeteorDocument**.
 
 The class Document also manages tempo and reference frequency parameters internally, so we don't pass them through the Play Calls anymore in this case.
 
@@ -154,7 +154,7 @@ The output will look like:
 }
 ```
 
-The first list "Engines" gives a list of names of available engines and the type of engine (is it an instrument or percussion or singing engine?).
+The first list **Engines** gives a list of names of available engines and the type of engine (is it an instrument or percussion or singing engine?).
 
 The 3 succeeding lists gives names of ready-to-use instrument/percussion/singer initializers and the engines they are based on. ScoreDraft creates these initializers automatically at starting time by searching some specific directories for samples/banks based on the starting place of the Python script.
 
@@ -222,7 +222,7 @@ You can also put the wav files into the **PercussionSamples** directory under th
 
 The UtauDraft engine uses a UTAU voicebank to create a singer.
 
-You can use the class ScoreDraft.UtauDraft directly. At creation time, you need to provide a path to the UTAU voicebank, and optionally a bool value indicating whether to use CUDA acceleration or not. The default is use CUDA acceleration when available. Pass in a "False" to disable it without attempting.
+You can use the class ScoreDraft.UtauDraft directly. At creation time, you need to provide a path to the UTAU voicebank, and optionally a bool value indicating whether to use CUDA acceleration or not. The default is use CUDA acceleration when available. Pass in a **False** to disable it without attempting.
 
 ```python
 cz = ScoreDraft.UtauDraft('d:/CZloid', False)
@@ -487,7 +487,7 @@ doc.playXML(instruments)
 
 Each instrument is alligned to a track (staff). If there are less instruments than tracks, the last instrument will be used mutliple times.
 
-A **MusicXMLDocument** can be used just like other documents, meteor is supported by default.
+A **MusicXMLDocument** can be used just like other documents, **Meteor** is supported by default.
 
 ## YAML Based Input
 
@@ -553,7 +553,7 @@ optional arguments:
   -run            run meteor
 ```
 
-With ****scoredraft-ly****, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't neccesarily go into the **LilyPond** file.
+With **scoredraft-ly**, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't neccesarily go into the **LilyPond** file.
 
 ![](workflow.png) 
 
