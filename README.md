@@ -163,6 +163,7 @@ which only partially solves the issues.
 After the Nov 2021 refactoring, ScoreDraft have all the benefits of both SingingGadgets and the old ScoreDraft.
 Therefore, the SingingGadgets project is now closed.
 
+* Dec 01, 2021. ScoreDraft 1.0.6, expose more low-level functions
 * Nov 29, 2021. ScoreDraft 1.0.4, 1.0.5, YAML function updates
 * Nov 27, 2021. ScoreDraft 1.0.3, adding a YAML based input routine support
 * Nov 24, 2021. ScoreDraft 1.0.2, adding MusicXML & LilyPond support
