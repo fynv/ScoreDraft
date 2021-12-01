@@ -21,6 +21,9 @@ from .SimpleInstruments import BottleBlow
 from .KarplusStrong import EngineKarplusStrong
 from .KarplusStrong import KarplusStrongInstrument
 
+from .BasicSamplers import GetSample_Percussion
+from .BasicSamplers import GetSample_Single
+from .BasicSamplers import GetSamples_Multi
 from .BasicSamplers import EnginePercussionSampler
 from .BasicSamplers import EngineInstrumentSampler_Single
 from .BasicSamplers import EngineInstrumentSampler_Multi
@@ -28,6 +31,7 @@ from .BasicSamplers import PercussionSampler
 from .BasicSamplers import InstrumentSampler_Single
 from .BasicSamplers import InstrumentSampler_Multi
 
+from .SoundFont2 import GetSF2Bank
 from .SoundFont2 import ListPresets as ListPresetsSF2
 from .SoundFont2 import EngineSoundFont2
 from .SoundFont2 import SF2Instrument
