@@ -173,13 +173,13 @@ Cello1 = ScoreDraft.Cello()
 flute = ScoreDraft.InstrumentSampler_Single('c:/samples/flute.wav')
 ```
 
-你也可以把wav文件布署到启动位置下的**InstrumentSamples**目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在PrintCatalog列表当中。
+你也可以把wav文件布署到启动位置下的 InstrumentSamples 目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在 PrintCatalog 列表当中。
 
 #### 多采样
 
-用户可以使用ScoreDraft.InstrumentSampler_Multi类来直接创建一个乐器，在创建的时候需要给出一个包含全部用到的wav文件的目录路径。这些音频样本应覆盖一定的音高范围。 采样器将通过在这些音高之间基于目标音高来插值得到最终的合成结果。
+用户可以使用 ScoreDraft.InstrumentSampler_Multi 类来直接创建一个乐器，在创建的时候需要给出一个包含全部用到的wav文件的目录路径。这些音频样本应覆盖一定的音高范围。 采样器将通过在这些音高之间基于目标音高来插值得到最终的合成结果。
 
-你也可以在**InstrumentSamples**目录下建立一个子目录来布署这些wav文件。，这样ScoreDraft 就可以自动为你创建一个初始化器。新建的子目录名将作为初始化器的名字出现在PrintCatalog列表当中。
+你也可以在 InstrumentSamples 目录下建立一个子目录来布署这些wav文件。，这样ScoreDraft 就可以自动为你创建一个初始化器。新建的子目录名将作为初始化器的名字出现在PrintCatalog列表当中。
 
 ### SoundFont2 乐器
 
@@ -203,13 +203,13 @@ SoundFont2 的支持来自于对 [TinySoundFont](https://github.com/schellingb/T
 
 打击乐采样器引擎使用1个wav文件来构造打击乐器，wav文件必须是1个或2个通道的16bit PCM格式。打击乐采样器在使用样本时不做任何修改，直接添加包络。因此使用的音频样本应具有足够的长度。
 
-用户可以使用ScoreDraft.PercussionSampler类来直接创建一个打击乐器，在创建时需要给出wav文件的路径：
+用户可以使用 ScoreDraft.PercussionSampler 类来直接创建一个打击乐器，在创建时需要给出wav文件的路径：
 
 ```python
 drum = ScoreDraft.PercussionSampler('./Drum.wav')
 ```
 
-你也可以把wav文件布署到启动位置下的**PercussionSamples**目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在PrintCatalog列表当中。
+你也可以把wav文件布署到启动位置下的 PercussionSamples 目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在PrintCatalog列表当中。
 
 ### UtauDraft 引擎
 
@@ -221,7 +221,7 @@ UtauDraft 引擎使用一个UTAU的音源目录来生成歌手。
 cz = ScoreDraft.UtauDraft('d:/CZloid', False)
 ```
 
-你也可以把音源目录布署到启动位置下的**UTAUVoice**目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。音源目录名将作为初始化器的名字出现在PrintCatalog列表当中。如果音源目录原来的名字不适合用作Python的变量名，那么用户应对目录名进行必要的修改以避免发生Python解析错误。
+你也可以把音源目录布署到启动位置下的 UTAUVoice 目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。音源目录名将作为初始化器的名字出现在PrintCatalog列表当中。如果音源目录原来的名字不适合用作Python的变量名，那么用户应对目录名进行必要的修改以避免发生Python解析错误。
 
 ## 乐器演奏
 
