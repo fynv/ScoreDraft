@@ -553,7 +553,7 @@ optional arguments:
   -run            run meteor
 ```
 
-With **scoredraft-ly**, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't necessarily go into the **LilyPond** file.
+With **scoredraft -ly**, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't necessarily go into the **LilyPond** file.
 
 ![](workflow.png) 
 
