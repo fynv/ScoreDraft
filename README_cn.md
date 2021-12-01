@@ -84,7 +84,7 @@ ScoreDraft 现在可以由 PyPi 安装，支持64位的 Windows 和 Linux 系统
 * GLFW: 
   
   - 已包含源代码
-  - Ubuntu: sudo apt install libglfw3-dev
+  - Ubuntu: sudo apt install libglfw3-dev libxinerama-dev libxcursor-dev libxi-dev
 
 * PortAudio:
   
