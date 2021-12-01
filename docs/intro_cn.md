@@ -454,7 +454,7 @@ Meteor 可以用来可视化前面介绍过的各种序列，同时播放混合�
 
 ScoreDraft 通过 class MusicXMLDocument 支持MusicXML和LilyPond格式的输入。可以由一个MusicXML文件或LilyPond文件创建该对象。MusicXML:
 
-```pythonag-0-1flafg1ldag-1-1flafg1ldag-0-1flafg1ldag-1-1flafg1ld
+```python
 doc = ScoreDraft.from_music_xml('xyz.xml')
 ```
 
