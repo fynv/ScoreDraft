@@ -342,12 +342,12 @@ UtauDraft 引擎试图尽可能支持UTAU的各种音源，包括单独音，连
 
 当使用VCV或CVVC等类型的音源时，为了正确处理音节之间的过渡，同时简化歌词输入，用户需要选择一个拆音函数来使用。ScoreDraft目前提供了以下的拆音函数：
 
-ScoreDraft.CVVCChineseConverter: for CVVChinese
-ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
-ScoreDraft.JPVCVConverter: for Japanese 連続音
-ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
-ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
-ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
+* ScoreDraft.CVVCChineseConverter: for CVVChinese
+* ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
+* ScoreDraft.JPVCVConverter: for Japanese 連続音
+* ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
+* ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
+* ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
 
 拆音函数的使用方法如下所示, 只需调用singer.setLyricConverter(converter)即可：
 
