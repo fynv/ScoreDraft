@@ -87,12 +87,12 @@ Build-time dependencies:
 * GLFW: 
   
   - Source code included
-  - Ubuntu: sudo apt install libglfw3-dev
+  - Ubuntu: sudo apt install libglfw3-dev libxinerama-dev libxcursor-dev libxi-dev
 
 * PortAudio:
   
   - Source code included
-  - Ubuntu: sudo apt-get install libasound-dev libjack-dev    
+  - Ubuntu: sudo apt-get install libasound-dev libjack-dev
 
 Build process:
 
