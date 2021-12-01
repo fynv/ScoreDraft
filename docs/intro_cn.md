@@ -183,7 +183,7 @@ flute = ScoreDraft.InstrumentSampler_Single('c:/samples/flute.wav')
 
 ### SoundFont2 乐器
 
-ScoreDraft 包含一个 SoundFont2 引擎。你可以通过**ScoreDraft.SF2Instrument**类来加载SoundFont音源。在使用ScoreDraft.SF2Instrument类创建一个乐器时，用户需要给出.sf2文件的路径，以及想要使用的preset的编号。
+ScoreDraft 包含一个 SoundFont2 引擎。你可以通过 ScoreDraft.SF2Instrument 类来加载SoundFont音源。在使用 ScoreDraft.SF2Instrument 类创建一个乐器时，用户需要给出.sf2文件的路径，以及想要使用的preset的编号。
 
 ```python
 piano = ScoreDraft.SF2Instrument('florestan-subset.sf2', 0)
@@ -195,9 +195,9 @@ piano = ScoreDraft.SF2Instrument('florestan-subset.sf2', 0)
 ScoreDraft.ListPresetsSF2('florestan-subset.sf2')
 ```
 
-你也可以把.sf2文件布署到启动位置下的**SF2**目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在PrintCatalog列表当中。因为我们还需要知道使用哪个preset, 在使用这个初始化器的时候依然需要一个preset_index参数。
+你也可以把.sf2文件布署到启动位置下的 SF2 目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。去掉扩展名的文件名将作为初始化器的名字出现在 PrintCatalog 列表当中。因为我们还需要知道使用哪个preset, 在使用这个初始化器的时候依然需要一个preset_index参数。
 
-SoundFont2 的支持来自于对TinySoundFont(https://github.com/schellingb/TinySoundFont)项目的移植，在此对作者Bernhard Schelling 表示感谢！
+SoundFont2 的支持来自于对 [TinySoundFont](https://github.com/schellingb/TinySoundFont)项目的移植，在此对作者Bernhard Schelling 表示感谢！
 
 ### 打击乐采样器
 
