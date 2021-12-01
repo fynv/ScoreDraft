@@ -349,12 +349,12 @@ When using UtauDraft Engine, for 単独音, you can use the names defined in oto
 
 For other types of voicebanks, in order to tackle transitions correctly as well as simplifying the lyric input, user should choose one of the lyric-converters to use. Currently there are:
 
-ScoreDraft.CVVCChineseConverter: for CVVChinese
-ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
-ScoreDraft.JPVCVConverter: for Japanese 連続音
-ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
-ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
-ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
+* ScoreDraft.CVVCChineseConverter: for CVVChinese
+* ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
+* ScoreDraft.JPVCVConverter: for Japanese 連続音
+* ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
+* ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
+* ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
 
 For setting lyric converter just call **singer.setLyricConverter(converter)**, for example:
 
