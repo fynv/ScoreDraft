@@ -1,6 +1,6 @@
 # Introduction to ScoreDraft
 
-The soure-code of ScoreDraft is hosted on [GitHub](https://github.com/fynv/ScoreDraft), where you can always find the latest changes that I have made.
+The source-code of ScoreDraft is hosted on [GitHub](https://github.com/fynv/ScoreDraft), where you can always find the latest changes that I have made.
 
 PyPi packages for Windows x64 & Linux x64 are available for download by
 
@@ -43,7 +43,7 @@ instrument.play(buf,seq)
 
 which simply means, play sequence **seq** with the instrument and write the resulted waveform to "buf".
 
-Similarly, you can also use a percussion group to play or use a "singer" to sing. We will use the the term **Play Call** to refer to any command of these sorts.
+Similarly, you can also use a percussion group to play or use a "singer" to sing. We will use the term **Play Call** to refer to any command of these sorts.
 
 We will sometimes pass in tempo and reference frequency parameters into a **Play Call**. There are built-in default values for these parameters so they are not compulsory.
 
@@ -104,7 +104,7 @@ Most musical pieces need multiple track-buffers. The class ScoreDraft.Document i
 
 As shown in the above example, using class Document is accompanied by some changes in the writing style of the Play Calls. When issuing a **Play Call** through the class Document, the target track-buffer is always implicated, so a parameter is not necessary anymore. At the same time, the instrument used for playing becomes a parameter. The format now looks like doc.play(seq,instrument) instead of instrument.play(buf,seq).
 
-This have a few benefits. First, it simplifies the creation of track-buffers, the document object can do that for you implicitly during Play Calls. Second, it largely simplifies the mixdown call. You don't need to enumerate all the track-buffer to be mixed when they are managed insides the document object. Third, visualization component can exploit polymorphism by replacing the Document class with an extended version. For example, the Meteor visualizer can be enabled with minimal effort by replacing **ScoreDraft.Document** with **ScoreDraft.MeteorDocument**.
+There are a few benefits. First, it simplifies the creation of track-buffers, the document object can do that for you implicitly during Play Calls. Second, it largely simplifies the mixdown call. You don't need to enumerate all the track-buffer to be mixed when they are managed insides the document object. Third, visualization component can exploit polymorphism by replacing the Document class with an extended version. For example, the Meteor visualizer can be enabled with minimal effort by replacing **ScoreDraft.Document** with **ScoreDraft.MeteorDocument**.
 
 The class Document also manages tempo and reference frequency parameters internally, so we don't pass them through the Play Calls anymore in this case.
 
@@ -176,7 +176,7 @@ You can use the class **ScoreDraft.InstrumentSampler_Single** to create an instr
 flute = ScoreDraft.InstrumentSampler_Single('c:/samples/flute.wav')
 ```
 
-You can also put the wav files into the **InstrumentSamples** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The file name without extension will apprear as the initializer name in the PrintCatalog lists.
+You can also put the wav files into the **InstrumentSamples** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The file name without extension will appear as the initializer name in the PrintCatalog lists.
 
 #### Multi-sampling
 
@@ -202,7 +202,7 @@ The function ScoreDraft.ListPresetsSF2() can be used to obtain a list of all ava
 ScoreDraft.ListPresetsSF2('florestan-subset.sf2')
 ```
 
-You can also put the .sf2 file into the **SF2** directory under the starting directory so that ScoreDraft will create an initializer for you automatically. The file name without extension will apprear as the initializer name in the PrintCatalog lists. Because we need to know which preset to use, a preset_index parameter is still needed when calling the initializer.
+You can also put the .sf2 file into the **SF2** directory under the starting directory so that ScoreDraft will create an initializer for you automatically. The file name without extension will appear as the initializer name in the PrintCatalog lists. Because we need to know which preset to use, a preset_index parameter is still needed when calling the initializer.
 
 SoundFont2 support is based on a porting of [TinySoundFont](https://github.com/schellingb/TinySoundFont) Here I acknowledge Bernhard Schelling for the work!
 
@@ -216,7 +216,7 @@ You can use the class ScoreDraft.PercussionSampler to create a percussion direct
 drum = ScoreDraft.PercussionSampler('./Drum.wav')
 ```
 
-You can also put the wav files into the **PercussionSamples** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The file name without extension will apprear as the initializer name in the PrintCatalog lists.
+You can also put the wav files into the **PercussionSamples** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The file name without extension will appear as the initializer name in the PrintCatalog lists.
 
 ### UtauDraft Engine
 
@@ -228,7 +228,7 @@ You can use the class ScoreDraft.UtauDraft directly. At creation time, you need 
 cz = ScoreDraft.UtauDraft('d:/CZloid', False)
 ```
 
-You can also put the voicebank folder into the **UTAUVoice** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The subdirectory name + "_UTAU" will apprear as the initializer name in the PrintCatalog lists. (The "_UTAU" posfix exists for some historical reason). If the original sub-foler name is unsuitable to be used as an Python variable name, then you should rename it to prevent a Python error. 
+You can also put the voicebank folder into the **UTAUVoice** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The subdirectory name + "_UTAU" will apprear as the initializer name in the PrintCatalog lists. (The "_UTAU" posfix exists for some historical reason). If the original sub-folder name is unsuitable to be used as an Python variable name, then you should rename it to prevent a Python error. 
 
 ## Instrument Play
 
@@ -284,7 +284,7 @@ perc_list= [BassDrum, Snare]
 
 The kind of sequence used for percussion play is called beat sequence. Beat sequences are consisted of tuples in (percussion_index, duration) form. Both "percussion_index" and "duration" are integers, where "percussion_index" refers to the index in the "perc_list" defined above, and "duration" is the same as instrument play.
 
-Often, we want to defines some utility functions to make the writing of beat sequences more intuitive:
+Often, we want to define some utility functions to make the writing of beat sequences more intuitive:
 
 ```python
 def dong(duration=48):
@@ -437,7 +437,7 @@ player.play_track(buf)
 player.main_loop()
 ```
 
-**main_loop()** has to be called inorder to make the UI interactive. However, that will make it a synchronized call. It a asynchronized behavior is required, you should instead use **ScoreDraft.AsyncUIPCMPlayer**:
+**main_loop()** has to be called in order to make the UI interactive. However, that will make it a synchronized call. If an asynchronized behavior is required, you should instead use **ScoreDraft.AsyncUIPCMPlayer**:
 
 ```python
 player = ScoreDraft.AsyncUIPCMPlayer()
@@ -485,7 +485,7 @@ instruments = [ScoreDraft.Piano()]
 doc.playXML(instruments)
 ```
 
-Each instrument is alligned to a track (staff). If there are less instruments than tracks, the last instrument will be used mutliple times.
+Each instrument is aligned to a track (staff). If there are fewer instruments than tracks, the last instrument will be used multiple times.
 
 A **MusicXMLDocument** can be used just like other documents, **Meteor** is supported by default.
 
@@ -533,9 +533,9 @@ score:
 
 **score** is the top-level object including everything. The second level includes global settings, besides the **staffs**.  
 
-Each **staff** defines a line of notes and decriptions of how to synthesize it. The **instrument** field tells Python how to initialize the instrument to play the notes. It is literally Python code which is evaluated using **exec()** internally. Here **Arachno** is a soundfont which is deployed inside the SF2 directory. The index tells which preset to use (40 = violin, 0 = piano).
+Each **staff** defines a line of notes and descriptions of how to synthesize it. The **instrument** field tells Python how to initialize the instrument to play the notes. It is literally Python code which is evaluated using **exec()** internally. Here **Arachno** is a soundfont which is deployed inside the SF2 directory. The index tells which preset to use (40 = violin, 0 = piano).
 
-Inside the **content** filed, **LilyPond** notes are embeded as a multiline string.
+Inside the **content** filed, **LilyPond** notes are embedded as a multiline string.
 
 Since version 1.0.3, a command-line tool **scoredraft** is provided to process the YAML input. 
 
@@ -553,11 +553,11 @@ optional arguments:
   -run            run meteor
 ```
 
-With **scoredraft-ly**, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't neccesarily go into the **LilyPond** file.
+With **scoredraft-ly**, the YAML file can be converted to a regular **LilyPond** file, which can be further improved for publishment. More information besides the notes can be passed to the synthesizer engine, which doesn't necessarily go into the **LilyPond** file.
 
 ![](workflow.png) 
 
-The picture above shows the internal workflow how a YAML file gets processed. The workflow allows arbitary information (useful to the synthesizer) to be included into the YAML file. For example, we can add pedal movements like:
+The picture above shows the internal workflow how a YAML file gets processed. The workflow allows arbitrary information (useful to the synthesizer) to be included into the YAML file. For example, we can add pedal movements like:
 
 ```yaml
 # exmaple 2
@@ -607,7 +607,7 @@ score:
 
 There is a dedicated syntax in **LilyPond** for pedals. However, there's no tool that can reliably convert that syntax into **MusicXML**. Therefore, instead, we simply define it as a percussion sequence, where **bd** means base-drum. You can use other percussion notes too, there's no difference since a pedal is just a simple trigger.
 
-For guitar tracks, we often want to add a little delay to the chord notes to simulate sweeping, this can be configured by adding a "sweep" field:
+For guitar tracks, we often want to add a little delay to the chord notes to simulate sweeping. This can be configured by adding a "sweep" field:
 
 ```yaml
 # exmaple 3
@@ -648,7 +648,7 @@ score:
 
 **sweep: 0.1** tells ScoreDraft to add a 10% delay to chord notes.
 
-To include a percussion track, simply add **is_drum: true** then you can use the persussion notes:
+To include a percussion track, simply add **is_drum: true** then you can use the percussion notes:
 
 ```yaml
 # exmaple 4
@@ -702,7 +702,7 @@ score:
 
 For percussion tracks, the **instrument** field must be a GM Drum instrument like the one used here.
 
-For singing synthesizing, some different configuration fileds are needed:
+For singing synthesizing, some different configuration fields are needed:
 
 ```yaml
 # example 5
@@ -775,7 +775,7 @@ score:
     <source type="audio/mpeg" src="example5.mp3"/>
 </audio>
 
-First, set **is_vocal** to **true**. Second, instead of defining a **instrument**, here we need a **singer**. Most of the cases, a **converter** needs to be given to handle syllable connections. If the voicebank is defined in CZMode, simply add **CZMode: true**. Third, add a **utau** field to incldue the phonetic symbols. Syllables are separated by spaces, with a dot at the end of each sentence. A rest 'r' in the **content** code also marks the end of a sentence. Each syllable is mapped to 1 note by default. Slurs can be used so that multiple notes can be mapped to a syllable.
+First, set **is_vocal** to **true**. Second, instead of defining a **instrument**, here we need a **singer**. Most of the cases, a **converter** needs to be given to handle syllable connections. If the voicebank is defined in CZMode, simply add **CZMode: true**. Third, add an **utau** field to include the phonetic symbols. Syllables are separated by spaces, with a dot at the end of each sentence. A rest 'r' in the **content** code also marks the end of a sentence. Each syllable is mapped to 1 note by default. Slurs can be used so that multiple notes can be mapped to a syllable.
 
 ### Reference
 
@@ -803,7 +803,7 @@ Entry to the array of staffs.
 
 #### content
 
-Staff property containing embedded **LilyPond** code. Basically any **LilyPond** code can be put here. For **-ly** ouput, these code will be put straightly to the **ly** file. However, for the synthesizer, only a small part of **LilyPond** syntax is acknowledged. Besides the notes, **<>** is recognized as a chord, and **()** is recognized as slur. Slurs are useful for singing synthesize.
+Staff property containing embedded **LilyPond** code. Basically any **LilyPond** code can be put here. For **-ly** output, these code will be put straightly to the **ly** file. However, for the synthesizer, only a small part of **LilyPond** syntax is acknowledged. Besides the notes, **<>** is recognized as a chord, and **()** is recognized as slur. Slurs are useful for singing synthesize.
 
 #### is_drum
 
@@ -817,7 +817,7 @@ When neither **is_drum** nor **is_vocal** is set, the current staff is a instrum
 
 #### relative
 
-Staff propery for a instrumental/singing track, indicating the **content** is in relative mode.
+Staff property for a instrumental/singing track, indicating the **content** is in relative mode.
 
 #### instrument
 
@@ -829,7 +829,7 @@ For percussion tracks, the instrument should be a GM Drum instrument.
 
 #### pedal
 
-Staff property for an instrumental track, telling the movement of the sustaining pedal. The value should be written using arbitary percussion notes. Rests are supported.
+Staff property for an instrumental track, telling the movement of the sustaining pedal. The value should be written using arbitrary percussion notes. Rests are supported.
 
 #### sweep
 
@@ -839,7 +839,7 @@ Staff property for an instrumental track, adding a delay to chord notes to simul
 
 Staff property for a singing track, giving singer information. 
 
-The value should be literal Python code calling the singer intitializer.
+The value should be literal Python code calling the singer initializer.
 
 #### converter
 
