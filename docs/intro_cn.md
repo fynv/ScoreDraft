@@ -312,7 +312,7 @@ seq=[('yi',do(),'shan',do(),'yi',so(),'shan',so(),'liang',la(),'jing',la(),'jing
 seq+=[('man',fa(),'tian',fa(),'dou',mi(),'shi',mi(),'xiao',re(),'xing',re(),'xing',do(5,72)), BL(24) ]
 ```
 
-每个“歌唱片段”（由逗号分隔的第一级元组）包含一个或多个作为歌词的字符串。每个歌词后可以跟一个或多个元组，用来定义该歌词对应的音高。这些元组在最简单的情况下可以是和乐器音符相同的 (freq_rel, duration) 的形式。一个元组也可以包含更多的freq_rel/duration对，如(freq_rel1, duration1, freq_rel2, duration2, ...)，此时则定义了多个控制点, 控制点和控制点之间音高线性过渡，最后一个控制点之后的区间音高保持水平。元组之间不做音高插值。使用**ScoreDraft.Notes**，你可以把多个乐器音符用“+”连接，来构造一个音高折线，如do(5,24)+so(5,24)+do(5,0)，该音高折线有三个控制点，总时值为48。
+每个“歌唱片段”（由逗号分隔的第一级元组）包含一个或多个作为歌词的字符串。每个歌词后可以跟一个或多个元组，用来定义该歌词对应的音高。这些元组在最简单的情况下可以是和乐器音符相同的 (freq_rel, duration) 的形式。一个元组也可以包含更多的freq_rel/duration对，如(freq_rel1, duration1, freq_rel2, duration2, ...)，此时则定义了多个控制点, 控制点和控制点之间音高线性过渡，最后一个控制点之后的区间音高保持水平。元组之间不做音高插值。使用 ScoreDraft.Notes ，你可以把多个乐器音符用“+”连接，来构造一个音高折线，如do(5,24)+so(5,24)+do(5,0)，该音高折线有三个控制点，总时值为48。
 
 每个“歌唱片段”内的所有音节（歌词＋音符）都应连续演唱，除非遇到空拍 BL() 或倒退 BK()，那时系统将不得不把把一个歌唱片段分解成多个歌唱片段来处理。使用一个已有的Document对象 "doc"和某个歌手，歌唱命令类似下面这样：
 
@@ -452,7 +452,7 @@ Meteor 可以用来可视化前面介绍过的各种序列，同时播放混合�
 
 ## MusicXML 和 LilyPond 支持
 
-ScoreDraft 通过 **class MusicXMLDocument** 支持MusicXML和LilyPond格式的输入。可以由一个MusicXML文件或LilyPond文件创建该对象。MusicXML:
+ScoreDraft 通过 class MusicXMLDocument 支持MusicXML和LilyPond格式的输入。可以由一个MusicXML文件或LilyPond文件创建该对象。MusicXML:
 
 ```pythonag-0-1flafg1ldag-1-1flafg1ldag-0-1flafg1ldag-1-1flafg1ld
 doc = ScoreDraft.from_music_xml('xyz.xml')
@@ -464,7 +464,7 @@ LilyPond:
 doc = ScoreDraft.from_lilypond('xyz.ly')
 ```
 
-方法 **playXML()** 用于将音符播放到音轨当中：
+方法 playXML() 用于将音符播放到音轨当中：
 
 ```python
 instruments = [ScoreDraft.Piano()]
@@ -473,7 +473,7 @@ doc.playXML(instruments)
 
 每个乐器对应于一个音轨（一行音符），当乐器数比音轨数少时，最后一个乐器会被使用多次。
 
-**MusicXMLDocument** 对象可以像其他文档对象一样使用，默认支持meteor.
+MusicXMLDocument 对象可以像其他文档对象一样使用，默认支持meteor.
 
 ## 基于 YAML 格式的输入
 
