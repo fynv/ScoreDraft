@@ -1,4 +1,6 @@
 score:
+    title: 真的爱你
+    composer: 黄家驹
     tempo: 72    
     staffs:
         -
@@ -40,7 +42,6 @@ score:
                 e4 r8 e16 d16
                 c4. c8 d4 e16 d c8
                 c2 
-                r8 g8 c d
             
         - 
             is_drum: false
@@ -85,7 +86,7 @@ score:
                 f c' <f a> c
                 g d' <g b> d
                 c g' <c e> g
-                <c e> g <c e> g
+                <c e>2
         -
             is_drum: true
             instrument: Arachno(128)
@@ -127,4 +128,4 @@ score:
                 bd8 hh16 hh hh hh hh hh
                 bd8 hh16 hh hh hh hh hh
                 bd8 hh16 hh hh hh hh hh
-                bd8 hh16 hh hh hh hh hh
+            

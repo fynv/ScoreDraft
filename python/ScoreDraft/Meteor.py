@@ -140,7 +140,7 @@ class DummyInstrumentEngine:
                 midiPitch = 0
             elif midiPitch>127:
                 midiPitch = 127
-            event = EventPerc(self.inst_id, fduration)
+            event = EventPerc(midiPitch, fduration)
         wavBuf.event = event
         return wavBuf
 
