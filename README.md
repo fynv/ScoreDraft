@@ -56,6 +56,7 @@ where in the 'content' part, LilyPond syntax can be used to input notes. The fol
 ```
 # scoredraft -wav twinkle.wav test.yaml
 ```
+For GUI editor, see [ScoreDraftEditor](https://github.com/fynv/ScoreDraftEditor)
 
 For more detailed introduction and demos see: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
 

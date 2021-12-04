@@ -54,6 +54,8 @@ score:
 # scoredraft -wav twinkle.wav test.yaml
 ```
 
+另有图形界面的编辑器， 详见：[ScoreDraftEditor](https://github.com/fynv/ScoreDraftEditor)
+
 更详细的使用说明和演示见: [https://fynv.github.io/ScoreDraft/](https://fynv.github.io/ScoreDraft/)
 
 ## 安装
