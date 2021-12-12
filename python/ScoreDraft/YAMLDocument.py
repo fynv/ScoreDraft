@@ -71,7 +71,7 @@ GM_Drum_Map = [
     ("acousticbassdrum", "b,,"),
     ("acousticsnare", "d,"),
     ("electricsnare", "e,"),
-    ("halfopenhihat", "f,"),
+    ("halfopenhihat", "bes,"),
     ("chinesecymbal", "e"),
     ("highfloortom", "g,"),  
     ("crashcymbala", "cis"),
@@ -82,7 +82,7 @@ GM_Drum_Map = [
     ("mutetriangle", "aes''"),
     ("lowfloortom", "f,"),
     ("closedhihat", "fis,"),
-    ("openhighhat", "f,"),
+    ("openhighhat", "bes,"),
     ("crashcymbal", "cis"),
     ("ridecymbala", "ees"),
     ("ridecymbalb", "b"), 
@@ -143,7 +143,7 @@ GM_Drum_Map = [
     ("guiro", "cis''"),
     ("tomh", "d"),
     ("toml", "a,"),
-    ("hhho", "f,"),
+    ("hhho", "bes,"),
     ("cymc", "cis"),
     ("cymr", "ees"), 
     ("cyms", "g"),   
@@ -169,7 +169,7 @@ GM_Drum_Map = [
     ("sna", "d,"),
     ("sne", "e,"),
     ("hhc", "fis,"),
-    ("hho", "f,"),
+    ("hho", "bes,"),
     ("hhp", "aes,"),
     ("boh", "c'"),
     ("bol", "cis'"),
@@ -432,7 +432,9 @@ class YAMLDocument(MusicXMLDocument):
                                 sustain = True
                                 break
                             else:
-                                i_range += 1                    
+                                i_range += 1
+                        else:
+                            break
                     
                     freq = -1.0
                     if len(note.rest)<1 and len(note.pitch)>0:

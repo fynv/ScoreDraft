@@ -102,10 +102,10 @@ def run_yaml():
         parser.add_argument("-meteor", help = "output meteor filename")
         parser.add_argument("-run", help = "run meteor", action='store_true')
         args=vars(parser.parse_args())
-        with open(args['yaml'], 'r') as f_in:
+        with open(args['yaml'], 'r', encoding = 'utf-8') as f_in:
             score = YAMLScore(f_in)
             if not args['ly'] is None:
-                with open(args['ly'], 'w') as f_out:
+                with open(args['ly'], 'w', encoding = 'utf-8') as f_out:
                     f_out.write(score.to_ly())
             if not args['wav'] is None or not args['meteor'] is None or args['run']:
                 doc = YAMLDocument(score)
