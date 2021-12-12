@@ -255,6 +255,13 @@ class YAMLDocument(MusicXMLDocument):
                 sweep = 0.0
                 if 'sweep' in staff:
                     sweep = staff['sweep']
+                    
+                volume = 1.0
+                pan = 0.0
+                if 'volume' in staff:
+                    volume = staff['volume']
+                if 'pan' in staff:
+                    pan = staff['pan']                
                 
                 content = staff['content']
                 if is_drum:
@@ -287,6 +294,9 @@ class YAMLDocument(MusicXMLDocument):
                         "instrument": inst,
                         "sweep": sweep
                     }
+                    
+                track_info['volume'] = volume
+                track_info['pan'] = pan
                 
                 self.tracks += [track_info] 
                 
@@ -391,8 +401,9 @@ class YAMLDocument(MusicXMLDocument):
                     seq += [sentence]
                     sentence = []
                     
-                self.sing(seq, track_info['singer'])
-                
+                idx = self.sing(seq, track_info['singer'])
+                self.setTrackVolume(idx, track_info['volume'])
+                self.setTrackPan(idx, track_info['pan'])
                 continue
                 
             sustain_ranges = []
@@ -461,5 +472,7 @@ class YAMLDocument(MusicXMLDocument):
                         seq += [(freq, duration)]
                     pos += duration
             
-            self.playNoteSeq(seq, track_info['instrument'])
+            idx = self.playNoteSeq(seq, track_info['instrument'])
+            self.setTrackVolume(idx, track_info['volume'])
+            self.setTrackPan(idx, track_info['pan'])
     

@@ -852,3 +852,12 @@ Staff property for a  singing track, indicating whether the singer is in CZMode.
 #### utau
 
 Staff property for a singing track containing **UTAU** phonetic symbols for each syllable. Syllables are separated by spaces, with a dot at the end of each sentence.
+
+#### volume
+
+Staff property for any track. Volume value used by the mixer.
+
+#### pan
+
+Staff property for any track. Pan value used by the mixer.
+

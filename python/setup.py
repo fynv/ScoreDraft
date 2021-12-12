@@ -9,7 +9,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
 	name = 'ScoreDraft',
-	version = '1.0.9',
+	version = '1.0.10',
 	description = 'A music/singing synthesizer that provides a Python based score authoring interface. ',
 	long_description=long_description,
 	long_description_content_type='text/markdown',  

@@ -161,7 +161,8 @@ ScoreDraft 实际上是我的第一个Python项目，由于一些设计问题，
 
 在2021年11月的重构之后，ScoreDraft已经具有SingingGadgets和早期ScoreDraft的全部优点，因此SingingGadgets项目现已被关闭。
 
-* 2021年12月12日. ScoreDraft 1.0.8 & 1.0.8 修正bug
+* 2021年12月12日. ScoreDraft 1.0.10 YAML输入支持音轨volume
+* 2021年12月12日. ScoreDraft 1.0.8 & 1.0.9 修正bug
 * 2021年12月04日. ScoreDraft 1.0.7 修正打击乐可视化bug
 * 2021年12月01日. ScoreDraft 1.0.6 暴露更多底层函数
 * 2021年11月29日. ScoreDraft 1.0.4, 1.0.5 更新YAML功能
