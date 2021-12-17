@@ -164,6 +164,7 @@ which only partially solves the issues.
 After the Nov 2021 refactoring, ScoreDraft have all the benefits of both SingingGadgets and the old ScoreDraft.
 Therefore, the SingingGadgets project is now closed.
 
+* Dec 17, 2021. ScoreDraft 1.0.11, fix slur handling
 * Dec 12, 2021. ScoreDraft 1.0.10, support track volume for YAML input
 * Dec 12, 2021. ScoreDraft 1.0.8 & 1.0.9, bug fix
 * Dec 04, 2021. ScoreDraft 1.0.7, percussion visualization bug fix

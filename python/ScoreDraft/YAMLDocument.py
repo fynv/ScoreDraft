@@ -360,6 +360,7 @@ class YAMLDocument(MusicXMLDocument):
                 sentence = []
                 i_syll = 0
                 new_syll = True
+                slur = False
                 for measure in part.measure:
                     for note in measure.note:
                         freq = -1.0
@@ -379,11 +380,15 @@ class YAMLDocument(MusicXMLDocument):
                                 sentence = []
                                 new_syll = True
                             seq += [(freq, duration)]
-                        else:
                             slur = False
+                        else:                            
                             if len(note.notations)>0:
-                                if len(note.notations[0].slur)>0 and note.notations[0].slur[0].type.value!="stop":                                    
-                                    slur = True
+                                if len(note.notations[0].slur)>0:
+                                    if note.notations[0].slur[0].type.value=="start":
+                                        slur = True
+                                    elif note.notations[0].slur[0].type.value=="stop":
+                                        slur = False
+                                    
                             if new_syll:
                                 sentence += [syllables[i_syll][0]]
                             sentence += [(freq, duration)]
@@ -434,6 +439,7 @@ class YAMLDocument(MusicXMLDocument):
             duration = 0
             pos = 0
             i_range = 0
+            slur = False
             for measure in part.measure:
                 for note in measure.note:
                     sustain = False
@@ -466,11 +472,21 @@ class YAMLDocument(MusicXMLDocument):
                         duration = int(note.duration[0] * 48 / divisions)
                         
                     if sustain:
-                        seq += [(freq, sustain_ranges[i_range][1] - pos)]
-                        seq += [(-1.0, pos + duration -sustain_ranges[i_range][1])]
-                    else:                        
-                        seq += [(freq, duration)]
+                        seq += [[freq, sustain_ranges[i_range][1] - pos]]
+                        seq += [[-1.0, pos + duration -sustain_ranges[i_range][1]]]
+                    else:
+                        if len(seq)>0 and slur and  freq == seq[len(seq)-1][0]:
+                            seq[len(seq)-1][1] += duration
+                        else:
+                            seq += [[freq, duration]]
                     pos += duration
+                    
+                    if len(note.notations)>0:
+                        if len(note.notations[0].slur)>0:
+                            if note.notations[0].slur[0].type.value=="start":
+                                slur = True
+                            elif note.notations[0].slur[0].type.value=="stop":
+                                slur = False
             
             idx = self.playNoteSeq(seq, track_info['instrument'])
             self.setTrackVolume(idx, track_info['volume'])
