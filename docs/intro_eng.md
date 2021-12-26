@@ -230,6 +230,42 @@ cz = ScoreDraft.UtauDraft('d:/CZloid', False)
 
 You can also put the voicebank folder into the **UTAUVoice** directory under the starting directory so that ScoreDraft can create an initializer for you automatically. The subdirectory name + "_UTAU" will apprear as the initializer name in the PrintCatalog lists. (The "_UTAU" posfix exists for some historical reason). If the original sub-folder name is unsuitable to be used as an Python variable name, then you should rename it to prevent a Python error. 
 
+The UtauDraft Enigine tries to be compatible with all kinds of UTAU voice-banks, including 単独音,連続音, VCV, CVVC as much as possible. oto.ini and .frq files will be used to understand the audio samples. prefix.map will also be used when one is present.
+
+When using UtauDraft Engine, for 単独音, you can use the names defined in oto.ini as lyrics, just like in UTAU.
+
+For other types of voicebanks, in order to tackle transitions correctly as well as simplifying the lyric input, user should choose one of the lyric-converters to use. Currently there are:
+
+* ScoreDraft.CVVCChineseConverter: for CVVChinese
+* ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
+* ScoreDraft.JPVCVConverter: for Japanese 連続音
+* ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
+* ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
+* ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
+
+For setting lyric converter just call **singer.setLyricConverter(converter)**, for example:
+
+```python
+import ScoreDraft
+Teto = ScoreDraft.TetoEng_UTAU()
+Teto.setLyricConverter(ScoreDraft.TTEnglishConverter)
+```
+
+For CZ style VCCV, you need one more call: singer.setCZMode() to let the engine use a special mapping method.
+
+The converter functions are defined in the following form, write your own if the above converters does not meet you requirements:
+
+```python
+def LyricConverterFunc(LyricForEachSyllable):
+    ...
+    return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
+```
+
+The argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string, which is the input lyric of a syllable.
+
+The converter function should convert 1 input lyric into 1 or more lyrics to split the duration of the original syllable. A weight value should be provided to indicate the ratio or duration of the converted note. A bool value "isVowel" need to be provided to indicate whether it contains the vowel part of the syllable.
+
+
 ## Instrument Play
 
 The kind of sequence used for instrument play is called note sequence. Note sequences are Python lists consisting of tuples in (rel_freq, duration) form, where "rel_freq" is a float and "duration" an integer.
@@ -324,7 +360,9 @@ Each singing segment contains one or more lyric as a string, each followed by on
 All lyrics and notes in the same singing segment are intended to be sung continuously. However, when there are rests/backspaces, the singing-segment will be broken into multiple segments to sing. The singing command looks like following, with an existing "doc" and some singer:
 
 ```python
-doc.sing(seq, ScoreDraft.TetoEng_UTAU())
+# Teto = ScoreDraft.TetoEng_UTAU()
+# Teto.setLyricConverter(ScoreDraft.TTEnglishConverter)
+doc.sing(seq, Teto)
 ```
 
 <audio controls>
@@ -340,43 +378,6 @@ seq= [ CRap("chu", 2, 36)+CRap("he", 2, 60)+CRap("ri", 4, 48)+CRap("dang", 1, 48
 <audio controls>
     <source type="audio/mpeg" src="rap2.mp3"/>
 </audio>
-
-### UtauDraft Engine
-
-The UtauDraft Enigine tries to be compatible with all kinds of UTAU voice-banks, including 単独音,連続音, VCV, CVVC as much as possible. oto.ini and .frq files will be used to understand the audio samples. prefix.map will also be used when one is present.
-
-When using UtauDraft Engine, for 単独音, you can use the names defined in oto.ini as lyrics, just like in UTAU.
-
-For other types of voicebanks, in order to tackle transitions correctly as well as simplifying the lyric input, user should choose one of the lyric-converters to use. Currently there are:
-
-* ScoreDraft.CVVCChineseConverter: for CVVChinese
-* ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
-* ScoreDraft.JPVCVConverter: for Japanese 連続音
-* ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
-* ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
-* ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
-
-For setting lyric converter just call **singer.setLyricConverter(converter)**, for example:
-
-```python
-import ScoreDraft
-Ayaka = ScoreDraft.Ayaka_UTAU()
-Ayaka.setLyricConverter(ScoreDraft.CVVCChineseConverter)
-```
-
-For CZ style VCCV, you need one more call: singer.setCZMode() to let the engine use a special mapping method.
-
-The converter functions are defined in the following form, write your own if the above converters does not meet you requirements:
-
-```python
-def LyricConverterFunc(LyricForEachSyllable):
-    ...
-    return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
-```
-
-The argument 'LyricForEachSyllable' has the form [lyric1, lyric2, ...], where each lyric is a string, which is the input lyric of a syllable.
-
-The converter function should convert 1 input lyric into 1 or more lyrics to split the duration of the original syllable. A weight value should be provided to indicate the ratio or duration of the converted note. A bool value "isVowel" need to be provided to indicate whether it contains the vowel part of the syllable.
 
 ## Dynamic Tempo Mapping
 

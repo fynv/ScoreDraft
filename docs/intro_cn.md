@@ -223,6 +223,40 @@ cz = ScoreDraft.UtauDraft('d:/CZloid', False)
 
 你也可以把音源目录布署到启动位置下的 UTAUVoice 目录中，这样ScoreDraft 就可以自动为你创建一个初始化器。音源目录名将作为初始化器的名字出现在PrintCatalog列表当中。如果音源目录原来的名字不适合用作Python的变量名，那么用户应对目录名进行必要的修改以避免发生Python解析错误。
 
+UtauDraft 引擎试图尽可能支持UTAU的各种音源，包括单独音，连续音，VCV, CVVC等。引擎会读取音源的oto.ini和.frq来提取音源的特征。如果有prefix.map，引擎也会读取这个文件来进行样本音高的选择。
+
+当使用 UtauDraft 引擎时，歌唱片段中使用的歌词应以oto.ini中的定义为准，正如在UTAU中那样。使用单独音音源时，我们只需要直接使用这些歌词。
+
+当使用VCV或CVVC等类型的音源时，为了正确处理音节之间的过渡，同时简化歌词输入，用户需要选择一个拆音函数来使用。ScoreDraft目前提供了以下的拆音函数：
+
+* ScoreDraft.CVVCChineseConverter: for CVVChinese
+* ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
+* ScoreDraft.JPVCVConverter: for Japanese 連続音
+* ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
+* ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
+* ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
+
+拆音函数的使用方法如下所示, 只需调用singer.setLyricConverter(converter)即可：
+
+```python
+import ScoreDraft
+Ayaka = ScoreDraft.Ayaka_UTAU()
+Ayaka.setLyricConverter(ScoreDraft.CVVCChineseConverter)
+```
+
+当使用CZ VCCV音源时，还需要调用一下singer.setCZMode()，让引擎使用特殊的方式来进行映射。
+
+拆音函数应具有以下的形式，如果上面列出的拆音函数无法满足需求，用户可以尝试编写自己的拆音函数：
+
+```python
+def LyricConverterFunc(LyricForEachSyllable):
+    ...
+    return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
+```
+
+输入参数'LyricForEachSyllable' 是歌唱片段中输入的歌词列表 [lyric1, lyric2, ...], 每个歌词 对应一个音节。拆音函数将每个输入歌词转换为1个或多个歌词，来瓜分原歌词的时值。输出的时候，要给每个 分解后的歌词设置一个权重，以指示分解后的歌词在原歌词的时值中所占的比例。另外还需要提供一个bool值isVowel表示分离出来的这个部分是否包含原音节的元音部分。
+
+
 ## 乐器演奏
 
 用于乐器演奏的序列称为Note序列，Note序列中的元素是具有(rel_freq, duration) 形式的Python元组, rel_freq是浮点数，duration是整数.
@@ -333,41 +367,6 @@ seq= [ CRap("chu", 2, 36)+CRap("he", 2, 60)+CRap("ri", 4, 48)+CRap("dang", 1, 48
 <audio controls>
     <source type="audio/mpeg" src="rap2.mp3"/>
 </audio>
-
-### UtauDraft 引擎
-
-UtauDraft 引擎试图尽可能支持UTAU的各种音源，包括单独音，连续音，VCV, CVVC等。引擎会读取音源 的oto.ini和.frq来提取音源的特征。如果有prefix.map，引擎也会读取这个文件来进行样本音高的选择。
-
-当使用 UtauDraft 引擎时，歌唱片段中使用的歌词应以oto.ini中的定义为准，正如在UTAU中那样。使用单独音音源时，我们只需要直接使用这些歌词。
-
-当使用VCV或CVVC等类型的音源时，为了正确处理音节之间的过渡，同时简化歌词输入，用户需要选择一个拆音函数来使用。ScoreDraft目前提供了以下的拆音函数：
-
-* ScoreDraft.CVVCChineseConverter: for CVVChinese
-* ScoreDraft.XiaYYConverter: for XiaYuYao style Chinese
-* ScoreDraft.JPVCVConverter: for Japanese 連続音
-* ScoreDraft.TsuroVCVConverter: for Tsuro style Chinese VCV
-* ScoreDraft.TTEnglishConverter: for Delta style (Teto) English CVVC
-* ScoreDraft.VCCVEnglishConverter: for CZ style VCCV English
-
-拆音函数的使用方法如下所示, 只需调用singer.setLyricConverter(converter)即可：
-
-```python
-import ScoreDraft
-Ayaka = ScoreDraft.Ayaka_UTAU()
-Ayaka.setLyricConverter(ScoreDraft.CVVCChineseConverter)
-```
-
-当使用CZ VCCV音源时，还需要调用一下singer.setCZMode()，让引擎使用特殊的方式来进行映射。
-
-拆音函数应具有以下的形式，如果上面列出的拆音函数无法满足需求，用户可以尝试编写自己的拆音函数：
-
-```python
-def LyricConverterFunc(LyricForEachSyllable):
-    ...
-    return [(lyric1ForSyllable1, weight11, isVowel11, lyric2ForSyllable1, weight21, isVowel21...  ),(lyric1ForSyllable2, weight12, isVowel12, lyric2ForSyllable2, weight22, isVowel22...), ...]
-```
-
-输入参数'LyricForEachSyllable' 是歌唱片段中输入的歌词列表 [lyric1, lyric2, ...], 每个歌词 对应一个音节。拆音函数将每个输入歌词转换为1个或多个歌词，来瓜分原歌词的时值。输出的时候，要给每个 分解后的歌词设置一个权重，以指示分解后的歌词在原歌词的时值中所占的比例。另外还需要提供一个bool值isVowel表示分离出来的这个部分是否包含原音节的元音部分。
 
 ## 动态速率映射
 
